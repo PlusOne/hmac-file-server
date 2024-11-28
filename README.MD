@@ -171,7 +171,7 @@ minfreebytes = 104857600 # 100 MB in bytes
 [timeouts]
 readtimeout = "4800s"
 writetimeout = "4800s"
-idletimeout = "4800s"
+idletimeout = "24h"
 
 [security]
 secret = "example-secret-key"
@@ -201,9 +201,6 @@ redishealthcheckinterval = "120s"
 [workers]
 numworkers = 2
 uploadqueuesize = 50
-
-[file]
-filerevision = 1
 ```
 
 This configuration file is set up with essential features like Prometheus integration, ClamAV scanning, and file handling with deduplication and versioning options. Adjust the settings according to your infrastructure needs.
