@@ -61,6 +61,10 @@ When `AutoAdjustWorkers` is enabled, the number of workers for HMAC operations a
 
 If `AutoAdjustWorkers = true`, the values for `NumWorkers` and `NumScanWorkers` in the configuration file will be ignored, and the server will automatically adjust these values.
 
+### Network Events Monitoring
+
+Setting `NetworkEvents = false` in the server configuration disables the logging and tracking of network-related events within the application. This means that functionalities such as monitoring IP changes or recording network activity will be turned off.
+
 ---
 
 ## Example `config.toml`
@@ -78,6 +82,7 @@ FileTTL = "1y"
 DeduplicationEnabled = true
 MinFreeBytes = "100MB"
 AutoAdjustWorkers = true # Enable auto-adjustment for worker scaling
+NetworkEvents = false # Disable logging of network events
 
 [timeouts]
 ReadTimeout = "480s"
