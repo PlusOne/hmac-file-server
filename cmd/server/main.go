@@ -107,6 +107,7 @@ type ServerConfig struct {
 	DeduplicationEnabled bool   `mapstructure:"DeduplicationEnabled"`
 	MinFreeByte          string `mapstructure:"MinFreeByte"`
 	AutoAdjustWorkers    bool   `mapstructure:"AutoAdjustWorkers"`
+	NetworkEvents        bool   `mapstructure:"NetworkEvents"` // Added field
 }
 
 type TimeoutConfig struct {
@@ -468,9 +469,9 @@ func setDefaults() {
 	viper.SetDefault("server.MetricsEnabled", true)
 	viper.SetDefault("server.MetricsPort", "9090")
 	viper.SetDefault("server.FileTTL", "8760h")
-	viper.SetDefault("server.MinFreeBytes", 100<<20)
+	viper.SetDefault("server.MinFreeBytes", "100MB")
 	viper.SetDefault("server.AutoAdjustWorkers", true)
-
+	viper.SetDefault("server.NetworkEvents", true) // Set default
 	_, err := parseTTL("1D")
 	if err != nil {
 		log.Warnf("Failed to parse TTL: %v", err)
@@ -889,34 +890,34 @@ func shouldScanFile(filename string) bool {
 }
 
 func uploadWorker(ctx context.Context, workerID int) {
-    log.Infof("Upload worker %d started.", workerID)
-    defer log.Infof("Upload worker %d stopped.", workerID)
-    for {
-        select {
-        case <-ctx.Done():
-            return
-        case task, ok := <-uploadQueue:
-            if !ok {
-                return
-            }
-            log.Infof("Worker %d processing file: %s", workerID, task.AbsFilename)
-            err := processUpload(task)
-            if err != nil {
-                log.Errorf("Worker %d failed to process file %s: %v", workerID, task.AbsFilename, err)
-            } else {
-                log.Infof("Worker %d successfully processed file: %s", workerID, task.AbsFilename)
-            }
-            task.Result <- err
-        }
-    }
+	log.Infof("Upload worker %d started.", workerID)
+	defer log.Infof("Upload worker %d stopped.", workerID)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case task, ok := <-uploadQueue:
+			if !ok {
+				return
+			}
+			log.Infof("Worker %d processing file: %s", workerID, task.AbsFilename)
+			err := processUpload(task)
+			if err != nil {
+				log.Errorf("Worker %d failed to process file %s: %v", workerID, task.AbsFilename, err)
+			} else {
+				log.Infof("Worker %d successfully processed file: %s", workerID, task.AbsFilename)
+			}
+			task.Result <- err
+		}
+	}
 }
 
 func initializeUploadWorkerPool(ctx context.Context, w *WorkersConfig) {
-    for i := 0; i < w.NumWorkers; i++ {
-        go uploadWorker(ctx, i)
-        log.Infof("Upload worker %d started.", i)
-    }
-    log.Infof("Initialized %d upload workers", w.NumWorkers)
+	for i := 0; i < w.NumWorkers; i++ {
+		go uploadWorker(ctx, i)
+		log.Infof("Upload worker %d started.", i)
+	}
+	log.Infof("Initialized %d upload workers", w.NumWorkers)
 }
 
 func scanWorker(ctx context.Context, workerID int) {
@@ -1070,107 +1071,107 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 // handleUpload handles PUT requests for file uploads
 func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStorePath string, a url.Values) {
-    log.Infof("Using storage path: %s", conf.Server.StoragePath)
+	log.Infof("Using storage path: %s", conf.Server.StoragePath)
 
-    // HMAC validation
-    var protocolVersion string
-    if a.Get("v2") != "" {
-        protocolVersion = "v2"
-    } else if a.Get("token") != "" {
-        protocolVersion = "token"
-    } else if a.Get("v") != "" {
-        protocolVersion = "v"
-    } else {
-        log.Warn("No HMAC attached to URL.")
-        http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
-        return
-    }
+	// HMAC validation
+	var protocolVersion string
+	if a.Get("v2") != "" {
+		protocolVersion = "v2"
+	} else if a.Get("token") != "" {
+		protocolVersion = "token"
+	} else if a.Get("v") != "" {
+		protocolVersion = "v"
+	} else {
+		log.Warn("No HMAC attached to URL.")
+		http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
+		return
+	}
 
-    mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
+	mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
 
-    if protocolVersion == "v" {
-        mac.Write([]byte(fileStorePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
-    } else {
-        contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
-        if contentType == "" {
-            contentType = "application/octet-stream"
-        }
-        mac.Write([]byte(fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType))
-    }
+	if protocolVersion == "v" {
+		mac.Write([]byte(fileStorePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
+	} else {
+		contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		mac.Write([]byte(fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType))
+	}
 
-    calculatedMAC := mac.Sum(nil)
+	calculatedMAC := mac.Sum(nil)
 
-    providedMACHex := a.Get(protocolVersion)
-    providedMAC, err := hex.DecodeString(providedMACHex)
-    if err != nil {
-        log.Warn("Invalid MAC encoding")
-        http.Error(w, "Invalid MAC encoding", http.StatusForbidden)
-        return
-    }
+	providedMACHex := a.Get(protocolVersion)
+	providedMAC, err := hex.DecodeString(providedMACHex)
+	if err != nil {
+		log.Warn("Invalid MAC encoding")
+		http.Error(w, "Invalid MAC encoding", http.StatusForbidden)
+		return
+	}
 
-    if !hmac.Equal(calculatedMAC, providedMAC) {
-        log.Warn("Invalid MAC")
-        http.Error(w, "Invalid MAC", http.StatusForbidden)
-        return
-    }
+	if !hmac.Equal(calculatedMAC, providedMAC) {
+		log.Warn("Invalid MAC")
+		http.Error(w, "Invalid MAC", http.StatusForbidden)
+		return
+	}
 
-    if !isExtensionAllowed(fileStorePath) {
-        log.Warn("Invalid file extension")
-        http.Error(w, "Invalid file extension", http.StatusBadRequest)
-        uploadErrorsTotal.Inc()
-        return
-    }
+	if !isExtensionAllowed(fileStorePath) {
+		log.Warn("Invalid file extension")
+		http.Error(w, "Invalid file extension", http.StatusBadRequest)
+		uploadErrorsTotal.Inc()
+		return
+	}
 
-    minFreeBytes, err := parseSize(conf.Server.MinFreeBytes)
-    if err != nil {
-        log.Fatalf("Invalid MinFreeBytes: %v", err)
-    }
-    err = checkStorageSpace(conf.Server.StoragePath, minFreeBytes)
-    if err != nil {
-        log.Warn("Not enough free space")
-        http.Error(w, "Not enough free space", http.StatusInsufficientStorage)
-        uploadErrorsTotal.Inc()
-        return
-    }
+	minFreeBytes, err := parseSize(conf.Server.MinFreeBytes)
+	if err != nil {
+		log.Fatalf("Invalid MinFreeBytes: %v", err)
+	}
+	err = checkStorageSpace(conf.Server.StoragePath, minFreeBytes)
+	if err != nil {
+		log.Warn("Not enough free space")
+		http.Error(w, "Not enough free space", http.StatusInsufficientStorage)
+		uploadErrorsTotal.Inc()
+		return
+	}
 
-    // Check for Callback-URL header
-    callbackURL := r.Header.Get("Callback-URL")
-    if callbackURL != "" {
-        log.Warnf("Callback-URL provided (%s) but not needed. Ignoring.", callbackURL)
-        // Do not perform any callback actions
-    }
+	// Check for Callback-URL header
+	callbackURL := r.Header.Get("Callback-URL")
+	if callbackURL != "" {
+		log.Warnf("Callback-URL provided (%s) but not needed. Ignoring.", callbackURL)
+		// Do not perform any callback actions
+	}
 
-    // Enqueue the upload task
-    result := make(chan error)
-    task := UploadTask{
-        AbsFilename: absFilename,
-        Request:     r,
-        Result:      result,
-    }
+	// Enqueue the upload task
+	result := make(chan error)
+	task := UploadTask{
+		AbsFilename: absFilename,
+		Request:     r,
+		Result:      result,
+	}
 
-    log.Debug("Attempting to enqueue upload task")
-    select {
-    case uploadQueue <- task:
-        log.Debug("Upload task enqueued successfully")
-    default:
-        log.Warn("Upload queue is full.")
-        http.Error(w, "Server busy. Try again later.", http.StatusServiceUnavailable)
-        uploadErrorsTotal.Inc()
-        return
-    }
+	log.Debug("Attempting to enqueue upload task")
+	select {
+	case uploadQueue <- task:
+		log.Debug("Upload task enqueued successfully")
+	default:
+		log.Warn("Upload queue is full.")
+		http.Error(w, "Server busy. Try again later.", http.StatusServiceUnavailable)
+		uploadErrorsTotal.Inc()
+		return
+	}
 
-    log.Debug("Waiting for upload task to complete")
-    err = <-result
-    if err != nil {
-        log.Errorf("Upload failed: %v", err)
-        http.Error(w, fmt.Sprintf("Upload failed: %v", err), http.StatusInternalServerError)
-        return
-    }
-    log.Debug("Upload task completed successfully")
+	log.Debug("Waiting for upload task to complete")
+	err = <-result
+	if err != nil {
+		log.Errorf("Upload failed: %v", err)
+		http.Error(w, fmt.Sprintf("Upload failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+	log.Debug("Upload task completed successfully")
 
-    // Respond with 201 Created on successful upload
-    w.WriteHeader(http.StatusCreated)
-    log.Infof("Responded with 201 Created for file: %s", absFilename)
+	// Respond with 201 Created on successful upload
+	w.WriteHeader(http.StatusCreated)
+	log.Infof("Responded with 201 Created for file: %s", absFilename)
 }
 
 func handleDownload(w http.ResponseWriter, r *http.Request, absFilename, fileStorePath string) {
@@ -1546,7 +1547,7 @@ func MonitorRedisHealth(ctx context.Context, client *redis.Client, checkInterval
 				}
 				redisConnected = false
 			} else {
-				if (!redisConnected) {
+				if !redisConnected {
 					log.Info("Redis reconnected successfully")
 				}
 				redisConnected = true
