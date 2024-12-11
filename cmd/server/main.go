@@ -1069,7 +1069,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleUpload handles PUT requests for file uploads
+// handleUpload processes the file upload and ensures a 201 Created response on success
 func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStorePath string, a url.Values) {
 	log.Infof("Using storage path: %s", conf.Server.StoragePath)
 
