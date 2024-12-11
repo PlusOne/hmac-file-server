@@ -1169,9 +1169,19 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 	}
 	log.Debug("Upload task completed successfully")
 
+	// Move the file to its final destination
+	finalPath := filepath.Join(conf.Server.StoragePath, filepath.Base(absFilename))
+	err = os.Rename(absFilename, finalPath)
+	if err != nil {
+		log.Errorf("Failed to move file to final destination: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to move file to final destination: %v", err), http.StatusInternalServerError)
+		return
+	}
+	log.Infof("File moved to final destination: %s", finalPath)
+
 	// Respond with 201 Created on successful upload
 	w.WriteHeader(http.StatusCreated)
-	log.Infof("Responded with 201 Created for file: %s", absFilename)
+	log.Infof("Responded with 201 Created for file: %s", finalPath)
 }
 
 func handleDownload(w http.ResponseWriter, r *http.Request, absFilename, fileStorePath string) {
