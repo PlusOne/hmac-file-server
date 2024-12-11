@@ -82,12 +82,12 @@ FileTTL = "1y"
 DeduplicationEnabled = true
 MinFreeBytes = "100MB"
 AutoAdjustWorkers = true # Enable auto-adjustment for worker scaling
-NetworkEvents = false # Disable logging of network events
+NetworkEvents = false # IP changes or recording network activity will be turned off.
 
 [timeouts]
 ReadTimeout = "480s"
 WriteTimeout = "480s"
-IdleTimeout = "480s"
+IdleTimeout = "65s" # nginx/apache2 keep-a-live 60s
 
 [security]
 Secret = "changeme"
