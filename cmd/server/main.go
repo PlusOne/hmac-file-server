@@ -1140,6 +1140,15 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 		return
 	}
 
+	// Move temp file to final destination
+	err = os.Rename(tempFilename, absFilename)
+	if err != nil {
+		log.Errorf("Rename failed for %s: %v", absFilename, err)
+		os.Remove(tempFilename)
+		http.Error(w, "Error moving file to final destination", http.StatusInternalServerError)
+		return
+	}
+
 	// Respond with 201 Created immediately
 	w.WriteHeader(http.StatusCreated)
 	if f, ok := w.(http.Flusher); ok {
@@ -1151,10 +1160,10 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 	go func() {
 		// ClamAV scanning
 		if conf.ClamAV.ClamAVEnabled && shouldScanFile(absFilename) {
-			err := scanFileWithClamAV(tempFilename)
+			err := scanFileWithClamAV(absFilename)
 			if err != nil {
-				log.Errorf("ClamAV failed for %s: %v", tempFilename, err)
-				os.Remove(tempFilename)
+				log.Errorf("ClamAV failed for %s: %v", absFilename, err)
+				os.Remove(absFilename)
 				uploadErrorsTotal.Inc()
 				return
 			}
@@ -1165,7 +1174,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 			err := handleDeduplication(context.Background(), absFilename)
 			if err != nil {
 				log.Errorf("Deduplication failed for %s: %v", absFilename, err)
-				os.Remove(tempFilename)
+				os.Remove(absFilename)
 				uploadErrorsTotal.Inc()
 				return
 			}
@@ -1177,20 +1186,11 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 				err := versionFile(absFilename)
 				if err != nil {
 					log.Errorf("Versioning failed for %s: %v", absFilename, err)
-					os.Remove(tempFilename)
+					os.Remove(absFilename)
 					uploadErrorsTotal.Inc()
 					return
 				}
 			}
-		}
-
-		// Move temp file to final destination
-		err = os.Rename(tempFilename, absFilename)
-		if err != nil {
-			log.Errorf("Rename failed for %s: %v", absFilename, err)
-			os.Remove(tempFilename)
-			uploadErrorsTotal.Inc()
-			return
 		}
 
 		log.Infof("Processing completed successfully for %s", absFilename)
