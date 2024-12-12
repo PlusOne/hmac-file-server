@@ -46,16 +46,16 @@ func parseSize(sizeStr string) (int64, error) {
 		return 0, fmt.Errorf("invalid size: %s", sizeStr)
 	}
 
-	unit := sizeStr[len(sizeStr)-2:]
+	unit := strings.ToUpper(sizeStr[len(sizeStr)-2:])
 	valueStr := sizeStr[:len(sizeStr)-2]
 	value, err := strconv.Atoi(valueStr)
 	if err != nil {
 		return 0, fmt.Errorf("invalid size value: %s", valueStr)
 	}
 
-	switch strings.ToUpper(unit) {
+	switch unit {
 	case "KB":
-		return int64(value) * 4, nil
+		return int64(value) * 1024, nil
 	case "MB":
 		return int64(value) * 1024 * 1024, nil
 	case "GB":
@@ -228,7 +228,8 @@ const (
 
 var bufferPool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, 32*1024)
+		buf := make([]byte, 32*1024)
+		return &buf
 	},
 }
 
@@ -850,8 +851,6 @@ func processUpload(task UploadTask) error {
 }
 
 func createFile(tempFilename string, r *http.Request) error {
-	startTime := time.Now()
-
 	err := os.MkdirAll(filepath.Dir(tempFilename), 0755)
 	if err != nil {
 		return err
@@ -859,16 +858,14 @@ func createFile(tempFilename string, r *http.Request) error {
 
 	file, err := os.OpenFile(tempFilename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		log.WithFields(logrus.Fields{"file": tempFilename, "error": err}).Error("Error creating file")
-		uploadDuration.Observe(time.Since(startTime).Seconds())
 		return err
 	}
 	defer file.Close()
 
 	bufWriter := bufio.NewWriter(file)
 	defer bufWriter.Flush()
-
-	bufPtr := bufferPool.Get().(*[]byte)
+	bufPtr := bufferPool.Get().(*[]byte) // Correct type assertion
+	defer bufferPool.Put(bufPtr)
 	defer bufferPool.Put(bufPtr)
 
 	_, err = io.CopyBuffer(bufWriter, r.Body, *bufPtr)
@@ -1134,44 +1131,71 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 		return
 	}
 
-	// Check for Callback-URL header
-	callbackURL := r.Header.Get("Callback-URL")
-	if callbackURL != "" {
-		log.Warnf("Callback-URL provided (%s) but not needed. Ignoring.", callbackURL)
-		// Do not perform any callback actions
-	}
-
-	// Enqueue the upload task
-	result := make(chan error)
-	task := UploadTask{
-		AbsFilename: absFilename,
-		Request:     r,
-		Result:      result,
-	}
-
-	log.Debug("Attempting to enqueue upload task")
-	select {
-	case uploadQueue <- task:
-		log.Debug("Upload task enqueued successfully")
-	default:
-		log.Warn("Upload queue is full.")
-		http.Error(w, "Server busy. Try again later.", http.StatusServiceUnavailable)
-		uploadErrorsTotal.Inc()
-		return
-	}
-
-	log.Debug("Waiting for upload task to complete")
-	err = <-result
+	// Create temp file and write the uploaded data
+	tempFilename := absFilename + ".tmp"
+	err = createFile(tempFilename, r)
 	if err != nil {
-		log.Errorf("Upload failed: %v", err)
-		http.Error(w, fmt.Sprintf("Upload failed: %v", err), http.StatusInternalServerError)
+		log.WithFields(logrus.Fields{"file": tempFilename, "error": err}).Error("Error creating temp file")
+		http.Error(w, "Error writing temp file", http.StatusInternalServerError)
 		return
 	}
-	log.Debug("Upload task completed successfully")
 
-	// Respond with 201 Created on successful upload
+	// Respond with 201 Created immediately
 	w.WriteHeader(http.StatusCreated)
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
 	log.Infof("Responded with 201 Created for file: %s", absFilename)
+
+	// Asynchronous processing in the background
+	go func() {
+		// ClamAV scanning
+		if conf.ClamAV.ClamAVEnabled && shouldScanFile(absFilename) {
+			err := scanFileWithClamAV(tempFilename)
+			if err != nil {
+				log.Errorf("ClamAV failed for %s: %v", tempFilename, err)
+				os.Remove(tempFilename)
+				uploadErrorsTotal.Inc()
+				return
+			}
+		}
+
+		// Deduplication
+		if conf.Redis.RedisEnabled && conf.Server.DeduplicationEnabled {
+			err := handleDeduplication(context.Background(), absFilename)
+			if err != nil {
+				log.Errorf("Deduplication failed for %s: %v", absFilename, err)
+				os.Remove(tempFilename)
+				uploadErrorsTotal.Inc()
+				return
+			}
+		}
+
+		// Versioning
+		if conf.Versioning.EnableVersioning {
+			if exists, _ := fileExists(absFilename); exists {
+				err := versionFile(absFilename)
+				if err != nil {
+					log.Errorf("Versioning failed for %s: %v", absFilename, err)
+					os.Remove(tempFilename)
+					uploadErrorsTotal.Inc()
+					return
+				}
+			}
+		}
+
+		// Move temp file to final destination
+		err = os.Rename(tempFilename, absFilename)
+		if err != nil {
+			log.Errorf("Rename failed for %s: %v", absFilename, err)
+			os.Remove(tempFilename)
+			uploadErrorsTotal.Inc()
+			return
+		}
+
+		log.Infof("Processing completed successfully for %s", absFilename)
+		uploadsTotal.Inc()
+	}()
 }
 
 func handleDownload(w http.ResponseWriter, r *http.Request, absFilename, fileStorePath string) {
