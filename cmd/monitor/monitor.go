@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/pelletier/go-toml"
 	"github.com/prometheus/common/expfmt"
 	"github.com/rivo/tview"
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -16,7 +17,40 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-const prometheusURL = "http://localhost:9090/metrics"
+var prometheusURL string
+
+func init() {
+	configPaths := []string{
+		"/etc/hmac-file-server/config.toml",
+		"../config.toml",
+	}
+
+	var config *toml.Tree
+	var err error
+
+	for _, path := range configPaths {
+		config, err = toml.LoadFile(path)
+		if err == nil {
+			break
+		}
+	}
+
+	if err != nil {
+		log.Fatalf("Error loading config file: %v", err)
+	}
+
+	portValue := config.Get("server.metrics_port")
+	if portValue == nil {
+		log.Fatalf("Error: 'server.metrics_port' is missing in the configuration")
+	}
+
+	port, ok := portValue.(int64)
+	if !ok {
+		log.Fatalf("Error: 'server.metrics_port' is not of type int64, got %T", portValue)
+	}
+
+	prometheusURL = fmt.Sprintf("http://localhost:%d/metrics", port)
+}
 
 // Thresholds for color coding
 const (
@@ -334,7 +368,7 @@ func updateProcessTable(processTable *tview.Table, processes []ProcessInfo) {
 	}
 }
 
-// Helper function to update hmac-file-server table
+// Helper function to update hmac-table
 func updateHmacTable(hmacTable *tview.Table, hmacInfo *ProcessInfo, metrics map[string]float64) {
 	hmacTable.Clear()
 	hmacTable.SetCell(0, 0, tview.NewTableCell("Property").SetAttributes(tcell.AttrBold))

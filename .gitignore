@@ -3,3 +3,5 @@
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
+cmd/monitor/hmac-monitor-1.0_amd64
+cmd/monitor/hmac-monitor-1.0_arm64
