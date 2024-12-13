@@ -107,7 +107,8 @@ type ServerConfig struct {
 	DeduplicationEnabled bool   `mapstructure:"DeduplicationEnabled"`
 	MinFreeByte          string `mapstructure:"MinFreeByte"`
 	AutoAdjustWorkers    bool   `mapstructure:"AutoAdjustWorkers"`
-	NetworkEvents        bool   `mapstructure:"NetworkEvents"` // Added field
+	NetworkEvents        bool   `mapstructure:"NetworkEvents"`  // Added field
+	LogRateLimiter       bool   `mapstructure:"LogRateLimiter"` // Add this line
 }
 
 type TimeoutConfig struct {
@@ -491,7 +492,8 @@ func setDefaults() {
 	viper.SetDefault("server.FileTTL", "8760h")
 	viper.SetDefault("server.MinFreeBytes", "100MB")
 	viper.SetDefault("server.AutoAdjustWorkers", true)
-	viper.SetDefault("server.NetworkEvents", true) // Set default
+	viper.SetDefault("server.NetworkEvents", true)  // Set default
+	viper.SetDefault("server.LogRateLimiter", true) // Add this line
 	_, err := parseTTL("1D")
 	if err != nil {
 		log.Warnf("Failed to parse TTL: %v", err)
