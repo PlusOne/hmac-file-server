@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,23 +19,26 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-var (
-	prometheusURL string
-	logFilePath   string
-)
+var prometheusURL string
+var configFilePath string // Pfad der gefundenen Konfiguration
+var logFilePath string    // Pfad der Logdatei aus der Konfiguration
 
 func init() {
 	configPaths := []string{
 		"/etc/hmac-file-server/config.toml",
 		"../config.toml",
+		"./config.toml",
 	}
 
 	var config *toml.Tree
 	var err error
 
+	// Lade die config.toml aus den definierten Pfaden
 	for _, path := range configPaths {
 		config, err = toml.LoadFile(path)
 		if err == nil {
+			configFilePath = path
+			log.Printf("Using config file: %s", configFilePath)
 			break
 		}
 	}
@@ -44,28 +47,40 @@ func init() {
 		log.Fatalf("Error loading config file: %v", err)
 	}
 
-	portValue := config.Get("server.metrics_port")
+	// Metricsport auslesen
+	portValue := config.Get("server.metricsport")
 	if portValue == nil {
-		log.Println("Warning: 'server.metrics_port' is missing in the configuration, using default port 9090")
+		log.Println("Warning: 'server.metricsport' is missing in the configuration, using default port 9090")
 		portValue = int64(9090)
 	}
 
-	port, ok := portValue.(int64)
-	if !ok {
-		log.Fatalf("Error: 'server.metrics_port' is not of type int64, got %T", portValue)
+	var port int64
+	switch v := portValue.(type) {
+	case int64:
+		port = v
+	case string:
+		parsedPort, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			log.Fatalf("Error parsing 'server.metricsport' as int64: %v", err)
+		}
+		port = parsedPort
+	default:
+		log.Fatalf("Error: 'server.metricsport' is not of type int64 or string, got %T", v)
 	}
 
 	prometheusURL = fmt.Sprintf("http://localhost:%d/metrics", port)
 
-	logFileValue := config.Get("server.log_file")
+	// Log-Datei auslesen über server.logfile
+	logFileValue := config.Get("server.logfile")
 	if logFileValue == nil {
-		log.Println("Warning: 'server.log_file' is missing in the configuration, using default log file path '/var/log/hmac-file-server.log'")
-		logFileValue = "/var/log/hmac-file-server.log"
-	}
-
-	logFilePath, ok = logFileValue.(string)
-	if !ok {
-		log.Fatalf("Error: 'server.log_file' is not of type string, got %T", logFileValue)
+		log.Println("Warning: 'server.logfile' is missing, using default '/var/log/hmac-file-server.log'")
+		logFilePath = "/var/log/hmac-file-server.log"
+	} else {
+		lf, ok := logFileValue.(string)
+		if !ok {
+			log.Fatalf("Error: 'server.logfile' is not of type string, got %T", logFileValue)
+		}
+		logFilePath = lf
 	}
 }
 
@@ -419,58 +434,6 @@ func updateHmacTable(hmacTable *tview.Table, hmacInfo *ProcessInfo, metrics map[
 	}
 }
 
-func main() {
-	app := tview.NewApplication()
-
-	// Create pages
-	pages := tview.NewPages()
-
-	// System page
-	sysPage := createSystemPage()
-	pages.AddPage("system", sysPage, true, true)
-
-	// hmac-file-server page
-	hmacPage := createHmacPage()
-	pages.AddPage("hmac", hmacPage, true, false)
-
-	// Log file page
-	logFilePage := createLogFilePage(app)
-	pages.AddPage("logfile", logFilePage, true, false)
-
-	// Add key binding to switch views
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyRune {
-			switch event.Rune() {
-			case 'q', 'Q':
-				app.Stop()
-				return nil
-			case 's', 'S':
-				// Switch to system page
-				pages.SwitchToPage("system")
-				return nil
-			case 'h', 'H':
-				// Switch to hmac-file-server page
-				pages.SwitchToPage("hmac")
-				return nil
-			case 'l', 'L':
-				// Switch to log file page
-				pages.SwitchToPage("logfile")
-				return nil
-			}
-		}
-		return event
-	})
-
-	// Start the UI update loop in a separate goroutine
-	go updateUI(app, pages, sysPage, hmacPage)
-
-	// Set the root and run the application
-	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
-		log.Fatalf("Error running application: %v", err)
-	}
-}
-
-// Function to create the system page
 func createSystemPage() tview.Primitive {
 	// Create system data table
 	sysTable := tview.NewTable().SetBorders(false)
@@ -487,14 +450,13 @@ func createSystemPage() tview.Primitive {
 	// Create a flex layout to hold the tables
 	sysFlex := tview.NewFlex().
 		SetDirection(tview.FlexRow).
-		AddItem(sysTable, 7, 0, false).     // Fixed height for system data
-		AddItem(metricsTable, 0, 1, false). // Proportional height for metrics
-		AddItem(processTable, 0, 2, false)  // Proportional height for process list
+		AddItem(sysTable, 7, 0, false).
+		AddItem(metricsTable, 0, 1, false).
+		AddItem(processTable, 0, 2, false)
 
 	return sysFlex
 }
 
-// Function to create the hmac-file-server page
 func createHmacPage() tview.Primitive {
 	hmacTable := tview.NewTable().SetBorders(false)
 	hmacTable.SetTitle(" [::b]hmac-file-server Details ").SetBorder(true)
@@ -506,48 +468,88 @@ func createHmacPage() tview.Primitive {
 	return hmacFlex
 }
 
-func createLogFilePage(app *tview.Application) tview.Primitive {
-	logTextView := tview.NewTextView().
+func createLogsPage(logFilePath string) tview.Primitive {
+	logsTextView := tview.NewTextView().
 		SetDynamicColors(true).
-		SetScrollable(true).
-		SetWrap(false).
-		SetChangedFunc(func() {
-			app.Draw()
-		})
+		SetRegions(true).
+		SetWordWrap(true)
+	logsTextView.SetTitle(" [::b]Logs ").SetBorder(true)
 
+	// Read logs periodically
 	go func() {
 		for {
-			file, err := os.Open(logFilePath)
+			content, err := ioutil.ReadFile(logFilePath)
 			if err != nil {
-				log.Printf("Error opening log file: %v", err)
-				return
-			}
-
-			stat, err := file.Stat()
-			if err != nil {
-				log.Printf("Error stating log file: %v", err)
-				file.Close()
-				return
-			}
-
-			offset := stat.Size()
-			for {
-				buf := make([]byte, 1024)
-				n, err := file.ReadAt(buf, offset)
-				if err != nil && err != io.EOF {
-					log.Printf("Error reading log file: %v", err)
-					break
+				logsTextView.SetText(fmt.Sprintf("[red]Error reading log file: %v[white]", err))
+			} else {
+				// Process the log content to add colors
+				lines := strings.Split(string(content), "\n")
+				var coloredLines []string
+				for _, line := range lines {
+					if strings.Contains(line, "level=info") {
+						coloredLines = append(coloredLines, "[green]"+line+"[white]")
+					} else if strings.Contains(line, "level=warn") {
+						coloredLines = append(coloredLines, "[yellow]"+line+"[white]")
+					} else if strings.Contains(line, "level=error") {
+						coloredLines = append(coloredLines, "[red]"+line+"[white]")
+					} else {
+						// Default color
+						coloredLines = append(coloredLines, line)
+					}
 				}
-				if n == 0 {
-					time.Sleep(1 * time.Second)
-					continue
-				}
-				offset += int64(n)
-				logTextView.Write(buf[:n])
+				logsTextView.SetText(strings.Join(coloredLines, "\n"))
 			}
-			file.Close()
+			time.Sleep(2 * time.Second) // Refresh interval for logs
 		}
 	}()
 
-	return logTextView
+	return logsTextView
+}
+
+func main() {
+	app := tview.NewApplication()
+
+	// Create pages
+	pages := tview.NewPages()
+
+	// System page
+	sysPage := createSystemPage()
+	pages.AddPage("system", sysPage, true, true)
+
+	// hmac-file-server page
+	hmacPage := createHmacPage()
+	pages.AddPage("hmac", hmacPage, true, false)
+
+	// Logs page mit dem gelesenen logFilePath
+	logsPage := createLogsPage(logFilePath)
+	pages.AddPage("logs", logsPage, true, false)
+
+	// Add key binding to switch views
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyRune {
+			switch event.Rune() {
+			case 'q', 'Q':
+				app.Stop()
+				return nil
+			case 's', 'S':
+				// Switch to system page
+				pages.SwitchToPage("system")
+			case 'h', 'H':
+				// Switch to hmac-file-server page
+				pages.SwitchToPage("hmac")
+			case 'l', 'L':
+				// Switch to logs page
+				pages.SwitchToPage("logs")
+			}
+		}
+		return event
+	})
+
+	// Start the UI update loop in a separate goroutine
+	go updateUI(app, pages, sysPage, hmacPage)
+
+	// Set the root and run the application
+	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
+		log.Fatalf("Error running application: %v", err)
+	}
 }
