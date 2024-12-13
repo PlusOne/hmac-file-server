@@ -911,11 +911,12 @@ func uploadWorker(ctx context.Context, workerID int) {
 }
 
 func initializeUploadWorkerPool(ctx context.Context, w *WorkersConfig) {
-	for i := 0; i < w.NumWorkers; i++ {
-		go uploadWorker(ctx, i)
-		log.Infof("Upload worker %d started.", i)
-	}
-	log.Infof("Initialized %d upload workers", w.NumWorkers)
+    var workerIDs []int
+    for i := 0; i < w.NumWorkers; i++ {
+        go uploadWorker(ctx, i)
+        workerIDs = append(workerIDs, i)
+    }
+    log.Infof("Initialized %d upload workers: %v", w.NumWorkers, workerIDs)
 }
 
 func scanWorker(ctx context.Context, workerID int) {
