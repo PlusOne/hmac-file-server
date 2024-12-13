@@ -335,11 +335,11 @@ func main() {
 	}
 
 	server := &http.Server{
-		Addr:         ":" + conf.Server.ListenPort,
-		Handler:      router,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		IdleTimeout:  idleTimeout,
+		Addr:           ":" + conf.Server.ListenPort,
+		Handler:        router,
+		ReadTimeout:    readTimeout,
+		WriteTimeout:   writeTimeout,
+		IdleTimeout:    idleTimeout,
 		MaxHeaderBytes: 1 << 20, // 1 MB
 	}
 
@@ -564,25 +564,25 @@ func validateConfig(conf *Config) error {
 }
 
 func setupLogging() {
-    level, err := logrus.ParseLevel(conf.Server.LogLevel)
-    if err != nil {
-        log.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
-    }
-    log.SetLevel(level)
+	level, err := logrus.ParseLevel(conf.Server.LogLevel)
+	if err != nil {
+		log.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
+	}
+	log.SetLevel(level)
 
-    if conf.Server.LogFile != "" {
-        logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-        if err != nil {
-            log.Fatalf("Failed to open log file: %v", err)
-        }
-        log.SetOutput(io.MultiWriter(os.Stdout, logFile))
-    } else {
-        log.SetOutput(os.Stdout)
-    }
+	if conf.Server.LogFile != "" {
+		logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			log.Fatalf("Failed to open log file: %v", err)
+		}
+		log.SetOutput(io.MultiWriter(os.Stdout, logFile))
+	} else {
+		log.SetOutput(os.Stdout)
+	}
 
-    log.SetFormatter(&logrus.TextFormatter{
-        FullTimestamp: true,
-    })
+	log.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
 }
 
 func logSystemInfo() {
@@ -818,7 +818,7 @@ func processUpload(task UploadTask) error {
 
 	// Gajim and Dino do not require a callback or acknowledgement beyond HTTP success.
 	callbackURL := r.Header.Get("Callback-URL")
-	if (callbackURL != "") {
+	if callbackURL != "" {
 		log.Warnf("Callback-URL provided (%s) but not needed. Ignoring.", callbackURL)
 		// We do not block or wait, just ignore.
 	}
@@ -888,7 +888,6 @@ func shouldScanFile(filename string) bool {
 }
 
 func uploadWorker(ctx context.Context, workerID int) {
-	log.Infof("Upload worker %d started.", workerID)
 	defer log.Infof("Upload worker %d stopped.", workerID)
 	for {
 		select {
@@ -898,7 +897,6 @@ func uploadWorker(ctx context.Context, workerID int) {
 			if !ok {
 				return
 			}
-			log.Infof("Worker %d processing file: %s", workerID, task.AbsFilename)
 			err := processUpload(task)
 			if err != nil {
 				log.Errorf("Worker %d failed to process file %s: %v", workerID, task.AbsFilename, err)
@@ -911,27 +909,24 @@ func uploadWorker(ctx context.Context, workerID int) {
 }
 
 func initializeUploadWorkerPool(ctx context.Context, w *WorkersConfig) {
-    var workerIDs []int
-    for i := 0; i < w.NumWorkers; i++ {
-        go uploadWorker(ctx, i)
-        workerIDs = append(workerIDs, i)
-    }
-    log.Infof("Initialized %d upload workers: %v", w.NumWorkers, workerIDs)
+	var workerIDs []int
+	for i := 0; i < w.NumWorkers; i++ {
+		go uploadWorker(ctx, i)
+		workerIDs = append(workerIDs, i)
+	}
+	log.Infof("Initialized %d upload workers: %v", w.NumWorkers, workerIDs)
 }
 
 func scanWorker(ctx context.Context, workerID int) {
-	log.WithField("worker_id", workerID).Info("Scan worker started")
+	defer log.WithField("worker_id", workerID).Info("Scan worker stopping")
 	for {
 		select {
 		case <-ctx.Done():
-			log.WithField("worker_id", workerID).Info("Scan worker stopping")
 			return
 		case task, ok := <-scanQueue:
 			if !ok {
-				log.WithField("worker_id", workerID).Info("Scan queue closed")
 				return
 			}
-			log.WithFields(logrus.Fields{"worker_id": workerID, "file": task.AbsFilename}).Info("Processing scan task")
 			err := scanFileWithClamAV(task.AbsFilename)
 			if err != nil {
 				log.WithFields(logrus.Fields{"worker_id": workerID, "file": task.AbsFilename, "error": err}).Error("Failed to scan file")
@@ -945,12 +940,12 @@ func scanWorker(ctx context.Context, workerID int) {
 }
 
 func initializeScanWorkerPool(ctx context.Context) {
-    var workerIDs []int
-    for i := 0; i < conf.ClamAV.NumScanWorkers; i++ {
-        go scanWorker(ctx, i)
-        workerIDs = append(workerIDs, i)
-    }
-    log.Infof("Initialized %d scan workers: %v", conf.ClamAV.NumScanWorkers, workerIDs)
+	var workerIDs []int
+	for i := 0; i < conf.ClamAV.NumScanWorkers; i++ {
+		go scanWorker(ctx, i)
+		workerIDs = append(workerIDs, i)
+	}
+	log.Infof("Initialized %d scan workers: %v", conf.ClamAV.NumScanWorkers, workerIDs)
 }
 
 func setupRouter() http.Handler {
@@ -1162,16 +1157,21 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 
 	// Asynchronous processing in the background
 	go func() {
+		var logMessages []string
+
 		// ClamAV scanning
 		if conf.ClamAV.ClamAVEnabled && shouldScanFile(absFilename) {
 			err := scanFileWithClamAV(absFilename)
 			if err != nil {
-				log.Errorf("ClamAV failed for %s: %v", absFilename, err)
-				os.Remove(absFilename)
-				uploadErrorsTotal.Inc()
+				logMessages = append(logMessages, fmt.Sprintf("ClamAV failed for %s: %v", absFilename, err))
+				for _, msg := range logMessages {
+					log.Info(msg)
+				}
 				return
+			} else {
+				logMessages = append(logMessages, fmt.Sprintf("ClamAV scan passed for file: %s", absFilename))
 			}
-		 }
+		}
 
 		// Deduplication
 		if conf.Redis.RedisEnabled && conf.Server.DeduplicationEnabled {
@@ -1181,8 +1181,10 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 				os.Remove(absFilename)
 				uploadErrorsTotal.Inc()
 				return
+			} else {
+				logMessages = append(logMessages, fmt.Sprintf("Deduplication handled successfully for file: %s", absFilename))
 			}
-		 }
+		}
 
 		// Versioning
 		if conf.Versioning.EnableVersioning {
@@ -1193,12 +1195,19 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 					os.Remove(absFilename)
 					uploadErrorsTotal.Inc()
 					return
+				} else {
+					logMessages = append(logMessages, fmt.Sprintf("File versioned successfully: %s", absFilename))
 				}
 			}
-		 }
+		}
 
-		log.Infof("Processing completed successfully for %s", absFilename)
+		logMessages = append(logMessages, fmt.Sprintf("Processing completed successfully for %s", absFilename))
 		uploadsTotal.Inc()
+
+		// Log all messages at once
+		for _, msg := range logMessages {
+			log.Info(msg)
+		}
 	}()
 }
 
@@ -1532,7 +1541,7 @@ func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
 }
 
 func initRedis() {
-	if (!conf.Redis.RedisEnabled) {
+	if !conf.Redis.RedisEnabled {
 		log.Info("Redis is disabled in configuration.")
 		return
 	}
