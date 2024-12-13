@@ -121,3 +121,45 @@ Charset = "utf-8"
 ---
 
 > For testing and feedback, ensure all configurations are adapted to your environment and note that this is a development/pre-release version.
+
+### Release Notes (Enhanced Multi-Page Monitoring Dashboard)
+
+#### New Features:
+- **Multi-Page Monitoring Dashboard**:
+  - Introduced a **dual-page** interface accessible via keybindings:
+    - **System Page**: Provides real-time system metrics, Prometheus data, and top processes.
+    - **HMAC Page**: Focused on `hmac-file-server` metrics, with relevant Prometheus data.
+    - **Log File Page**: Displays the log file content dynamically.
+
+- **Keybindings for Seamless Navigation**:
+  - **`s` or `S`**: Navigate to the **System Page**.
+  - **`h` or `H`**: Switch to the **HMAC Page**.
+  - **`l` or `L`**: Switch to the **Log File Page**.
+  - **`q` or `Q`**: Exit the application.
+
+#### Enhancements:
+- **Dynamic Real-Time Updates**:
+  - Refreshes every 2 seconds, ensuring the latest metrics are displayed.
+  
+- **Optimized Process Display**:
+  - Top processes sorted by **CPU usage**, limited to 20 entries for improved clarity.
+
+- **Color-Coded Metric Thresholds**:
+  - Intuitive visuals for CPU and memory utilization.
+
+- **Configurable Prometheus URL and Log File Path**:
+  - Dynamically determined from a configuration file:
+    - Primary: `/etc/hmac-file-server/config.toml`
+    - Secondary: `../config.toml`
+  - Ensures flexibility and adaptability to varying setups.
+
+- **Fallback Logic for Configuration**:
+  - Uses default values if `server.metrics_port` or `server.log_file` is missing in the configuration.
+  - Logs a fatal error if no valid configuration file is found.
+
+#### Known Limitations:
+- **Dependency on `hmac-file-server`**:
+  - Displays a message if the `hmac-file-server` process is not detected.
+
+- **Monitor Bundled in Deb Package**:
+  - The monitor is bundled in the deb package with the release stable 2.0.
