@@ -945,10 +945,12 @@ func scanWorker(ctx context.Context, workerID int) {
 }
 
 func initializeScanWorkerPool(ctx context.Context) {
-	for i := 0; i < conf.ClamAV.NumScanWorkers; i++ {
-		go scanWorker(ctx, i)
-	}
-	log.Infof("Initialized %d scan workers", conf.ClamAV.NumScanWorkers)
+    var workerIDs []int
+    for i := 0; i < conf.ClamAV.NumScanWorkers; i++ {
+        go scanWorker(ctx, i)
+        workerIDs = append(workerIDs, i)
+    }
+    log.Infof("Initialized %d scan workers: %v", conf.ClamAV.NumScanWorkers, workerIDs)
 }
 
 func setupRouter() http.Handler {
