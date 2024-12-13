@@ -237,6 +237,24 @@ const maxConcurrentOperations = 10
 
 var semaphore = make(chan struct{}, maxConcurrentOperations)
 
+var logMessages []string
+var logMu sync.Mutex
+
+func cumulateLogMessage(level logrus.Level, msg string) {
+	logMu.Lock()
+	defer logMu.Unlock()
+	logMessages = append(logMessages, fmt.Sprintf("time=%q level=%s msg=%q", time.Now().Format(time.RFC3339), level, msg))
+}
+
+func flushLogMessages() {
+	logMu.Lock()
+	defer logMu.Unlock()
+	for _, msg := range logMessages {
+		log.Info(msg)
+	}
+	logMessages = []string{}
+}
+
 func main() {
 	setDefaults()
 
@@ -940,12 +958,12 @@ func scanWorker(ctx context.Context, workerID int) {
 }
 
 func initializeScanWorkerPool(ctx context.Context) {
-    var workerIDs []int
-    for i := 0; i < conf.ClamAV.NumScanWorkers; i++ {
-        go scanWorker(ctx, i)
-        workerIDs = append(workerIDs, i)
-    }
-    log.Infof("Initialized %d scan workers: %v", conf.ClamAV.NumScanWorkers, workerIDs)
+	var workerIDs []int
+	for i := 0; i < conf.ClamAV.NumScanWorkers; i++ {
+		go scanWorker(ctx, i)
+		workerIDs = append(workerIDs, i)
+	}
+	log.Infof("Initialized %d scan workers: %v", conf.ClamAV.NumScanWorkers, workerIDs)
 }
 
 func setupRouter() http.Handler {
@@ -1036,8 +1054,9 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	fileStorePath := strings.TrimPrefix(p, "/")
 	if fileStorePath == "" || fileStorePath == "/" {
-		log.Warn("Access to root directory is forbidden")
+		cumulateLogMessage(logrus.WarnLevel, "Access to root directory is forbidden")
 		http.Error(w, "Forbidden", http.StatusForbidden)
+		flushLogMessages()
 		return
 	} else if fileStorePath[0] == '/' {
 		fileStorePath = fileStorePath[1:]
