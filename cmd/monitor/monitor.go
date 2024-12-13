@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -17,7 +19,10 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-var prometheusURL string
+var (
+	prometheusURL string
+	logFilePath   string
+)
 
 func init() {
 	configPaths := []string{
@@ -41,7 +46,8 @@ func init() {
 
 	portValue := config.Get("server.metrics_port")
 	if portValue == nil {
-		log.Fatalf("Error: 'server.metrics_port' is missing in the configuration")
+		log.Println("Warning: 'server.metrics_port' is missing in the configuration, using default port 9090")
+		portValue = int64(9090)
 	}
 
 	port, ok := portValue.(int64)
@@ -50,6 +56,17 @@ func init() {
 	}
 
 	prometheusURL = fmt.Sprintf("http://localhost:%d/metrics", port)
+
+	logFileValue := config.Get("server.log_file")
+	if logFileValue == nil {
+		log.Println("Warning: 'server.log_file' is missing in the configuration, using default log file path '/var/log/hmac-file-server.log'")
+		logFileValue = "/var/log/hmac-file-server.log"
+	}
+
+	logFilePath, ok = logFileValue.(string)
+	if !ok {
+		log.Fatalf("Error: 'server.log_file' is not of type string, got %T", logFileValue)
+	}
 }
 
 // Thresholds for color coding
@@ -416,6 +433,10 @@ func main() {
 	hmacPage := createHmacPage()
 	pages.AddPage("hmac", hmacPage, true, false)
 
+	// Log file page
+	logFilePage := createLogFilePage(app)
+	pages.AddPage("logfile", logFilePage, true, false)
+
 	// Add key binding to switch views
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyRune {
@@ -430,6 +451,10 @@ func main() {
 			case 'h', 'H':
 				// Switch to hmac-file-server page
 				pages.SwitchToPage("hmac")
+				return nil
+			case 'l', 'L':
+				// Switch to log file page
+				pages.SwitchToPage("logfile")
 				return nil
 			}
 		}
@@ -479,4 +504,50 @@ func createHmacPage() tview.Primitive {
 		AddItem(hmacTable, 0, 1, false)
 
 	return hmacFlex
+}
+
+func createLogFilePage(app *tview.Application) tview.Primitive {
+	logTextView := tview.NewTextView().
+		SetDynamicColors(true).
+		SetScrollable(true).
+		SetWrap(false).
+		SetChangedFunc(func() {
+			app.Draw()
+		})
+
+	go func() {
+		for {
+			file, err := os.Open(logFilePath)
+			if err != nil {
+				log.Printf("Error opening log file: %v", err)
+				return
+			}
+
+			stat, err := file.Stat()
+			if err != nil {
+				log.Printf("Error stating log file: %v", err)
+				file.Close()
+				return
+			}
+
+			offset := stat.Size()
+			for {
+				buf := make([]byte, 1024)
+				n, err := file.ReadAt(buf, offset)
+				if err != nil && err != io.EOF {
+					log.Printf("Error reading log file: %v", err)
+					break
+				}
+				if n == 0 {
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				offset += int64(n)
+				logTextView.Write(buf[:n])
+			}
+			file.Close()
+		}
+	}()
+
+	return logTextView
 }
