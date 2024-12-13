@@ -340,6 +340,7 @@ func main() {
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		IdleTimeout:  idleTimeout,
+		MaxHeaderBytes: 1 << 20, // 1 MB
 	}
 
 	if conf.Server.MetricsEnabled {
@@ -563,25 +564,25 @@ func validateConfig(conf *Config) error {
 }
 
 func setupLogging() {
-	level, err := logrus.ParseLevel(conf.Server.LogLevel)
-	if err != nil {
-		log.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
-	}
-	log.SetLevel(level)
+    level, err := logrus.ParseLevel(conf.Server.LogLevel)
+    if err != nil {
+        log.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
+    }
+    log.SetLevel(level)
 
-	if conf.Server.LogFile != "" {
-		logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			log.Fatalf("Failed to open log file: %v", err)
-		}
-		log.SetOutput(io.MultiWriter(os.Stdout, logFile))
-	} else {
-		log.SetOutput(os.Stdout)
-	}
+    if conf.Server.LogFile != "" {
+        logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+        if err != nil {
+            log.Fatalf("Failed to open log file: %v", err)
+        }
+        log.SetOutput(io.MultiWriter(os.Stdout, logFile))
+    } else {
+        log.SetOutput(os.Stdout)
+    }
 
-	log.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
+    log.SetFormatter(&logrus.TextFormatter{
+        FullTimestamp: true,
+    })
 }
 
 func logSystemInfo() {
@@ -817,7 +818,7 @@ func processUpload(task UploadTask) error {
 
 	// Gajim and Dino do not require a callback or acknowledgement beyond HTTP success.
 	callbackURL := r.Header.Get("Callback-URL")
-	if callbackURL != "" {
+	if (callbackURL != "") {
 		log.Warnf("Callback-URL provided (%s) but not needed. Ignoring.", callbackURL)
 		// We do not block or wait, just ignore.
 	}
@@ -864,8 +865,8 @@ func createFile(tempFilename string, r *http.Request) error {
 
 	bufWriter := bufio.NewWriter(file)
 	defer bufWriter.Flush()
+
 	bufPtr := bufferPool.Get().(*[]byte) // Correct type assertion
-	defer bufferPool.Put(bufPtr)
 	defer bufferPool.Put(bufPtr)
 
 	_, err = io.CopyBuffer(bufWriter, r.Body, *bufPtr)
@@ -1167,7 +1168,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 				uploadErrorsTotal.Inc()
 				return
 			}
-		}
+		 }
 
 		// Deduplication
 		if conf.Redis.RedisEnabled && conf.Server.DeduplicationEnabled {
@@ -1178,7 +1179,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 				uploadErrorsTotal.Inc()
 				return
 			}
-		}
+		 }
 
 		// Versioning
 		if conf.Versioning.EnableVersioning {
@@ -1191,7 +1192,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 					return
 				}
 			}
-		}
+		 }
 
 		log.Infof("Processing completed successfully for %s", absFilename)
 		uploadsTotal.Inc()
@@ -1528,7 +1529,7 @@ func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
 }
 
 func initRedis() {
-	if !conf.Redis.RedisEnabled {
+	if (!conf.Redis.RedisEnabled) {
 		log.Info("Redis is disabled in configuration.")
 		return
 	}
