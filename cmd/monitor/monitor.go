@@ -1,10 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -469,41 +470,66 @@ func createHmacPage() tview.Primitive {
 }
 
 func createLogsPage(logFilePath string) tview.Primitive {
-	logsTextView := tview.NewTextView().
-		SetDynamicColors(true).
-		SetRegions(true).
-		SetWordWrap(true)
-	logsTextView.SetTitle(" [::b]Logs ").SetBorder(true)
+    logsTextView := tview.NewTextView().
+        SetDynamicColors(true).
+        SetRegions(true).
+        SetWordWrap(true)
+    logsTextView.SetTitle(" [::b]Logs ").SetBorder(true)
 
-	// Read logs periodically
-	go func() {
-		for {
-			content, err := ioutil.ReadFile(logFilePath)
-			if err != nil {
-				logsTextView.SetText(fmt.Sprintf("[red]Error reading log file: %v[white]", err))
-			} else {
-				// Process the log content to add colors
-				lines := strings.Split(string(content), "\n")
-				var coloredLines []string
-				for _, line := range lines {
-					if strings.Contains(line, "level=info") {
-						coloredLines = append(coloredLines, "[green]"+line+"[white]")
-					} else if strings.Contains(line, "level=warn") {
-						coloredLines = append(coloredLines, "[yellow]"+line+"[white]")
-					} else if strings.Contains(line, "level=error") {
-						coloredLines = append(coloredLines, "[red]"+line+"[white]")
-					} else {
-						// Default color
-						coloredLines = append(coloredLines, line)
-					}
-				}
-				logsTextView.SetText(strings.Join(coloredLines, "\n"))
-			}
-			time.Sleep(2 * time.Second) // Refresh interval for logs
-		}
-	}()
+    const numLines = 100 // Number of lines to read from the end of the log file
 
-	return logsTextView
+    // Read logs periodically
+    go func() {
+        for {
+            content, err := readLastNLines(logFilePath, numLines)
+            if err != nil {
+                logsTextView.SetText(fmt.Sprintf("[red]Error reading log file: %v[white]", err))
+            } else {
+                // Process the log content to add colors
+                lines := strings.Split(content, "\n")
+                var coloredLines []string
+                for _, line := range lines {
+                    if strings.Contains(line, "level=info") {
+                        coloredLines = append(coloredLines, "[green]"+line+"[white]")
+                    } else if strings.Contains(line, "level=warn") {
+                        coloredLines = append(coloredLines, "[yellow]"+line+"[white]")
+                    } else if strings.Contains(line, "level=error") {
+                        coloredLines = append(coloredLines, "[red]"+line+"[white]")
+                    } else {
+                        // Default color
+                        coloredLines = append(coloredLines, line)
+                    }
+                }
+                logsTextView.SetText(strings.Join(coloredLines, "\n"))
+            }
+            time.Sleep(2 * time.Second) // Refresh interval for logs
+        }
+    }()
+
+    return logsTextView
+}
+
+func readLastNLines(filePath string, n int) (string, error) {
+    file, err := os.Open(filePath)
+    if err != nil {
+        return "", err
+    }
+    defer file.Close()
+
+    var lines []string
+    scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        lines = append(lines, scanner.Text())
+        if len(lines) > n {
+            lines = lines[1:]
+        }
+    }
+
+    if err := scanner.Err(); err != nil {
+        return "", err
+    }
+
+    return strings.Join(lines, "\n"), nil
 }
 
 func main() {
