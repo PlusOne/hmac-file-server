@@ -37,6 +37,8 @@ import (
 	"github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"github.com/yourusername/hmac-file-server/internal/config"
+	"github.com/yourusername/hmac-file-server/internal/storage"
 )
 
 // parseSize converts a human-readable size string to bytes
@@ -263,11 +265,16 @@ func main() {
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
 	flag.Parse()
 
-	err := readConfig(configFile, &conf)
+	conf, err := config.ReadConfig(configFile)
 	if err != nil {
 		log.Fatalf("Error reading config: %v", err)
 	}
 	log.Info("Configuration loaded successfully.")
+
+	storage, err := InitializeStorage(*conf)
+	if err != nil {
+		log.Fatalf("Error initializing storage: %v", err)
+	}
 
 	initializeWorkerSettings(&conf.Server, &conf.Workers, &conf.ClamAV)
 
@@ -2055,4 +2062,20 @@ func handleCorruptedISOFile(isoPath string, files []string, size string, charset
 		return fmt.Errorf("failed to recreate ISO: %w", err)
 	}
 	return nil
+}
+
+// InitializeStorage initializes the storage based on the configuration
+func InitializeStorage(conf config.Config) (storage.StorageInterface, error) {
+	switch conf.Server.StorageType {
+	case "local":
+		return storage.NewLocalStorage(conf.Server.StoragePath), nil
+	case "iso":
+		return storage.NewISOStorage(conf.ISO.MountPoint, conf.ISO.Size, conf.ISO.Charset), nil
+	case "ftp":
+		return storage.NewFTPStorage(conf.FTP.Server, conf.FTP.Username, conf.FTP.Password, conf.FTP.BasePath)
+	case "s3":
+		return storage.NewS3Storage(conf.S3.Endpoint, conf.S3.AccessKey, conf.S3.SecretKey, conf.S3.Bucket, conf.S3.Region)
+	default:
+		return nil, fmt.Errorf("unsupported storage type: %s", conf.Server.StorageType)
+	}
 }
