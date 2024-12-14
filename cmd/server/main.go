@@ -78,10 +78,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := server.Start(ctx, serverInstance, log); err != nil {
-			log.Errorf("Server encountered an error: %v", err)
-			cancel() // Cancel context on server error
-		}
+		server.Start(ctx, serverInstance, log)
 	}()
 
 	// Listen for OS interrupt signals
