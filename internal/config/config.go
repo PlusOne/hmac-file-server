@@ -17,7 +17,6 @@ type ServerConfig struct {
 	FileTTL              string `mapstructure:"FileTTL"`
 	MinFreeBytes         string `mapstructure:"MinFreeBytes"`
 	DeduplicationEnabled bool   `mapstructure:"DeduplicationEnabled"`
-	MinFreeByte          string `mapstructure:"MinFreeByte"`
 	AutoAdjustWorkers    bool   `mapstructure:"AutoAdjustWorkers"`
 	NetworkEvents        bool   `mapstructure:"NetworkEvents"`
 	LogRateLimiter       bool   `mapstructure:"LogRateLimiter"`
@@ -89,22 +88,44 @@ type Config struct {
 	ISO        ISOConfig        `mapstructure:"iso"`
 }
 
-func ReadConfig(configFilename string, conf *Config) error {
+func readConfig(configFilename string, conf *Config) error {
 	viper.SetConfigFile(configFilename)
 	viper.SetConfigType("toml")
 
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("HMAC")
 
+	// Load configuration file
 	if err := viper.ReadInConfig(); err != nil {
 		return fmt.Errorf("error reading config file: %w", err)
 	}
 
+	// Unmarshal configuration into the struct
 	if err := viper.Unmarshal(conf); err != nil {
 		return fmt.Errorf("unable to decode into struct: %w", err)
 	}
 
-	conf.Server.DeduplicationEnabled = viper.GetBool("deduplication.Enabled")
+	// Additional validation
+	if err := validateConfig(conf); err != nil {
+		return fmt.Errorf("configuration validation failed: %w", err)
+	}
 
+	return nil
+}
+
+// validateConfig performs basic checks on the configuration
+func validateConfig(conf *Config) error {
+	if conf.Server.ListenPort == "" {
+		return fmt.Errorf("server.ListenPort must be set")
+	}
+	if conf.Security.Secret == "" {
+		return fmt.Errorf("security.Secret must be set")
+	}
+	if conf.Server.StoragePath == "" {
+		return fmt.Errorf("server.StoragePath must be set")
+	}
+	if conf.Timeouts.ReadTimeout == "" || conf.Timeouts.WriteTimeout == "" || conf.Timeouts.IdleTimeout == "" {
+		return fmt.Errorf("timeouts must be fully configured (ReadTimeout, WriteTimeout, IdleTimeout)")
+	}
 	return nil
 }
