@@ -5,11 +5,10 @@ package downloads
 import (
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
+	"path/filepath"
 
-	"time"
 
 	"github.com/PlusOne/hmac-file-server/internal/config"
 	"github.com/PlusOne/hmac-file-server/internal/logging"
@@ -41,7 +40,6 @@ func HandleDownload(w http.ResponseWriter, r *http.Request, absFilename string) 
 		return
 	} else {
 		// Measure download duration
-		startTime := time.Now()
 		logging.Log.Infof("Initiating download for file: %s", absFilename)
 		http.ServeFile(w, r, absFilename)
 		// Update metrics here if notwendig
