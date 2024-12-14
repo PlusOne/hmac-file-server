@@ -9,9 +9,17 @@ import (
 	"os"
 	"time"
 
+	"github.com/dutchcoders/go-clamd" // ClamAV integration
+	"github.com/go-redis/redis/v8"    // Redis integration
 	"github.com/patrickmn/go-cache"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/PlusOne/hmac-file-server/internal/config"
 	"github.com/PlusOne/hmac-file-server/internal/iso"
