@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"github.com/spf13/viper"
+	"log"
 	"strconv"
 	"strings"
 )
@@ -350,4 +351,25 @@ func validateConfig(conf *Config) error {
 	}
 
 	return nil
+}
+
+// LoadConfig loads the configuration from file and environment
+func LoadConfig() (*Config, error) {
+    var conf Config
+    viper.SetConfigFile("./config.toml")
+    viper.SetConfigType("toml")
+    viper.AutomaticEnv()
+    viper.SetEnvPrefix("HMAC")
+
+    if err := viper.ReadInConfig(); err != nil {
+        log.Printf("Error reading config: %v", err)
+        return nil, err
+    }
+
+    if err := viper.Unmarshal(&conf); err != nil {
+        log.Printf("Error unmarshaling config: %v", err)
+        return nil, err
+    }
+
+    return &conf, nil
 }

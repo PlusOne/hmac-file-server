@@ -8,11 +8,11 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/renz/source/hmac-file-server/internal/config"
+	"github.com/renz/source/hmac-file-server/internal/metrics"
 	"github.com/renz/source/hmac-file-server/internal/server"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
@@ -26,77 +26,60 @@ var (
 	conf config.Config
 )
 
+func parseDuration(durationStr string, logger *logrus.Logger) time.Duration {
+	duration, err := time.ParseDuration(durationStr)
+	if err != nil {
+		logger.Fatalf("Failed to parse duration: %v", err)
+	}
+	return duration
+}
+
 func main() {
+	// Initialize logger
+	logger := logrus.New()
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+	logger.SetOutput(os.Stdout)
+
+	// Flags for configuration file
 	var configFile string
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
 	flag.Parse()
 
-	log.Infof("Using configuration file: %s", configFile)
-
-	// Set defaults and load config
-	setDefaults()
-	if err := loadConfig(configFile); err != nil {
-		log.Fatalf("Error reading config: %v", err)
-	}
-
-	// Configure logging
-	configureLogging()
-
-	// Set log level
-	level, err := logrus.ParseLevel(conf.Server.LogLevel)
+	// Load configuration
+	conf, err := config.LoadConfig(configFile)
 	if err != nil {
-		log.Fatalf("Invalid log level: %v", err)
-	}
-	log.SetLevel(level)
-
-	// Log system info
-	logSystemInfo()
-
-	// Set up HTTP server
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", helloHandler)
-	serverInstance := &http.Server{
-		Addr:    ":" + conf.Server.ListenPort,
-		Handler: mux,
+		logger.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Create a WaitGroup to wait for all goroutines to finish
-	var wg sync.WaitGroup
+	// Initialize metrics
+	metrics.InitMetrics(conf.Server.MetricsEnabled, logger)
 
-	// Create a context that is cancelled on SIGINT or SIGTERM
+	// Create HTTP server
+	srv := &http.Server{
+		Addr:         ":" + conf.Server.ListenPort,
+		Handler:      server.SetupRouter(),
+		ReadTimeout:  parseDuration(conf.Timeouts.ReadTimeout, logger),
+		WriteTimeout: parseDuration(conf.Timeouts.WriteTimeout, logger),
+		IdleTimeout:  parseDuration(conf.Timeouts.IdleTimeout, logger),
+	}
+
+	// Create context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start worker goroutines
-	wg.Add(1)
+	// Handle OS signals for graceful shutdown
 	go func() {
-		defer wg.Done()
-		worker(ctx)
-	}()
-
-	// Start server
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		server.Start(ctx, serverInstance, log)
-	}()
-
-	// Listen for OS interrupt signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// Block until a signal is received or context is cancelled
-	select {
-	case sig := <-sigChan:
-		log.Infof("Received signal: %s. Initiating shutdown...", sig)
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		sig := <-quit
+		logger.Infof("Received signal %s. Initiating shutdown...", sig)
 		cancel()
-	case <-ctx.Done():
-		// Context was cancelled elsewhere
-	}
+	}()
 
-	// Wait for all goroutines to finish
-	wg.Wait()
-	log.Info("Application shutdown complete.")
+	// Start the server
+	server.Start(ctx, srv, logger)
 }
 
 func configureLogging() {
@@ -121,7 +104,7 @@ func loadConfig(configFile string) error {
 	return config.ReadConfig(configFile, &conf)
 }
 
-func helloHandler(w http.ResponseWriter, r *http.Request) {
+func helloHandler(w http.ResponseWriter) {
 	w.Write([]byte("Hello, World!"))
 }
 

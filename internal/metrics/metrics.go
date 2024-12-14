@@ -1,11 +1,14 @@
 package metrics
 
 import (
+	"net/http"
 	"runtime"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -24,7 +27,7 @@ var (
 	DownloadSizeBytes   prometheus.Histogram
 )
 
-func InitMetrics(metricsEnabled bool) {
+func InitMetrics(metricsEnabled bool, log *logrus.Logger) {
 	UploadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{Name: "file_server_upload_duration_seconds"})
 	UploadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{Name: "file_server_upload_errors_total"})
 	UploadsTotal = prometheus.NewCounter(prometheus.CounterOpts{Name: "file_server_uploads_total"})
@@ -39,11 +42,25 @@ func InitMetrics(metricsEnabled bool) {
 	UploadSizeBytes = prometheus.NewHistogram(prometheus.HistogramOpts{Name: "file_server_upload_size_bytes"})
 	DownloadSizeBytes = prometheus.NewHistogram(prometheus.HistogramOpts{Name: "file_server_download_size_bytes"})
 
+	if !metricsEnabled {
+		log.Info("Prometheus metrics are disabled.")
+		return
+	}
+
 	if metricsEnabled {
 		prometheus.MustRegister(UploadDuration, UploadErrorsTotal, UploadsTotal)
 		prometheus.MustRegister(DownloadDuration, DownloadsTotal, DownloadErrorsTotal)
 		prometheus.MustRegister(MemoryUsage, CPUUsage, ActiveConnections, RequestsTotal, Goroutines, UploadSizeBytes, DownloadSizeBytes)
 	}
+
+	// Start Prometheus metrics server
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Infof("Prometheus metrics server is starting on %s", ":2112")
+		if err := http.ListenAndServe(":2112", nil); err != nil {
+			log.Fatalf("Failed to start Prometheus metrics server: %v", err)
+		}
+	}()
 }
 
 // Example system metric updates
