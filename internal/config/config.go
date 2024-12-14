@@ -20,6 +20,7 @@ type Config struct {
 		AutoAdjustWorkers    bool   `mapstructure:"AutoAdjustWorkers"`
 		NetworkEvents        bool   `mapstructure:"NetworkEvents"`
 		LogRateLimiter       bool   `mapstructure:"LogRateLimiter"`
+		StorageType          string `mapstructure:"StorageType"`
 	} `mapstructure:"server"`
 	Timeouts struct {
 		ReadTimeout  string `mapstructure:"ReadTimeout"`
@@ -65,6 +66,19 @@ type Config struct {
 		MountPoint string `mapstructure:"mountpoint"`
 		Charset    string `mapstructure:"charset"`
 	} `mapstructure:"iso"`
+	FTP struct {
+		Server   string `mapstructure:"server"`
+		Username string `mapstructure:"username"`
+		Password string `mapstructure:"password"`
+		BasePath string `mapstructure:"basePath"`
+	} `mapstructure:"ftp"`
+	S3 struct {
+		Endpoint  string `mapstructure:"endpoint"`
+		AccessKey string `mapstructure:"accessKey"`
+		SecretKey string `mapstructure:"secretKey"`
+		Bucket    string `mapstructure:"bucket"`
+		Region    string `mapstructure:"region"`
+	} `mapstructure:"s3"`
 }
 
 func ReadConfig(configFile string) (*Config, error) {
