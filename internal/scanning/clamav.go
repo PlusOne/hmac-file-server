@@ -4,9 +4,9 @@ package scanning
 
 import (
 	"fmt"
+	"context"
 
-	"your-project/internal/config"
-	"your-project/internal/logging"
+	"github.com/PlusOne/hmac-file-server/internal/logging"
 
 	"github.com/dutchcoders/go-clamd"
 	"github.com/sirupsen/logrus"
@@ -68,4 +68,9 @@ func ScanFileWithClamAV(filePath string) error {
 		}).Warn("ClamAV scan returned unexpected status")
 		return fmt.Errorf("ClamAV scan returned unexpected status: %s", scanResult.Description)
 	}
+}
+
+// InitializeScanWorkerPool initializes the worker pool for scanning.
+func InitializeScanWorkerPool(ctx context.Context) {
+	// Implementation of the worker pool initialization
 }

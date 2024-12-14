@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"strings"
 
-	"your-project/internal/config"
-	"your-project/internal/logging"
-	"your-project/internal/uploads"
-	"your-project/internal/downloads"
+	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/PlusOne/hmac-file-server/internal/config"
+	"github.com/PlusOne/hmac-file-server/internal/logging"
+	"github.com/PlusOne/hmac-file-server/internal/storage"
+	"github.com/PlusOne/hmac-file-server/internal/uploads"
+	"github.com/sirupsen/logrus"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -29,6 +32,21 @@ func SetupRouter() http.Handler {
 	handler = corsMiddleware(handler)
 	return handler
 }
+
+// Define Prometheus counter
+var requestsTotal = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "http_requests_total",
+		Help: "Total number of HTTP requests",
+	},
+	[]string{"method", "path"},
+)
+
+func init() {
+	prometheus.MustRegister(requestsTotal)
+}
+
+// Middleware für Logging
 
 // Middleware für Logging
 func loggingMiddleware(next http.Handler) http.Handler {

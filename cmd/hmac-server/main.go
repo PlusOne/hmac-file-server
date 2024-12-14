@@ -71,9 +71,8 @@ func main() {
 	metrics.InitMetrics()
 	logging.Log.Info("Prometheus metrics initialized.")
 
-	// Initialize upload and scan queues
+	// Initialize upload queue
 	uploads.InitUploadQueue()
-	scanning.InitScanQueue()
 
 	// Context for goroutines
 	ctx, cancel := context.WithCancel(context.Background())

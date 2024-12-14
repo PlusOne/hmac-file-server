@@ -5,14 +5,17 @@ package storage
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
-	"your-project/internal/config"
-	"your-project/internal/logging"
+	"github.com/PlusOne/hmac-file-server/internal/config"
+	"github.com/PlusOne/hmac-file-server/internal/logging"
 
 	"github.com/patrickmn/go-cache"
 )

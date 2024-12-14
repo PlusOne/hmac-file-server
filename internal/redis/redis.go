@@ -4,11 +4,11 @@ package redis
 
 import (
 	"context"
-	"fmt"
 	"time"
+	"sync"
 
-	"your-project/internal/config"
-	"your-project/internal/logging"
+	"github.com/PlusOne/hmac-file-server/internal/config"
+	"github.com/PlusOne/hmac-file-server/internal/logging"
 
 	"github.com/go-redis/redis/v8"
 )

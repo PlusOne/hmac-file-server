@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"time"
 
-	"your-project/internal/config"
+	"github.com/PlusOne/hmac-file-server/internal/config"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"

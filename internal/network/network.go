@@ -5,11 +5,9 @@ package network
 import (
 	"context"
 	"net"
-	"strings"
 	"time"
 
-	"your-project/internal/config"
-	"your-project/internal/logging"
+	"github.com/PlusOne/hmac-file-server/internal/logging"
 )
 
 type NetworkEvent struct {

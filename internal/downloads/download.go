@@ -3,20 +3,20 @@
 package downloads
 
 import (
-	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
-	"your-project/internal/logging"
-	"your-project/internal/storage"
+	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/PlusOne/hmac-file-server/internal/config"
+	"github.com/PlusOne/hmac-file-server/internal/logging"
 )
 
 func HandleDownload(w http.ResponseWriter, r *http.Request, absFilename string) {
-	fileInfo, err := storage.GetFileInfo(absFilename)
+	fileInfo, err := os.Stat(absFilename)
 	if err != nil {
 		logging.Log.WithError(err).Error("Failed to get file information")
 		http.Error(w, "Not Found", http.StatusNotFound)
