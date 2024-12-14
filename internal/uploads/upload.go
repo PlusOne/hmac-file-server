@@ -31,7 +31,11 @@ func InitUploadQueue() {
 // HandleUpload verarbeitet den Upload-Antrag
 func HandleUpload(w http.ResponseWriter, r *http.Request, absFilename string) {
 	// Validierung und Verarbeitung des Uploads
-	err := handleMultipartUpload(w, r, absFilename)
+	if !isExtensionAllowed(absFilename) {
+		http.Error(w, "File extension not allowed", http.StatusBadRequest)
+		return
+	}
+	err := handleMultipartUpload()
 	if err != nil {
 		logging.Log.WithError(err).Error("Failed to handle multipart upload")
 		http.Error(w, "Failed to handle multipart upload", http.StatusInternalServerError)
@@ -68,6 +72,7 @@ func uploadWorker(ctx context.Context, workerID int) {
 func processUpload(task UploadTask) error {
 	// Implementiere die Logik für den Upload-Prozess
 	// Dies könnte das Speichern der Datei, das Scannen mit ClamAV, etc. beinhalten
+	logging.Log.Infof("Processing upload for file: %s", task.AbsFilename)
 	return nil
 }
 
@@ -84,7 +89,7 @@ func isExtensionAllowed(filename string) bool {
 	return false
 }
 
-func handleMultipartUpload(w http.ResponseWriter, r *http.Request, absFilename string) error {
+func handleMultipartUpload() error {
 	// Hier wird die Upload-Logik implementiert
 	// Zum Beispiel das Parsen der Multipart-Form, Validierung der Dateiendung, Speichern der Datei, etc.
 	return nil
