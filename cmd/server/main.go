@@ -4,38 +4,44 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
-	"time"
 
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
-// Config structure for demonstration
 type Config struct {
-	ListenPort string `mapstructure:"listen_port"`
 	LogLevel   string `mapstructure:"log_level"`
+	ListenPort string `mapstructure:"listen_port"`
 }
 
 var (
-	log    = logrus.New()
-	conf   Config
-	ctx, cancel = context.WithCancel(context.Background())
+	log  = logrus.New()
+	conf Config
 )
 
 func main() {
-	// Flags for configuration file
 	var configFile string
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
 	flag.Parse()
 
-	// Set defaults and then load config
+	// Set defaults and load config
 	setDefaults()
-	if err := loadConfig(configFile); err != nil {
+	if err := loadConfig(); err != nil {
 		log.Fatalf("Error reading config: %v", err)
 	}
+
+	// Configure logging
+	configureLogging()
 
 	// Set log level
 	level, err := logrus.ParseLevel(conf.LogLevel)
@@ -44,25 +50,25 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	// Validate configuration
-	if err := validateConfig(&conf); err != nil {
-		log.Fatalf("Configuration validation failed: %v", err)
-	}
+	// Log system info
+	logSystemInfo()
 
-	// Setup HTTP server with sample route
+	// Set up server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", helloHandler)
-
 	server := &http.Server{
 		Addr:    ":" + conf.ListenPort,
 		Handler: mux,
 	}
 
-	// Setup graceful shutdown
-	quit := make(chan os.Signal, 1)
-	setupGracefulShutdown(server, cancel, quit)
+	// Graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Start the server
+	quit := make(chan os.Signal, 1)
+	setupGracefulShutdown(server, quit, cancel)
+
+	// Start server
 	log.Infof("Starting server on port %s...", conf.ListenPort)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Could not listen on %s: %v", server.Addr, err)
@@ -72,55 +78,81 @@ func main() {
 	log.Println("Shutting down...")
 }
 
-func setDefaults() {
-	// Set default configuration values
-	conf.ListenPort = "8080"
-	conf.LogLevel = "info"
-}
-
-func loadConfig(configFile string) error {
-	// Here you would actually parse your config file (e.g., using viper)
-	// For demonstration, we'll just print that we're "loading" it.
-	log.Infof("Loading configuration from: %s", configFile)
-
-	// Assume the configuration was loaded successfully and stored into 'c'.
-	// TODO: Implement real configuration loading.
-
-	return nil
-}
-
-func validateConfig(c *Config) error {
-	if c.ListenPort == "" {
-		return fmt.Errorf("listen_port must be set")
+func configureLogging() {
+	logFile, err := os.OpenFile("server.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Failed to open log file: %v", err)
 	}
-	if c.LogLevel == "" {
-		return fmt.Errorf("log_level must be set")
+	log.SetOutput(io.MultiWriter(os.Stdout, logFile))
+	log.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+}
+
+func setupGracefulShutdown(server *http.Server, quit chan os.Signal, ctxCancel context.CancelFunc) {
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-quit
+		log.Infof("Received signal %s. Initiating shutdown...", sig)
+
+		if err := server.Shutdown(context.Background()); err != nil {
+			log.Fatalf("Server Shutdown: %v", err)
+		}
+
+		ctxCancel()
+	}()
+}
+
+func setDefaults() {
+	conf.LogLevel = "info"
+	conf.ListenPort = "8080"
+}
+
+func loadConfig() error {
+	viper.SetConfigFile("./config.toml")
+	viper.AutomaticEnv()
+	if err := viper.ReadInConfig(); err != nil {
+		return fmt.Errorf("error reading config file: %w", err)
+	}
+	if err := viper.Unmarshal(&conf); err != nil {
+		return fmt.Errorf("unable to decode config: %w", err)
 	}
 	return nil
 }
 
 func helloHandler(w http.ResponseWriter, r *http.Request) {
-	log.Info("Received request for /")
-	w.Write([]byte("Hello, world!"))
+	w.Write([]byte("Hello, World!"))
 }
 
-func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc, quit chan os.Signal) {
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+func logSystemInfo() {
+	log.Info("========================================")
+	log.Info("       HMAC File Server Information      ")
+	log.Info("========================================")
 
-	go func() {
-		sig := <-quit
-		log.Printf("Received signal %s. Initiating shutdown...", sig)
+	log.Infof("Operating System: %s", runtime.GOOS)
+	log.Infof("Architecture: %s", runtime.GOARCH)
+	log.Infof("Number of CPUs: %d", runtime.NumCPU())
+	log.Infof("Go Version: %s", runtime.Version())
 
-		ctxShutdown, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer shutdownCancel()
+	v, _ := mem.VirtualMemory()
+	log.Infof("Total Memory: %v MB", v.Total/1024/1024)
+	log.Infof("Used Memory: %v MB (%.2f%%)", (v.Total-v.Free)/1024/1024, v.UsedPercent)
 
-		if err := server.Shutdown(ctxShutdown); err != nil {
-			log.Printf("Server shutdown failed: %v", err)
-		} else {
-			log.Println("Server gracefully stopped.")
-		}
+	cpuInfo, _ := cpu.Info()
+	if len(cpuInfo) > 0 {
+		log.Infof("CPU Model: %s", cpuInfo[0].ModelName)
+		log.Infof("CPU Cores: %d", runtime.NumCPU())
+	}
 
-		// Additional cleanup if needed
-		cancel()
-	}()
+	partitions, _ := disk.Partitions(false)
+	for _, partition := range partitions {
+		usage, _ := disk.Usage(partition.Mountpoint)
+		log.Infof("Disk Mountpoint: %s, Total: %v GB, Used: %v GB (%.2f%%), Free: %v GB",
+			partition.Mountpoint, usage.Total/1024/1024/1024, usage.Used/1024/1024/1024, usage.UsedPercent, usage.Free/1024/1024/1024)
+	}
+
+	hostInfo, _ := host.Info()
+	log.Infof("Hostname: %s", hostInfo.Hostname)
+	log.Infof("Uptime: %v seconds", hostInfo.Uptime)
+	log.Infof("Kernel Version: %s", hostInfo.KernelVersion)
 }
