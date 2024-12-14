@@ -12,12 +12,13 @@ import (
 )
 
 func HandleResumableDownload(absFilename string, w http.ResponseWriter, r *http.Request, fileSize int64, log *logrus.Logger) {
+	startTime := time.Now()
+
 	rangeHeader := r.Header.Get("Range")
 	if rangeHeader == "" {
-		startTime := time.Now()
 		http.ServeFile(w, r, absFilename)
 		// observe metrics here if needed
-		log.Infof("File downloaded: %s", absFilename)
+		log.Infof("File fully downloaded: %s, duration: %v", absFilename, time.Since(startTime))
 		return
 	}
 
@@ -28,7 +29,7 @@ func HandleResumableDownload(absFilename string, w http.ResponseWriter, r *http.
 	}
 
 	start, err := strconv.ParseInt(ranges[0], 10, 64)
-	if err != nil {
+	if err != nil || start < 0 {
 		http.Error(w, "Invalid Range", http.StatusRequestedRangeNotSatisfiable)
 		return
 	}
@@ -36,7 +37,7 @@ func HandleResumableDownload(absFilename string, w http.ResponseWriter, r *http.
 	end := fileSize - 1
 	if ranges[1] != "" {
 		end, err = strconv.ParseInt(ranges[1], 10, 64)
-		if err != nil || end >= fileSize {
+		if err != nil || end < start || end >= fileSize {
 			http.Error(w, "Invalid Range", http.StatusRequestedRangeNotSatisfiable)
 			return
 		}
@@ -62,23 +63,22 @@ func HandleResumableDownload(absFilename string, w http.ResponseWriter, r *http.
 
 	buffer := make([]byte, 32*1024)
 	remaining := end - start + 1
-	startTime := time.Now()
 	for remaining > 0 {
 		if int64(len(buffer)) > remaining {
 			buffer = buffer[:remaining]
 		}
-		n, err := file.Read(buffer)
+		n, readErr := file.Read(buffer)
 		if n > 0 {
 			if _, writeErr := w.Write(buffer[:n]); writeErr != nil {
-				log.WithError(writeErr).Error("Failed to write to response")
+				log.WithError(writeErr).Errorf("Failed to write to response (Range: %d-%d)", start, end)
 				return
 			}
 			remaining -= int64(n)
 		}
-		if err != nil {
+		if readErr != nil {
 			break
 		}
 	}
 	// observe metrics
-	log.Infof("Partial file downloaded: %s (Range: %d-%d)", absFilename, start, end)
+	log.Infof("Partial file downloaded: %s (Range: %d-%d), duration: %v", absFilename, start, end, time.Since(startTime))
 }
