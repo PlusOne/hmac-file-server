@@ -37,8 +37,6 @@ import (
 	"github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	// "github.com/renz/hmac-file-server/internal/storage" // Removed due to missing package
-	// "github.com/renz/hmac-file-server/internal/config"
 )
 
 // parseSize converts a human-readable size string to bytes
@@ -265,21 +263,15 @@ func main() {
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
 	flag.Parse()
 
-	// conf, err := config.ReadConfig(configFile)
-	// if err != nil {
-	// 	log.Fatalf("Error reading config: %v", err)
-	// }
-	// log.Info("Configuration loaded successfully.")
-
-	// _, err = InitializeStorage(*conf)
-	// if err != nil {
-	// 	log.Fatalf("Error initializing storage: %v", err)
-	// }
+	err := readConfig(configFile, &conf)
+	if err != nil {
+		log.Fatalf("Error reading config: %v", err)
+	}
+	log.Info("Configuration loaded successfully.")
 
 	initializeWorkerSettings(&conf.Server, &conf.Workers, &conf.ClamAV)
 
 	if conf.ISO.Enabled {
-		var err error
 		err = verifyAndCreateISOContainer()
 		if err != nil {
 			log.Fatalf("ISO container verification failed: %v", err)
@@ -614,49 +606,49 @@ func setupLogging() {
 }
 
 func logSystemInfo() {
-    log.Info("========================================")
-    log.Infof("       HMAC File Server - %s          ", versionString)
-    log.Info("  Secure File Handling with HMAC Auth   ")
-    log.Info("========================================")
+	log.Info("========================================")
+	log.Infof("       HMAC File Server - %s          ", versionString)
+	log.Info("  Secure File Handling with HMAC Auth   ")
+	log.Info("========================================")
 
-    log.Info("Features: Prometheus Metrics, Chunked Uploads, ClamAV Scanning")
-    log.Info("Build Date: 2024-10-28")
+	log.Info("Features: Prometheus Metrics, Chunked Uploads, ClamAV Scanning")
+	log.Info("Build Date: 2024-10-28")
 
-    log.Infof("Operating System: %s", runtime.GOOS)
-    log.Infof("Architecture: %s", runtime.GOARCH)
-    log.Infof("Number of CPUs: %d", runtime.NumCPU())
-    log.Infof("Go Version: %s", runtime.Version())
+	log.Infof("Operating System: %s", runtime.GOOS)
+	log.Infof("Architecture: %s", runtime.GOARCH)
+	log.Infof("Number of CPUs: %d", runtime.NumCPU())
+	log.Infof("Go Version: %s", runtime.Version())
 
-    v, _ := mem.VirtualMemory()
-    log.Infof("Total Memory: %v MB", v.Total/1024/1024)
-    log.Infof("Free Memory: %v MB", v.Free/1024/1024)
-    log.Infof("Used Memory: %v MB", v.Used/1024/1024)
+	v, _ := mem.VirtualMemory()
+	log.Infof("Total Memory: %v MB", v.Total/1024/1024)
+	log.Infof("Free Memory: %v MB", v.Free/1024/1024)
+	log.Infof("Used Memory: %v MB", v.Used/1024/1024)
 
-    cpuInfo, _ := cpu.Info()
-    if len(cpuInfo) > 0 {
-        modelName := cpuInfo[0].ModelName
-        totalCores := 0
-        for _, info := range cpuInfo {
-            totalCores += int(info.Cores)
-        }
-        log.Infof("CPU Model: %s, Total Cores: %d, Mhz: %f", modelName, totalCores, cpuInfo[0].Mhz)
-    }
+	cpuInfo, _ := cpu.Info()
+	if len(cpuInfo) > 0 {
+		modelName := cpuInfo[0].ModelName
+		totalCores := 0
+		for _, info := range cpuInfo {
+			totalCores += int(info.Cores)
+		}
+		log.Infof("CPU Model: %s, Total Cores: %d, Mhz: %f", modelName, totalCores, cpuInfo[0].Mhz)
+	}
 
-    partitions, _ := disk.Partitions(false)
-    for _, partition := range partitions {
-        usage, _ := disk.Usage(partition.Mountpoint)
-        log.Infof("Disk Mountpoint: %s, Total: %v GB, Free: %v GB, Used: %v GB",
-            partition.Mountpoint, usage.Total/1024/1024/1024, usage.Free/1024/1024/1024, usage.Used/1024/1024/1024)
-    }
+	partitions, _ := disk.Partitions(false)
+	for _, partition := range partitions {
+		usage, _ := disk.Usage(partition.Mountpoint)
+		log.Infof("Disk Mountpoint: %s, Total: %v GB, Free: %v GB, Used: %v GB",
+			partition.Mountpoint, usage.Total/1024/1024/1024, usage.Free/1024/1024/1024, usage.Used/1024/1024/1024)
+	}
 
-    hInfo, _ := host.Info()
-    log.Infof("Hostname: %s", hInfo.Hostname)
-    log.Infof("Uptime: %v seconds", hInfo.Uptime)
-    log.Infof("Boot Time: %v", time.Unix(int64(hInfo.BootTime), 0))
-    log.Infof("Platform: %s", hInfo.Platform)
-    log.Infof("Platform Family: %s", hInfo.PlatformFamily)
-    log.Infof("Platform Version: %s", hInfo.PlatformVersion)
-    log.Infof("Kernel Version: %s", hInfo.KernelVersion)
+	hInfo, _ := host.Info()
+	log.Infof("Hostname: %s", hInfo.Hostname)
+	log.Infof("Uptime: %v seconds", hInfo.Uptime)
+	log.Infof("Boot Time: %v", time.Unix(int64(hInfo.BootTime), 0))
+	log.Infof("Platform: %s", hInfo.Platform)
+	log.Infof("Platform Family: %s", hInfo.PlatformFamily)
+	log.Infof("Platform Version: %s", hInfo.PlatformVersion)
+	log.Infof("Kernel Version: %s", hInfo.KernelVersion)
 }
 
 func initMetrics() {
@@ -2063,20 +2055,4 @@ func handleCorruptedISOFile(isoPath string, files []string, size string, charset
 		return fmt.Errorf("failed to recreate ISO: %w", err)
 	}
 	return nil
-}
-
-// InitializeStorage initializes the storage based on the configuration
-func InitializeStorage(conf config.Config) (storage.StorageInterface, error) {
-	switch conf.Server.StorageType {
-	case "local":
-		return storage.NewLocalStorage(conf.Server.StoragePath), nil
-	case "iso":
-		return storage.NewISOStorage(conf.ISO.MountPoint, conf.ISO.Size, conf.ISO.Charset), nil
-	case "ftp":
-		return storage.NewFTPStorage(conf.FTP.Server, conf.FTP.Username, conf.FTP.Password, conf.FTP.BasePath)
-	case "s3":
-		return storage.NewS3Storage(conf.S3.Endpoint, conf.S3.AccessKey, conf.S3.SecretKey, conf.S3.Bucket, conf.S3.Region)
-	default:
-		return nil, fmt.Errorf("unsupported storage type: %s", conf.Server.StorageType)
-	}
 }
