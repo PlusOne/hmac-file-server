@@ -21,16 +21,16 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	"github.com/PlusOne/hmac-file-server/internal/config"
-	"github.com/PlusOne/hmac-file-server/internal/iso"
-	"github.com/PlusOne/hmac-file-server/internal/logging"
-	"github.com/PlusOne/hmac-file-server/internal/metrics"
-	"github.com/PlusOne/hmac-file-server/internal/network"
-	"github.com/PlusOne/hmac-file-server/internal/redis"
-	"github.com/PlusOne/hmac-file-server/internal/router"
-	"github.com/PlusOne/hmac-file-server/internal/scanning"
-	"github.com/PlusOne/hmac-file-server/internal/storage"
-	"github.com/PlusOne/hmac-file-server/internal/uploads"
+	"github.com/renz/hmac-file-server/internal/config"
+	"github.com/renz/hmac-file-server/internal/iso"
+	"github.com/renz/hmac-file-server/internal/logging"
+	"github.com/renz/hmac-file-server/internal/metrics"
+	"github.com/renz/hmac-file-server/internal/network"
+	"github.com/renz/hmac-file-server/internal/redis"
+	"github.com/renz/hmac-file-server/internal/router"
+	"github.com/renz/hmac-file-server/internal/scanning"
+	"github.com/renz/hmac-file-server/internal/storage"
+	"github.com/renz/hmac-file-server/internal/uploads"
 )
 
 var (
