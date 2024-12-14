@@ -1,8 +1,9 @@
-module github.com/renz/hmac-file-server
+module github.com/PlusOne/hmac-file-server
 
 go 1.22.0
 
 require (
+	github.com/dutchcoders/go-clamd v0.0.0-20170520113014-b970184f4d9e
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.20.5
