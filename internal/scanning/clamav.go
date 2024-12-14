@@ -1,67 +1,48 @@
-// internal/scanning/clamav.go
-
-package scanning
-
-import (
-	"fmt"
-	"context"
-
-	"github.com/PlusOne/hmac-file-server/internal/logging"
-
-	"github.com/dutchcoders/go-clamd"
-	"github.com/sirupsen/logrus"
-)
-
-var (
-	ClamClient *clamd.Clamd
-)
-
-func InitClamAV(socket string) (*clamd.Clamd, error) {
+func initClamAV(socket string) (*clamd.Clamd, error) {
 	if socket == "" {
-		logging.Log.Error("ClamAV socket path is not configured.")
+		log.Error("ClamAV socket path is not configured.")
 		return nil, fmt.Errorf("ClamAV socket path is not configured")
 	}
 
-	ClamClient = clamd.NewClamd("unix:" + socket)
-	err := ClamClient.Ping()
+	clamClient := clamd.NewClamd("unix:" + socket)
+	err := clamClient.Ping()
 	if err != nil {
-		logging.Log.Errorf("Failed to connect to ClamAV at %s: %v", socket, err)
+		log.Errorf("Failed to connect to ClamAV at %s: %v", socket, err)
 		return nil, fmt.Errorf("failed to connect to ClamAV: %w", err)
 	}
 
-	logging.Log.Info("Connected to ClamAV successfully.")
-	return ClamClient, nil
+	log.Info("Connected to ClamAV successfully.")
+	return clamClient, nil
 }
+func scanFileWithClamAV(filePath string) error {
+	log.WithField("file", filePath).Info("Scanning file with ClamAV")
 
-func ScanFileWithClamAV(filePath string) error {
-	logging.Log.WithField("file", filePath).Info("Scanning file with ClamAV")
-
-	scanResultChan, err := ClamClient.ScanFile(filePath)
+	scanResultChan, err := clamClient.ScanFile(filePath)
 	if err != nil {
-		logging.Log.WithError(err).Error("Failed to initiate ClamAV scan")
+		log.WithError(err).Error("Failed to initiate ClamAV scan")
 		return fmt.Errorf("failed to initiate ClamAV scan: %w", err)
 	}
 
 	// Receive scan result
 	scanResult := <-scanResultChan
 	if scanResult == nil {
-		logging.Log.Error("Failed to receive scan result from ClamAV")
+		log.Error("Failed to receive scan result from ClamAV")
 		return fmt.Errorf("failed to receive scan result from ClamAV")
 	}
 
 	// Handle scan result
 	switch scanResult.Status {
 	case clamd.RES_OK:
-		logging.Log.WithField("file", filePath).Info("ClamAV scan passed")
+		log.WithField("file", filePath).Info("ClamAV scan passed")
 		return nil
 	case clamd.RES_FOUND:
-		logging.Log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"file":        filePath,
 			"description": scanResult.Description,
 		}).Warn("ClamAV detected a virus")
 		return fmt.Errorf("virus detected: %s", scanResult.Description)
 	default:
-		logging.Log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"file":        filePath,
 			"status":      scanResult.Status,
 			"description": scanResult.Description,
@@ -69,8 +50,43 @@ func ScanFileWithClamAV(filePath string) error {
 		return fmt.Errorf("ClamAV scan returned unexpected status: %s", scanResult.Description)
 	}
 }
-
-// InitializeScanWorkerPool initializes the worker pool for scanning.
-func InitializeScanWorkerPool(ctx context.Context) {
-	// Implementation of the worker pool initialization
+func scanWorker(ctx context.Context, workerID int) {
+	log.WithField("worker_id", workerID).Info("Scan worker started")
+	for {
+		select {
+		case <-ctx.Done():
+			log.WithField("worker_id", workerID).Info("Scan worker stopping")
+			return
+		case task, ok := <-scanQueue:
+			if !ok {
+				log.WithField("worker_id", workerID).Info("Scan queue closed")
+				return
+			}
+			log.WithFields(logrus.Fields{
+				"worker_id": workerID,
+				"file":      task.AbsFilename,
+			}).Info("Processing scan task")
+			err := scanFileWithClamAV(task.AbsFilename)
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"worker_id": workerID,
+					"file":      task.AbsFilename,
+					"error":     err,
+				}).Error("Failed to scan file")
+			} else {
+				log.WithFields(logrus.Fields{
+					"worker_id": workerID,
+					"file":      task.AbsFilename,
+				}).Info("Successfully scanned file")
+			}
+			task.Result <- err
+			close(task.Result)
+		}
+	}
+}
+func initializeScanWorkerPool(ctx context.Context) {
+	for i := 0; i < conf.ClamAV.NumScanWorkers; i++ {
+		go scanWorker(ctx, i)
+	}
+	log.Infof("Initialized %d scan workers", conf.ClamAV.NumScanWorkers)
 }
