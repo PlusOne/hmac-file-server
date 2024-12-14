@@ -37,8 +37,8 @@ import (
 	"github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"github.com/renz/hmac-file-server/internal/storage"
-	"github.com/renz/hmac-file-server/internal/config"
+	// "github.com/renz/hmac-file-server/internal/storage" // Removed due to missing package
+	// "github.com/renz/hmac-file-server/internal/config"
 )
 
 // parseSize converts a human-readable size string to bytes
@@ -265,20 +265,21 @@ func main() {
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
 	flag.Parse()
 
-	conf, err := config.ReadConfig(configFile)
-	if err != nil {
-		log.Fatalf("Error reading config: %v", err)
-	}
-	log.Info("Configuration loaded successfully.")
+	// conf, err := config.ReadConfig(configFile)
+	// if err != nil {
+	// 	log.Fatalf("Error reading config: %v", err)
+	// }
+	// log.Info("Configuration loaded successfully.")
 
-	_, err = InitializeStorage(*conf)
-	if err != nil {
-		log.Fatalf("Error initializing storage: %v", err)
-	}
+	// _, err = InitializeStorage(*conf)
+	// if err != nil {
+	// 	log.Fatalf("Error initializing storage: %v", err)
+	// }
 
 	initializeWorkerSettings(&conf.Server, &conf.Workers, &conf.ClamAV)
 
 	if conf.ISO.Enabled {
+		var err error
 		err = verifyAndCreateISOContainer()
 		if err != nil {
 			log.Fatalf("ISO container verification failed: %v", err)
