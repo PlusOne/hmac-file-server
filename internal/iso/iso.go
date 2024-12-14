@@ -1,32 +1,58 @@
-package iso
+func verifyAndCreateISOContainer() error {
+	isoPath := filepath.Join(conf.ISO.MountPoint, "container.iso")
 
-import (
-	"fmt"
-	"os"
-	"os/exec"
-	"time"
+	// Check if ISO file exists
+	if exists, _ := fileExists(isoPath); !exists {
+		log.Infof("ISO container does not exist. Creating new ISO container at %s", isoPath)
 
-	"github.com/sirupsen/logrus"
-)
+		// Example files to include in the ISO container
+		files := []string{conf.Server.StoragePath}
 
-// CreateISOContainer creates an ISO container with the specified size and charset.
-func CreateISOContainer(files []string, isoPath string, size string, charset string, log *logrus.Logger) error {
+		// Create ISO container
+		err := CreateISOContainer(files, isoPath, conf.ISO.Size, conf.ISO.Charset)
+		if err != nil {
+			return fmt.Errorf("failed to create ISO container: %w", err)
+		}
+		log.Infof("ISO container created successfully at %s", isoPath)
+	}
+
+	// Verify ISO file consistency
+	err := verifyISOFile(isoPath)
+	if err != nil {
+		// Handle corrupted ISO file
+		files := []string{conf.Server.StoragePath}
+		err = handleCorruptedISOFile(isoPath, files, conf.ISO.Size, conf.ISO.Charset)
+		if err != nil {
+			return fmt.Errorf("failed to handle corrupted ISO file: %w", err)
+		}
+	}
+
+	// Ensure the mount point directory exists
+	if err := os.MkdirAll(conf.ISO.MountPoint, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create mount point directory: %w", err)
+	}
+
+	// Mount ISO container
+	err = MountISOContainer(isoPath, conf.ISO.MountPoint)
+	if err != nil {
+		return fmt.Errorf("failed to mount ISO container: %w", err)
+	}
+	log.Infof("ISO container mounted successfully at %s", conf.ISO.MountPoint)
+
+	return nil
+}
+func CreateISOContainer(files []string, isoPath string, size string, charset string) error {
 	args := []string{"-o", isoPath, "-V", "ISO_CONTAINER", "-J", "-R", "-input-charset", charset}
 	args = append(args, files...)
 	cmd := exec.Command("genisoimage", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run genisoimage: %w", err)
-	}
-	log.Infof("ISO container created at %s", isoPath)
-	return nil
+	return cmd.Run()
 }
-
-// MountISOContainer mounts the ISO container at the given mount point.
-func MountISOContainer(isoPath string, mountPoint string, log *logrus.Logger) error {
+func MountISOContainer(isoPath string, mountPoint string) error {
+	// Ensure the mount point directory exists
 	if err := os.MkdirAll(mountPoint, os.ModePerm); err != nil {
-		return fmt.Errorf("failed to create mount point: %w", err)
+		return fmt.Errorf("failed to create mount point directory: %w", err)
 	}
 
 	var output []byte
@@ -35,44 +61,61 @@ func MountISOContainer(isoPath string, mountPoint string, log *logrus.Logger) er
 		cmd := exec.Command("mount", "-o", "loop,ro", isoPath, mountPoint)
 		output, err = cmd.CombinedOutput()
 		if err == nil {
-			log.Infof("ISO container mounted at %s", mountPoint)
+			log.Infof("ISO container mounted successfully at %s", mountPoint)
 			return nil
 		}
-		log.Warnf("Mount attempt %d failed: %v, output: %s", i+1, err, string(output))
+		log.Warnf("Failed to mount ISO container (attempt %d/3): %v, output: %s", i+1, err, string(output))
 		time.Sleep(2 * time.Second)
 	}
-	return fmt.Errorf("failed to mount ISO: %w, output: %s", err, string(output))
+	return fmt.Errorf("failed to mount ISO container: %w, output: %s", err, string(output))
 }
-
-// UnmountISOContainer unmounts the ISO container from the specified mount point.
-func UnmountISOContainer(mountPoint string, log *logrus.Logger) error {
+func UnmountISOContainer(mountPoint string) error {
 	cmd := exec.Command("umount", mountPoint)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to unmount ISO: %w", err)
-	}
-	log.Infof("ISO container unmounted from %s", mountPoint)
-	return nil
+	return cmd.Run()
 }
+func handleISOContainer(absFilename string) error {
+	isoPath := filepath.Join(conf.ISO.MountPoint, "container.iso")
 
-// HandleISOContainer creates, mounts, and unmounts an ISO container for the given file.
-func HandleISOContainer(absFilename string, isoPath, mountPoint, size, charset string, log *logrus.Logger) error {
-	if err := CreateISOContainer([]string{absFilename}, isoPath, size, charset, log); err != nil {
+	// Create ISO container
+	err := CreateISOContainer([]string{absFilename}, isoPath, conf.ISO.Size, conf.ISO.Charset)
+	if err != nil {
 		return fmt.Errorf("failed to create ISO container: %w", err)
 	}
 
-	if err := os.MkdirAll(mountPoint, os.ModePerm); err != nil {
+	// Ensure the mount point directory exists
+	if err := os.MkdirAll(conf.ISO.MountPoint, os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create mount point directory: %w", err)
 	}
 
-	if err := MountISOContainer(isoPath, mountPoint, log); err != nil {
+	// Mount ISO container
+	err = MountISOContainer(isoPath, conf.ISO.MountPoint)
+	if err != nil {
 		return fmt.Errorf("failed to mount ISO container: %w", err)
 	}
 
-	if err := UnmountISOContainer(mountPoint, log); err != nil {
+	// Unmount ISO container (example)
+	err = UnmountISOContainer(conf.ISO.MountPoint)
+	if err != nil {
 		return fmt.Errorf("failed to unmount ISO container: %w", err)
 	}
 
+	return nil
+}
+func verifyISOFile(isoPath string) error {
+	cmd := exec.Command("isoinfo", "-i", isoPath, "-d")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to verify ISO file: %w, output: %s", err, string(output))
+	}
+	return nil
+}
+func handleCorruptedISOFile(isoPath string, files []string, size string, charset string) error {
+	log.Warnf("ISO file %s is corrupted. Recreating it.", isoPath)
+	err := CreateISOContainer(files, isoPath, size, charset)
+	if err != nil {
+		return fmt.Errorf("failed to recreate ISO container: %w", err)
+	}
 	return nil
 }
