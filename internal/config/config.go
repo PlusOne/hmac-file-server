@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
-
 	"github.com/spf13/viper"
+	"strconv"
+	"strings"
 )
 
 // ServerConfig holds server-related configurations
@@ -16,7 +17,8 @@ type ServerConfig struct {
 	MetricsEnabled       bool   `mapstructure:"MetricsEnabled"`
 	MetricsPort          string `mapstructure:"MetricsPort"`
 	FileTTL              string `mapstructure:"FileTTL"`
-	MinFreeBytes         int64  `mapstructure:"MinFreeBytes"` // Changed to int64
+	MinFreeBytesStr      string `mapstructure:"MinFreeBytes"` // Changed to string
+	MinFreeBytes         int64  `mapstructure:"-"`            // Parsed value
 	DeduplicationEnabled bool   `mapstructure:"DeduplicationEnabled"`
 	AutoAdjustWorkers    bool   `mapstructure:"AutoAdjustWorkers"`
 	NetworkEvents        bool   `mapstructure:"NetworkEvents"`
@@ -133,40 +135,120 @@ type Config struct {
 	Storage    StorageConfig    `mapstructure:"storage"`
 }
 
-// ReadConfig loads the configuration from the specified file into the Config struct
+// parseSize parses human-readable size strings (e.g., "100GB") to bytes.
+func parseSize(sizeStr string) (int64, error) {
+    sizeStr = strings.TrimSpace(sizeStr)
+    if sizeStr == "" {
+        return 0, fmt.Errorf("size string is empty")
+    }
+
+    var multiplier int64 = 1
+    if strings.HasSuffix(sizeStr, "KB") {
+        multiplier = 1 << 10
+        sizeStr = strings.TrimSuffix(sizeStr, "KB")
+    } else if strings.HasSuffix(sizeStr, "MB") {
+        multiplier = 1 << 20
+        sizeStr = strings.TrimSuffix(sizeStr, "MB")
+    } else if strings.HasSuffix(sizeStr, "GB") {
+        multiplier = 1 << 30
+        sizeStr = strings.TrimSuffix(sizeStr, "GB")
+    } else if strings.HasSuffix(sizeStr, "TB") {
+        multiplier = 1 << 40
+        sizeStr = strings.TrimSuffix(sizeStr, "TB")
+    }
+
+    value, err := strconv.ParseFloat(strings.TrimSpace(sizeStr), 64)
+    if err != nil {
+        return 0, fmt.Errorf("invalid size value: %v", err)
+    }
+
+    return int64(value * float64(multiplier)), nil
+}
+
+// setDefaults sets the default values for the configuration
+func setDefaults(conf *Config) {
+	// Set default values for ServerConfig
+	conf.Server.ListenPort = "8080"
+	conf.Server.LogLevel = "info"
+	conf.Server.MetricsPort = "9090"
+	// Removed recursive call to setDefaults to avoid infinite recursion
+	conf.Server.MinFreeBytesStr = "1GB"
+
+	// Set default values for TimeoutConfig
+	conf.Timeouts.ReadTimeout = "5s"
+	conf.Timeouts.WriteTimeout = "10s"
+	conf.Timeouts.IdleTimeout = "120s"
+
+	// Set default values for SecurityConfig
+	conf.Security.Secret = "default-secret"
+
+	// Set default values for VersioningConfig
+	conf.Versioning.EnableVersioning = false
+	conf.Versioning.MaxVersions = 5
+
+	// Set default values for UploadsConfig
+	conf.Uploads.ResumableUploadsEnabled = false
+	conf.Uploads.ChunkedUploadsEnabled = false
+	conf.Uploads.ChunkSize = "10MB"
+	conf.Uploads.AllowedExtensions = []string{".txt", ".jpg", ".png"}
+
+	// Set default values for ClamAVConfig
+	conf.ClamAV.ClamAVEnabled = false
+	conf.ClamAV.ClamAVSocket = "/var/run/clamav/clamd.ctl"
+	conf.ClamAV.NumScanWorkers = 5
+	conf.ClamAV.ScanFileExtensions = []string{".exe", ".dll"}
+
+	// Set default values for RedisConfig
+	conf.Redis.RedisEnabled = false
+	conf.Redis.RedisDBIndex = 0
+	conf.Redis.RedisAddr = "localhost:6379"
+	conf.Redis.RedisPassword = ""
+	conf.Redis.RedisHealthCheckInterval = "30s"
+
+	// Set default values for WorkersConfig
+	conf.Workers.NumWorkers = 10
+	conf.Workers.UploadQueueSize = 100
+
+	// Set default values for StorageConfig
+	conf.Storage.Type = "local"
+	conf.Storage.Local.Path = "/var/lib/hmac-file-server/storage"
+}
+
+// ReadConfig loads the configuration from the given file into conf
 func ReadConfig(configFile string, conf *Config) error {
-	viper.SetConfigFile(configFile)
-	viper.SetConfigType("toml")
+    viper.SetConfigFile(configFile)
+    viper.SetConfigType("toml")
 
-	viper.AutomaticEnv()
-	viper.SetEnvPrefix("HMAC")
+    // Set default values
+	setDefaults(conf)
 
-	// Set default values if needed
-	viper.SetDefault("server.loglevel", "info")
-	viper.SetDefault("server.listenport", "8080")
-	viper.SetDefault("server.logfile", "server.log")
-	viper.SetDefault("server.storagepath", "/mnt/nfs_vol01/hmac-file-server/")
-	viper.SetDefault("timeouts.readtimeout", "30s")
-	viper.SetDefault("timeouts.writetimeout", "30s")
-	viper.SetDefault("timeouts.idletimeout", "60s")
-	viper.SetDefault("security.secret", "defaultsecret")
+    // Read environment variables that match
+    viper.AutomaticEnv()
+    viper.SetEnvPrefix("HMAC") // Prefix for environment variables
 
-	// Load configuration file
-	if err := viper.ReadInConfig(); err != nil {
-		return fmt.Errorf("error reading config file: %w", err)
-	}
+    // Read the config file
+    if err := viper.ReadInConfig(); err != nil {
+        return fmt.Errorf("error reading config file: %w", err)
+    }
 
-	// Unmarshal configuration into the struct
-	if err := viper.Unmarshal(conf); err != nil {
-		return fmt.Errorf("unable to decode into struct: %w", err)
-	}
+    // Unmarshal the config into the Config struct
+    if err := viper.Unmarshal(conf); err != nil {
+        return fmt.Errorf("unable to decode into struct: %w", err)
+    }
 
-	// Additional validation
-	if err := validateConfig(conf); err != nil {
-		return fmt.Errorf("configuration validation failed: %w", err)
-	}
+    // Parse human-readable sizes
+    minFreeBytes, err := parseSize(conf.Server.MinFreeBytesStr)
+    if err != nil {
+        return fmt.Errorf("invalid MinFreeBytes: %v", err)
+    }
+    conf.Server.MinFreeBytes = minFreeBytes
 
-	return nil
+    // Validate the configuration
+    if err := validateConfig(conf); err != nil {
+        return fmt.Errorf("configuration validation failed: %w", err)
+    }
+
+    return nil
 }
 
 // validateConfig performs comprehensive checks on the configuration
