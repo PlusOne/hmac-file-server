@@ -37,8 +37,8 @@ import (
 	"github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"github.com/yourusername/hmac-file-server/internal/config"
-	"github.com/yourusername/hmac-file-server/internal/storage"
+	"github.com/renz/hmac-file-server/internal/storage"
+	"github.com/renz/hmac-file-server/internal/config"
 )
 
 // parseSize converts a human-readable size string to bytes
@@ -271,7 +271,7 @@ func main() {
 	}
 	log.Info("Configuration loaded successfully.")
 
-	storage, err := InitializeStorage(*conf)
+	_, err = InitializeStorage(*conf)
 	if err != nil {
 		log.Fatalf("Error initializing storage: %v", err)
 	}
