@@ -6,11 +6,10 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/signal"
 	"runtime"
-	"syscall"
 
 	"github.com/renz/source/hmac-file-server/internal/config"
+	"github.com/renz/source/hmac-file-server/internal/server"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
@@ -52,25 +51,18 @@ func main() {
 	// Set up server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", helloHandler)
-	server := &http.Server{
+	serverInstance := &http.Server{
 		Addr:    ":" + conf.Server.ListenPort,
 		Handler: mux,
 	}
 
-	// Graceful shutdown
+	// Context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	quit := make(chan os.Signal, 1)
-	setupGracefulShutdown(server, quit, cancel)
+	// Start the server using the server package
+	server.Start(ctx, serverInstance, log)
 
-	// Start server
-	log.Infof("Starting server on port %s...", conf.Server.ListenPort)
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Could not listen on %s: %v", server.Addr, err)
-	}
-
-	<-ctx.Done() // Wait until context is canceled
 	log.Println("Shutting down...")
 }
 
@@ -83,20 +75,6 @@ func configureLogging() {
 	log.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 	})
-}
-
-func setupGracefulShutdown(server *http.Server, quit chan os.Signal, ctxCancel context.CancelFunc) {
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-quit
-		log.Infof("Received signal %s. Initiating shutdown...", sig)
-
-		if err := server.Shutdown(context.Background()); err != nil {
-			log.Fatalf("Server Shutdown: %v", err)
-		}
-
-		ctxCancel()
-	}()
 }
 
 func setDefaults() {
