@@ -145,7 +145,11 @@ func ReadConfig(configFile string, conf *Config) error {
 	viper.SetDefault("server.loglevel", "info")
 	viper.SetDefault("server.listenport", "8080")
 	viper.SetDefault("server.logfile", "server.log")
-	viper.SetDefault("storage.type", "local")
+	viper.SetDefault("server.storagepath", "/mnt/nfs_vol01/hmac-file-server/")
+	viper.SetDefault("timeouts.readtimeout", "30s")
+	viper.SetDefault("timeouts.writetimeout", "30s")
+	viper.SetDefault("timeouts.idletimeout", "60s")
+	viper.SetDefault("security.secret", "defaultsecret")
 
 	// Load configuration file
 	if err := viper.ReadInConfig(); err != nil {

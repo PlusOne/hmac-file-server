@@ -106,7 +106,7 @@ func setDefaults() {
 }
 
 func loadConfig(configFile string) error {
-	return config.readConfig(configFile, &conf)
+    return config.ReadConfig(configFile, &conf)
 }
 
 func helloHandler(w http.ResponseWriter, r *http.Request) {
