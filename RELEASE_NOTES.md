@@ -6,16 +6,16 @@
 
 ## Key Features and Updates
 
-1. **Auto-Adjust Worker Scaling**: Introduced a new `AutoAdjustWorkers` option under the `[server]` section. When enabled, the server automatically determines the optimal number of HMAC and ClamAV workers based on system resources.  
+1. **Auto-Adjust Worker Scaling**: Introduced a new `AutoAdjustWorkers` option under the `[server]` section. When enabled, the server automatically determines the optimal number of HMAC and ClamAV workers based on system resources.
    - This feature overrides manually specified `NumWorkers` and `NumScanWorkers` settings, ensuring efficient resource utilization without manual tuning.
 
 2. **MinFreeBytes Configuration**: Added a `MinFreeBytes` field to the `ServerConfig` struct, specifying the minimum free bytes required.
-   - Example: `MinFreeBytes = 100 * (1 << 30) // 100 GB`
+   - Example: `MinFreeBytes = "100MB"`
 
 3. **Deduplication Feature**: Introduced a deduplication feature that automatically removes duplicate files based on hashing.
    - Functions added: `DeduplicateFiles(storeDir string) error` and `computeFileHash(filePath string) (string, error)`
 
-4. **Network Monitoring**: Added functionality to monitor network changes and handle network events.  
+4. **Network Monitoring**: Added functionality to monitor network changes and handle network events.
    - Added `NetworkEvents` configuration option to toggle this feature on or off.
    - Functions added: `monitorNetwork(ctx context.Context)` and `handleNetworkEvents(ctx context.Context)`
 
@@ -41,13 +41,19 @@
 
 7. **Improved Error Handling and Logging**: Enhanced error handling and logging mechanisms throughout the codebase.
 
+8. **Log Rate Limiter**: Introduced a new `LogRateLimiter` option under the `[server]` section. When enabled, the server limits repetitive log messages to prevent log flooding.
+   - Set `LogRateLimiter = true` to enable this feature.
+   - Helps maintain cleaner logs in high-traffic environments.
+
 ---
 
 ## Configuration Details
 
 The server is configured via a `config.toml` file, allowing fine-grained control over various settings. The `AutoAdjustWorkers` option has been moved into the `[server]` block. When set to `true`, this feature automatically tunes both HMAC and ClamAV worker counts, ignoring manual worker settings.
 
-Additionally, a new `NetworkEvents` option has been added to control whether the server logs and handles network-related events. Set `NetworkEvents = false` to disable monitoring and handling of IP changes or network activity logging.
+The new `NetworkEvents` option controls whether the server logs and handles network-related events. Set `NetworkEvents = false` to disable monitoring and handling of IP changes or network activity logging.
+
+A new `LogRateLimiter` option has been added to the `[server]` section. When set to `true`, it enables rate limiting for certain log messages, preventing excessive logging in high-traffic scenarios.
 
 ### Example `config.toml`
 
@@ -63,13 +69,14 @@ MetricsPort = "9090"
 FileTTL = "1y"
 DeduplicationEnabled = true
 MinFreeBytes = "100MB"
-AutoAdjustWorkers = true # Enable automatic tuning of worker counts
-NetworkEvents = false # Disable monitoring and logging of network-related events
+AutoAdjustWorkers = true    # Enable automatic tuning of worker counts
+NetworkEvents = false       # Disable monitoring and logging of network-related events
+LogRateLimiter = true       # Enable log rate limiting
 
 [timeouts]
 ReadTimeout = "480s"
 WriteTimeout = "480s"
-IdleTimeout = "480s"
+IdleTimeout = "65s"
 
 [security]
 Secret = "changeme"
@@ -82,7 +89,9 @@ MaxVersions = 1
 ResumableUploadsEnabled = true
 ChunkedUploadsEnabled = true
 ChunkSize = "32MB"
-AllowedExtensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"]
+AllowedExtensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
+".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v",
+".3gp", ".3g2", ".mp3", ".ogg"]
 
 [clamav]
 ClamAVEnabled = false
@@ -116,7 +125,8 @@ Charset = "utf-8"
 - **Network Monitoring**: Monitors network changes and handles network events (configurable via `NetworkEvents`).
 - **ISO Support**: Manages ISO files with customizable mount options, size, and character sets.
 - **ClamAV Integration**: Optional file scanning, focusing on critical file types to optimize performance.
-- **Improved Logging**: Enhanced logging for better debugging during development.
+- **Improved Logging**: Enhanced logging with rate limiting to prevent log flooding in high-traffic environments.
+- **Log Rate Limiter**: New feature to limit repetitive log messages, improving log manageability.
 
 ---
 
