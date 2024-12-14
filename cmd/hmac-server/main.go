@@ -9,8 +9,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/dutchcoders/go-clamd" // ClamAV integration
-	"github.com/go-redis/redis/v8"    // Redis integration
 	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
