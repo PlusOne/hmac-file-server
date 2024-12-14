@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -11,22 +10,17 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/renz/source/hmac-file-server/internal/config"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
-
-type Config struct {
-	LogLevel   string `mapstructure:"log_level"`
-	ListenPort string `mapstructure:"listen_port"`
-}
 
 var (
 	log  = logrus.New()
-	conf Config
+	conf config.Config
 )
 
 func main() {
@@ -34,11 +28,11 @@ func main() {
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
 	flag.Parse()
 
-	log.Infof("Using configuration file: %s", configFile) // Add this line
+	log.Infof("Using configuration file: %s", configFile)
 
 	// Set defaults and load config
 	setDefaults()
-	if err := loadConfig(); err != nil {
+	if err := loadConfig(configFile); err != nil {
 		log.Fatalf("Error reading config: %v", err)
 	}
 
@@ -46,7 +40,7 @@ func main() {
 	configureLogging()
 
 	// Set log level
-	level, err := logrus.ParseLevel(conf.LogLevel)
+	level, err := logrus.ParseLevel(conf.Server.LogLevel)
 	if err != nil {
 		log.Fatalf("Invalid log level: %v", err)
 	}
@@ -59,7 +53,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", helloHandler)
 	server := &http.Server{
-		Addr:    ":" + conf.ListenPort,
+		Addr:    ":" + conf.Server.ListenPort,
 		Handler: mux,
 	}
 
@@ -71,7 +65,7 @@ func main() {
 	setupGracefulShutdown(server, quit, cancel)
 
 	// Start server
-	log.Infof("Starting server on port %s...", conf.ListenPort)
+	log.Infof("Starting server on port %s...", conf.Server.ListenPort)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Could not listen on %s: %v", server.Addr, err)
 	}
@@ -81,7 +75,7 @@ func main() {
 }
 
 func configureLogging() {
-	logFile, err := os.OpenFile("server.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("Failed to open log file: %v", err)
 	}
@@ -106,20 +100,13 @@ func setupGracefulShutdown(server *http.Server, quit chan os.Signal, ctxCancel c
 }
 
 func setDefaults() {
-	conf.LogLevel = "info"
-	conf.ListenPort = "8080"
+	conf.Server.LogLevel = "info"
+	conf.Server.ListenPort = "8080"
+	conf.Server.LogFile = "server.log"
 }
 
-func loadConfig() error {
-	viper.SetConfigFile("./config.toml")
-	viper.AutomaticEnv()
-	if err := viper.ReadInConfig(); err != nil {
-		return fmt.Errorf("error reading config file: %w", err)
-	}
-	if err := viper.Unmarshal(&conf); err != nil {
-		return fmt.Errorf("unable to decode config: %w", err)
-	}
-	return nil
+func loadConfig(configFile string) error {
+	return config.readConfig(configFile, &conf)
 }
 
 func helloHandler(w http.ResponseWriter, r *http.Request) {
