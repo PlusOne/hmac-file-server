@@ -34,6 +34,8 @@ func main() {
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
 	flag.Parse()
 
+	log.Infof("Using configuration file: %s", configFile) // Add this line
+
 	// Set defaults and load config
 	setDefaults()
 	if err := loadConfig(); err != nil {
