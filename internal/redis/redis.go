@@ -1,37 +1,57 @@
+// internal/redis/redis.go
+
 package redis
-import ( 
-        // TODO: Add required imports here 
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"your-project/internal/config"
+	"your-project/internal/logging"
+
+	"github.com/go-redis/redis/v8"
 )
-func initRedis() {
-	if !conf.Redis.RedisEnabled {
-		log.Info("Redis is disabled in configuration.")
+
+var (
+	RedisClient     *redis.Client
+	RedisConnected  bool
+	mu              sync.RWMutex
+)
+
+// InitRedis initialisiert den Redis-Client
+func InitRedis() {
+	if !config.Conf.Redis.RedisEnabled {
+		logging.Log.Info("Redis is disabled in configuration.")
 		return
 	}
 
-	redisClient = redis.NewClient(&redis.Options{
-		Addr:     conf.Redis.RedisAddr,
-		Password: conf.Redis.RedisPassword,
-		DB:       conf.Redis.RedisDBIndex,
+	RedisClient = redis.NewClient(&redis.Options{
+		Addr:     config.Conf.Redis.RedisAddr,
+		Password: config.Conf.Redis.RedisPassword,
+		DB:       config.Conf.Redis.RedisDBIndex,
 	})
 
 	// Test the Redis connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := redisClient.Ping(ctx).Result()
+	_, err := RedisClient.Ping(ctx).Result()
 	if err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+		logging.Log.Fatalf("Failed to connect to Redis: %v", err)
 	}
-	log.Info("Connected to Redis successfully")
+	logging.Log.Info("Connected to Redis successfully")
 
 	// Set initial connection status
 	mu.Lock()
-	redisConnected = true
+	RedisConnected = true
 	mu.Unlock()
 
 	// Start monitoring Redis health
-	go MonitorRedisHealth(context.Background(), redisClient, parseDuration(conf.Redis.RedisHealthCheckInterval))
+	go MonitorRedisHealth(context.Background(), RedisClient, ParseDuration(config.Conf.Redis.RedisHealthCheckInterval))
 }
+
+// MonitorRedisHealth überwacht periodisch die Redis-Verbindung
 func MonitorRedisHealth(ctx context.Context, client *redis.Client, checkInterval time.Duration) {
 	ticker := time.NewTicker(checkInterval)
 	defer ticker.Stop()
@@ -39,24 +59,34 @@ func MonitorRedisHealth(ctx context.Context, client *redis.Client, checkInterval
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("Stopping Redis health monitor.")
+			logging.Log.Info("Stopping Redis health monitor.")
 			return
 		case <-ticker.C:
 			err := client.Ping(ctx).Err()
 			mu.Lock()
 			if err != nil {
-				if redisConnected {
-					log.Errorf("Redis health check failed: %v", err)
+				if RedisConnected {
+					logging.Log.Errorf("Redis health check failed: %v", err)
 				}
-				redisConnected = false
+				RedisConnected = false
 			} else {
-				if !redisConnected {
-					log.Info("Redis reconnected successfully")
+				if !RedisConnected {
+					logging.Log.Info("Redis reconnected successfully")
 				}
-				redisConnected = true
-				log.Debug("Redis health check succeeded.")
+				RedisConnected = true
+				logging.Log.Debug("Redis health check succeeded.")
 			}
 			mu.Unlock()
 		}
 	}
+}
+
+// ParseDuration konvertiert eine Dauerzeichenkette in eine time.Duration
+func ParseDuration(durationStr string) time.Duration {
+	duration, err := time.ParseDuration(durationStr)
+	if err != nil {
+		logging.Log.WithError(err).Warn("Invalid duration format, using default 30s")
+		return 30 * time.Second
+	}
+	return duration
 }

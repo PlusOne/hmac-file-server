@@ -1,54 +1,83 @@
+// internal/network/network.go
+
 package network
-import ( 
-        // TODO: Add required imports here 
+
+import (
+	"context"
+	"net"
+	"strings"
+	"time"
+
+	"your-project/internal/config"
+	"your-project/internal/logging"
 )
-func monitorNetwork(ctx context.Context) {
-	currentIP := getCurrentIPAddress() // Placeholder for the current IP address
+
+type NetworkEvent struct {
+	Type    string
+	Details string
+}
+
+var (
+	NetworkEvents chan NetworkEvent
+)
+
+// MonitorNetwork überwacht Netzwerkänderungen
+func MonitorNetwork(ctx context.Context) {
+	NetworkEvents = make(chan NetworkEvent, 100)
+	currentIP := getCurrentIPAddress()
+
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("Stopping network monitor.")
+			logging.Log.Info("Stopping network monitor.")
+			close(NetworkEvents)
 			return
-		case <-time.After(10 * time.Second):
+		case <-ticker.C:
 			newIP := getCurrentIPAddress()
 			if newIP != currentIP && newIP != "" {
 				currentIP = newIP
 				select {
-				case networkEvents <- NetworkEvent{Type: "IP_CHANGE", Details: currentIP}:
-					log.WithField("new_ip", currentIP).Info("Queued IP_CHANGE event")
+				case NetworkEvents <- NetworkEvent{Type: "IP_CHANGE", Details: currentIP}:
+					logging.Log.WithField("new_ip", currentIP).Info("Queued IP_CHANGE event")
 				default:
-					log.Warn("Network event channel is full. Dropping IP_CHANGE event.")
+					logging.Log.Warn("Network event channel is full. Dropping IP_CHANGE event.")
 				}
 			}
 		}
 	}
 }
-func handleNetworkEvents(ctx context.Context) {
+
+// HandleNetworkEvents verarbeitet Netzwerkereignisse
+func HandleNetworkEvents(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("Stopping network event handler.")
+			logging.Log.Info("Stopping network event handler.")
 			return
-		case event, ok := <-networkEvents:
+		case event, ok := <-NetworkEvents:
 			if !ok {
-				log.Info("Network events channel closed.")
+				logging.Log.Info("Network events channel closed.")
 				return
 			}
 			switch event.Type {
 			case "IP_CHANGE":
-				log.WithField("new_ip", event.Details).Info("Network change detected")
-				// Example: Update Prometheus gauge or trigger alerts
+				logging.Log.WithField("new_ip", event.Details).Info("Network change detected")
+				// Beispiel: Update Prometheus gauge oder trigger alerts
 				// activeConnections.Set(float64(getActiveConnections()))
 			}
-			// Additional event types can be handled here
+			// Weitere Ereignistypen können hier behandelt werden
 		}
 	}
 }
+
+// getCurrentIPAddress ermittelt die aktuelle IP-Adresse
 func getCurrentIPAddress() string {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		log.WithError(err).Error("Failed to get network interfaces")
+		logging.Log.WithError(err).Error("Failed to get network interfaces")
 		return ""
 	}
 
@@ -58,7 +87,7 @@ func getCurrentIPAddress() string {
 		}
 		addrs, err := iface.Addrs()
 		if err != nil {
-			log.WithError(err).Errorf("Failed to get addresses for interface %s", iface.Name)
+			logging.Log.WithError(err).Errorf("Failed to get addresses for interface %s", iface.Name)
 			continue
 		}
 		for _, addr := range addrs {
