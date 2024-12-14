@@ -1,3 +1,7 @@
+package iso
+import ( 
+        // TODO: Add required imports here 
+)
 func verifyAndCreateISOContainer() error {
 	isoPath := filepath.Join(conf.ISO.MountPoint, "container.iso")
 

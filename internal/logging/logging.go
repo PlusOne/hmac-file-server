@@ -1,3 +1,7 @@
+package logging
+import ( 
+        // TODO: Add required imports here 
+)
 func setupLogging() {
 	level, err := logrus.ParseLevel(conf.Server.LogLevel)
 	if err != nil {

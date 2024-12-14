@@ -1,3 +1,7 @@
+package config
+import ( 
+        // TODO: Add required imports here 
+)
 func readConfig(configFilename string, conf *Config) error {
 	viper.SetConfigFile(configFilename)
 	viper.SetConfigType("toml")

@@ -1,3 +1,7 @@
+package network
+import ( 
+        // TODO: Add required imports here 
+)
 func monitorNetwork(ctx context.Context) {
 	currentIP := getCurrentIPAddress() // Placeholder for the current IP address
 

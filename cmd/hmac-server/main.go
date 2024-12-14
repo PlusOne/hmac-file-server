@@ -1,3 +1,7 @@
+package main
+import ( 
+        // TODO: Add required imports here 
+)
 func main() {
 	// Set default configuration values
 	setDefaults()

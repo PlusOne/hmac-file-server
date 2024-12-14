@@ -1,3 +1,7 @@
+package router
+import ( 
+        // TODO: Add required imports here 
+)
 func setupRouter() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleRequest)

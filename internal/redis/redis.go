@@ -1,3 +1,7 @@
+package redis
+import ( 
+        // TODO: Add required imports here 
+)
 func initRedis() {
 	if !conf.Redis.RedisEnabled {
 		log.Info("Redis is disabled in configuration.")
