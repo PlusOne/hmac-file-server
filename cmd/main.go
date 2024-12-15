@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	"runtime"
 
 	"github.com/PlusOne/hmac-file-server/config"
 	"github.com/PlusOne/hmac-file-server/handlers"
@@ -24,6 +25,10 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/mem"
 )
 
 var (
@@ -197,7 +202,44 @@ func parseCustomDuration(durationStr string) (time.Duration, error) {
 }
 
 func logSystemInfo() {
-	logrus.Info("Logging system information...")
+	logrus.Info("========================================")
+	logrus.Infof("       HMAC File Server - %s          ", versionString)
+	logrus.Info("  Secure File Handling with HMAC Auth   ")
+	logrus.Info("========================================")
+
+	logrus.Info("Features: Prometheus Metrics, Chunked Uploads, ClamAV Scanning")
+	logrus.Info("Build Date: 2024-10-28")
+
+	logrus.Infof("Operating System: %s", runtime.GOOS)
+	logrus.Infof("Architecture: %s", runtime.GOARCH)
+	logrus.Infof("Number of CPUs: %d", runtime.NumCPU())
+	logrus.Infof("Go Version: %s", runtime.Version())
+
+	v, _ := mem.VirtualMemory()
+	logrus.Infof("Total Memory: %v MB", v.Total/1024/1024)
+	logrus.Infof("Free Memory: %v MB", v.Free/1024/1024)
+	logrus.Infof("Used Memory: %v MB", v.Used/1024/1024)
+
+	cpuInfo, _ := cpu.Info()
+	for _, info := range cpuInfo {
+		logrus.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
+	}
+
+	partitions, _ := disk.Partitions(false)
+	for _, partition := range partitions {
+		usage, _ := disk.Usage(partition.Mountpoint)
+		logrus.Infof("Disk Mountpoint: %s, Total: %v GB, Free: %v GB, Used: %v GB",
+			partition.Mountpoint, usage.Total/1024/1024/1024, usage.Free/1024/1024/1024, usage.Used/1024/1024/1024)
+	}
+
+	hInfo, _ := host.Info()
+	logrus.Infof("Hostname: %s", hInfo.Hostname)
+	logrus.Infof("Uptime: %v seconds", hInfo.Uptime)
+	logrus.Infof("Boot Time: %v", time.Unix(int64(hInfo.BootTime), 0))
+	logrus.Infof("Platform: %s", hInfo.Platform)
+	logrus.Infof("Platform Family: %s", hInfo.PlatformFamily)
+	logrus.Infof("Platform Version: %s", hInfo.PlatformVersion)
+	logrus.Infof("Kernel Version: %s", hInfo.KernelVersion)
 }
 
 func setupLogging() {
