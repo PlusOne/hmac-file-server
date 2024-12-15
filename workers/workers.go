@@ -6,8 +6,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/PlusOne/hmac-file-server/config"
-	"github.com/PlusOne/hmac-file-server/handlers"
+	"/home/renz/source/hmac-file-server/config"
+	"/home/renz/source/hmac-file-server/handlers"
+
 	"github.com/sirupsen/logrus"
 )
 
