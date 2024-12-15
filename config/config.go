@@ -1,5 +1,9 @@
 package config
 
+import (
+    "github.com/spf13/viper"
+)
+
 type ServerConfig struct {
     ListenPort     string `mapstructure:"ListenPort"`
     StoragePath    string `mapstructure:"StoragePath"`
