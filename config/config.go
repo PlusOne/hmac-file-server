@@ -9,16 +9,22 @@ import (
 // Configuration structures...
 
 type ServerConfig struct {
-	ListenPort     string `toml:"listen_port"`
-	UnixSocket     bool   `toml:"unix_socket"`
-	MetricsEnabled bool   `toml:"metrics_enabled"`
-	// Define server configuration fields
+	ListenPort     string `mapstructure:"ListenPort"`
+	StoragePath    string `mapstructure:"StoragePath"`
+	FileTTL        string `mapstructure:"FileTTL"`
+	MetricsEnabled bool   `mapstructure:"MetricsEnabled"`
+	MetricsPort    string `mapstructure:"MetricsPort"`
+	UnixSocket     bool   `mapstructure:"UnixSocket"`
+}
+
+type ISOConfig struct {
+	Enabled bool `mapstructure:"Enabled"`
 }
 
 type TimeoutConfig struct {
-	ReadTimeout  string
-	WriteTimeout string
-	IdleTimeout  string
+	ReadTimeout  string `mapstructure:"ReadTimeout"`
+	WriteTimeout string `mapstructure:"WriteTimeout"`
+	IdleTimeout  string `mapstructure:"IdleTimeout"`
 }
 
 type SecurityConfig struct {
@@ -34,22 +40,24 @@ type UploadsConfig struct {
 }
 
 type ClamAVConfig struct {
-	// Define ClamAV configuration fields
-	ClamAVEnabled bool
+	ClamAVEnabled bool   `mapstructure:"ClamAVEnabled"`
+	ClamAVSocket  string `mapstructure:"ClamAVSocket"`
 }
 
 type RedisConfig struct {
-	// Define Redis configuration fields
+	RedisEnabled             bool   `mapstructure:"RedisEnabled"`
+	RedisHealthCheckInterval string `mapstructure:"RedisHealthCheckInterval"`
 }
 
 type WorkersConfig struct {
-	NumWorkers      int
-	UploadQueueSize int
+	NumWorkers      int `mapstructure:"NumWorkers"`
+	UploadQueueSize int `mapstructure:"UploadQueueSize"`
 	ScanQueueSize   int
 }
 
 type Config struct {
 	Server     ServerConfig     `mapstructure:"server"`
+	ISO        ISOConfig        `mapstructure:"iso"`
 	Timeouts   TimeoutConfig    `mapstructure:"timeouts"`
 	Security   SecurityConfig   `mapstructure:"security"`
 	Versioning VersioningConfig `mapstructure:"versioning"`
