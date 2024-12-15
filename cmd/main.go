@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"os"
@@ -16,12 +20,15 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	"net/url"
 
 	"github.com/PlusOne/hmac-file-server/config"
 	"github.com/PlusOne/hmac-file-server/handlers"
+	"github.com/PlusOne/hmac-file-server/metrics"
 	"github.com/PlusOne/hmac-file-server/workers"
 	"github.com/go-redis/redis/v8"
 	"github.com/patrickmn/go-cache"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
@@ -38,11 +45,24 @@ var (
 	clamClient    *workers.ClamAVClient
 	networkEvents chan NetworkEvent
 	versionString = "2.1-dev"
+
+	// Prometheus metrics
+	uploadErrorsTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "upload_errors_total",
+			Help: "Total number of upload errors",
+		},
+	)
 )
 
 type NetworkEvent struct {
 	EventType string
 	Timestamp time.Time
+}
+
+func init() {
+	// Register Prometheus metrics
+	prometheus.MustRegister(uploadErrorsTotal)
 }
 
 func initClamAV(socket string) (*workers.ClamAVClient, error) {
@@ -70,7 +90,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func setupRouter() *http.ServeMux {
 	router := http.NewServeMux()
-	router.HandleFunc("/upload", handlers.UploadHandler)
+	router.HandleFunc("/upload", handleUploadWrapper)
 	// Define additional routes here
 	return router
 }
@@ -114,6 +134,10 @@ func setDefaults() {
 	conf.Redis = config.RedisConfig{
 		RedisEnabled:             false,
 		RedisHealthCheckInterval: "30s",
+	}
+
+	conf.Security = config.SecurityConfig{
+		SecretKey: "your-secret-key",
 	}
 }
 
@@ -392,7 +416,8 @@ func updateSystemMetrics(ctx context.Context) {
 
 func initMetrics() {
 	// Initialize Prometheus metrics here
-	logrus.Info("Initializing Prometheus metrics...")
+	metrics.InitMetrics()
+	logrus.Info("Prometheus metrics initialized.")
 }
 
 var redisClient *redis.Client
@@ -400,14 +425,38 @@ var redisClient *redis.Client
 func initRedis() {
 	// Initialize Redis client here
 	logrus.Info("Initializing Redis client...")
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     conf.Redis.RedisAddr,
+		Password: conf.Redis.RedisPassword,
+		DB:       conf.Redis.RedisDBIndex,
+	})
+
+	// Optionally, test Redis connection
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		logrus.Errorf("Failed to connect to Redis: %v", err)
+		conf.Redis.RedisEnabled = false
+	} else {
+		logrus.Info("Connected to Redis successfully.")
+	}
 }
 
 func initializeUploadWorkerPool(ctx context.Context) {
 	for i := 0; i < conf.Workers.NumWorkers; i++ {
 		go workers.UploadWorker(ctx, uploadQueue)
 	}
+	logrus.Infof("Initialized %d upload workers", conf.Workers.NumWorkers)
 }
 
+func initializeScanWorkerPool(ctx context.Context) {
+	for i := 0; i < conf.Workers.NumScanWorkers; i++ {
+		go workers.ScanWorker(ctx, scanQueue)
+	}
+	logrus.Infof("Initialized %d scan workers", conf.Workers.NumScanWorkers)
+}
+
+// Monitor Redis health
 func MonitorRedisHealth(ctx context.Context, client *redis.Client, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -427,10 +476,96 @@ func MonitorRedisHealth(ctx context.Context, client *redis.Client, interval time
 	}
 }
 
-func initializeScanWorkerPool(ctx context.Context) {
-	for i := 0; i < conf.Workers.NumScanWorkers; i++ {
-		go workers.ScanWorker(ctx, scanQueue)
+// Check if the file extension is allowed
+func isExtensionAllowed(filePath string) bool {
+	allowedExtensions := []string{".txt", ".pdf", ".jpg", ".png"} // Define allowed extensions
+	ext := filepath.Ext(filePath)
+	for _, allowed := range allowedExtensions {
+		if ext == allowed {
+			return true
+		}
 	}
+	return false
+}
+
+// Wrapper for handleUpload to match handler signature
+func handleUploadWrapper(w http.ResponseWriter, r *http.Request) {
+	absFilename := ""      // Retrieve absolute filename as needed
+	queryParams := r.URL.Query()
+	handleUpload(w, r, absFilename, queryParams)
+}
+
+// Handle file uploads with extension restrictions and HMAC validation
+func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, a url.Values) {
+	// Log the storage path being used
+	logrus.Infof("Using storage path: %s", conf.Server.StoragePath)
+
+	// Determine protocol version based on query parameters
+	var protocolVersion string
+	if a.Get("v2") != "" {
+		protocolVersion = "v2"
+	} else if a.Get("token") != "" {
+		protocolVersion = "token"
+	} else if a.Get("v") != "" {
+		protocolVersion = "v"
+	} else {
+		logrus.Warn("No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC")
+		http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
+		uploadErrorsTotal.Inc()
+		return
+	}
+	logrus.Debugf("Protocol version determined: %s", protocolVersion)
+
+	// Initialize HMAC
+	mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
+
+	// Calculate MAC based on protocolVersion
+	if protocolVersion == "v" {
+		mac.Write([]byte(fileStorePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
+	} else if protocolVersion == "v2" || protocolVersion == "token" {
+		contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		mac.Write([]byte(fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType))
+	}
+
+	calculatedMAC := mac.Sum(nil)
+	logrus.Debugf("Calculated MAC: %x", calculatedMAC)
+
+	// Decode provided MAC from hex
+	providedMACHex := a.Get(protocolVersion)
+	providedMAC, err := hex.DecodeString(providedMACHex)
+	if err != nil {
+		logrus.Warn("Invalid MAC encoding")
+		http.Error(w, "Invalid MAC encoding", http.StatusForbidden)
+		uploadErrorsTotal.Inc()
+		return
+	}
+	logrus.Debugf("Provided MAC: %x", providedMAC)
+
+	// Validate the HMAC
+	if !hmac.Equal(calculatedMAC, providedMAC) {
+		logrus.Warn("Invalid MAC")
+		http.Error(w, "Invalid MAC", http.StatusForbidden)
+		uploadErrorsTotal.Inc()
+		return
+	}
+	logrus.Debug("HMAC validation successful")
+
+	// Validate file extension
+	if !isExtensionAllowed(fileStorePath) {
+		logrus.WithFields(logrus.Fields{
+			"file":  fileStorePath,
+			"error": "Invalid file extension",
+		}).Warn("Invalid file path")
+		http.Error(w, "Invalid file path", http.StatusBadRequest)
+		uploadErrorsTotal.Inc()
+		return
+	}
+
+	// Proceed with upload handling
+	handlers.UploadHandler(w, r)
 }
 
 func main() {

@@ -51,16 +51,20 @@ type RedisConfig struct {
 	RedisHealthCheckInterval string `mapstructure:"redishealthcheckinterval"`
 }
 
+type SecurityConfig struct {
+	Enabled   bool   `mapstructure:"enabled"`
+	Secret    string `mapstructure:"secret"`
+	SecretKey string `toml:"secret_key"`
+}
+
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	ISO      ISOConfig      `mapstructure:"iso"`
-	Timeouts TimeoutsConfig `mapstructure:"timeouts"`
-	Workers  WorkersConfig  `mapstructure:"workers"`
-	ClamAV   ClamAVConfig   `mapstructure:"clamav"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	File     struct {
-		FileRevision int `mapstructure:"filerevision"`
-	} `mapstructure:"file"`
+	Server   ServerConfig
+	ISO      ISOConfig
+	Timeouts TimeoutsConfig
+	Workers  WorkersConfig
+	ClamAV   ClamAVConfig
+	Redis    RedisConfig
+	Security SecurityConfig
 }
 
 func LoadConfig(configFile string) (*Config, error) {
