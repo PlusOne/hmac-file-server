@@ -7,7 +7,24 @@ import (
     "github.com/sirupsen/logrus"
     "github.com/PlusOne/hmac-file-server/config"
     "github.com/PlusOne/hmac-file-server/workers"
+    "github.com/shirou/gopsutil/cpu"
+    "path/filepath"
+    "os"
+    "io"
 )
+
+func corsMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        if r.Method == "OPTIONS" {
+            w.WriteHeader(http.StatusOK)
+            return
+        }
+        next.ServeHTTP(w, r)
+    })
+}
 
 func UploadHandlerV2(w http.ResponseWriter, r *http.Request) {
     // Load configuration
@@ -23,6 +40,17 @@ func UploadHandlerV2(w http.ResponseWriter, r *http.Request) {
         logrus.Infof("ListenPort is set to %s.", conf.Server.ListenPort)
     }
 
+    // Gather CPU information
+    cpuInfo, err := cpu.Info()
+    if err != nil {
+        logrus.Fatalf("Error gathering CPU information: %v", err)
+    }
+
+    // Log CPU information in a cumulative manner
+    for _, info := range cpuInfo {
+        logrus.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
+    }
+
     // Start a goroutine to log system metrics every 10 seconds if LogLimiter is enabled
     if conf.Server.LogLimiter {
         go func() {
@@ -36,12 +64,36 @@ func UploadHandlerV2(w http.ResponseWriter, r *http.Request) {
     }
 
     // Implement the upload handler logic here
-    w.WriteHeader(http.StatusOK)
+    file, header, err := r.FormFile("file")
+    if err != nil {
+        http.Error(w, "Failed to get file from request", http.StatusBadRequest)
+        return
+    }
+    defer file.Close()
+
+    filePath := filepath.Join(conf.Server.StoragePath, header.Filename)
+    outFile, err := os.Create(filePath)
+    if err != nil {
+        http.Error(w, "Failed to create file", http.StatusInternalServerError)
+        return
+    }
+    defer outFile.Close()
+
+    _, err = io.Copy(outFile, file)
+    if err != nil {
+        http.Error(w, "Failed to save file", http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusCreated)
     w.Write([]byte("Upload successful"))
 }
 
 func InitHandlers(uploadQueue chan workers.UploadTask, scanQueue chan workers.ScanTask, conf *config.Config) {
-    // Initialize handlers with access to the queues and configuration
+    mux := http.NewServeMux()
+    mux.HandleFunc("/upload", UploadHandlerV2)
+    handler := corsMiddleware(mux)
+    http.ListenAndServe(":"+conf.Server.ListenPort, handler)
 }
 
 type Config struct {
