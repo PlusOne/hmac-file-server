@@ -40,13 +40,13 @@ func (c *ClamAVClient) ScanFile(filePath string) error {
 }
 
 var (
-	UploadQueue chan UploadTask
+	UploadQueue chan handlers.UploadTask
 	ScanQueue   chan ScanTask
 )
 
 func InitializeWorkers(ctx context.Context) {
 	UploadQueue = make(chan handlers.UploadTask, config.Conf.Workers.UploadQueueSize)
-	ScanQueue = make(chan handlers.ScanTask, config.Conf.Workers.ScanQueueSize)
+	ScanQueue = make(chan ScanTask, config.Conf.Workers.ScanQueueSize)
 
 	for i := 0; i < config.Conf.Workers.NumWorkers; i++ {
 		go uploadWorker(ctx, i)

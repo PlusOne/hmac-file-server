@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+
 	"github.com/PlusOne/hmac-file-server/config"
 	"github.com/PlusOne/hmac-file-server/workers"
 )
