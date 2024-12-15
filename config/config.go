@@ -5,15 +5,17 @@ import (
 )
 
 type ServerConfig struct {
-    ListenPort             string `mapstructure:"ListenPort"`
-    StoragePath            string `mapstructure:"StoragePath"`
-    FileTTL                string `mapstructure:"FileTTL"`
-    MetricsEnabled         bool   `mapstructure:"MetricsEnabled"`
-    MetricsPort            string `mapstructure:"MetricsPort"`
-    UnixSocket             bool   `mapstructure:"UnixSocket"`
-    LogFile                string `mapstructure:"LogFile"`
-    LogLevel               string `mapstructure:"LogLevel"`
+    ListenPort              string `mapstructure:"ListenPort"`
+    StoragePath             string `mapstructure:"StoragePath"`
+    FileTTL                 string `mapstructure:"FileTTL"`
+    MetricsEnabled          bool   `mapstructure:"MetricsEnabled"`
+    MetricsPort             string `mapstructure:"MetricsPort"`
+    UnixSocket              bool   `mapstructure:"UnixSocket"`
+    LogFile                 string `mapstructure:"LogFile"`
+    LogLevel                string `mapstructure:"LogLevel"`
     NetworkChangeMonitoring bool   `mapstructure:"NetworkChangeMonitoring"`
+    ResumeableUploads       bool   `mapstructure:"ResumeableUploads"`
+    ResumeableDownloads     bool   `mapstructure:"ResumeableDownloads"`
 }
 
 type ISOConfig struct {

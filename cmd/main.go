@@ -56,43 +56,53 @@ func initClamAV(socket string) (*workers.ClamAVClient, error) {
 }
 
 func setupRouter() *http.ServeMux {
-	router := http.NewServeMux()
-	router.HandleFunc("/upload", handlers.UploadHandler)
-	return router
+    router := http.NewServeMux()
+    if conf.Server.ResumeableUploads {
+        router.HandleFunc("/upload", handlers.UploadHandler)
+    }
+    if conf.Server.ResumeableDownloads {
+        router.HandleFunc("/download", handlers.DownloadHandler)
+    }
+    return router
 }
 
 func setDefaults() {
-	conf.Server = config.ServerConfig{
-		StoragePath:    "./storage",
-		FileTTL:        "24h",
-		MetricsEnabled: true,
-		MetricsPort:    "2112",
-		UnixSocket:     false,
-	}
+    conf.Server = config.ServerConfig{
+        StoragePath:             "./storage",
+        FileTTL:                 "24h",
+        MetricsEnabled:          true,
+        MetricsPort:             "2112",
+        UnixSocket:              false,
+        LogFile:                 "./logs/server.log",
+        LogLevel:                "info",
+        NetworkChangeMonitoring: true,
+        ResumeableUploads:       true,
+        ResumeableDownloads:     true,
+    }
 
-	conf.ISO = config.ISOConfig{
-		Enabled: false,
-	}
+    conf.ISO = config.ISOConfig{
+        Enabled: false,
+    }
 
-	conf.Timeouts = config.TimeoutsConfig{
-		ReadTimeout:  "10s",
-		WriteTimeout: "10s",
-		IdleTimeout:  "60s",
-	}
+    conf.Timeouts = config.TimeoutsConfig{
+        ReadTimeout:  "10s",
+        WriteTimeout: "10s",
+        IdleTimeout:  "60s",
+    }
 
-	conf.Workers = config.WorkersConfig{
-		UploadQueueSize: 10,
-	}
+    conf.Workers = config.WorkersConfig{
+        UploadQueueSize: 10,
+    }
 
-	conf.ClamAV = config.ClamAVConfig{
-		ClamAVEnabled: false,
-		ClamAVSocket:  "/var/run/clamav/clamd.ctl",
-	}
+    conf.ClamAV = config.ClamAVConfig{
+        ClamAVEnabled: false,
+        ClamAVSocket:  "/var/run/clamav/clamd.ctl",
+    }
 
-	conf.Redis = config.RedisConfig{
-		RedisEnabled:             false,
-		RedisHealthCheckInterval: "30s",
-	}
+    conf.Redis = config.RedisConfig{
+        RedisEnabled:             false,
+        RedisHealthCheckInterval: "30s",
+    }
 }
 
 func readConfig(configFile string) error {
@@ -420,7 +430,7 @@ func main() {
 
     // Load configuration
     err := readConfig(configFile)
-    if err != nil {
+    if (err != nil) {
         logrus.Fatalf("Error reading configuration file: %v", err)
     }
     logrus.Info("Configuration loaded successfully.")

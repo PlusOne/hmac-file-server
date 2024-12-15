@@ -9,8 +9,10 @@ metricsport = "9090"
 DeduplicationEnabled = true
 filettl = "356D"
 minfreebytes = "100GB"
-NetworkChangeMonitoring = true
+NetworkChangeMonitoring = false
 AutoAdjustWorkers = true
+ResumeableUploads = true
+ResumeableDownloads = true
 
 [iso]
 enabled = false
