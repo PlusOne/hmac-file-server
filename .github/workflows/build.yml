@@ -17,12 +17,12 @@ jobs:
 
       - name: Build Server
         run: |
-          cd cmd/server
+          cd cmd/
           go build -o hmac-file-server main.go
 
       - name: Start Server
         run: |
-          cd cmd/server
+          cd cmd/
           ./hmac-file-server &
           echo $! > server.pid
         shell: bash
@@ -39,5 +39,5 @@ jobs:
 
       - name: Stop Server
         run: |
-          kill $(cat cmd/server/server.pid)
+          kill $(cat cmd/server.pid)
         shell: bash
