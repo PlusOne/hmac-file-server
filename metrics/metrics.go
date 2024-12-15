@@ -11,7 +11,7 @@ var (
     once sync.Once
 
     // Define your metrics
-    uploadErrorsTotal = prometheus.NewCounter(
+    UploadErrorsTotal = prometheus.NewCounter(
         prometheus.CounterOpts{
             Name: "upload_errors_total",
             Help: "Total number of upload errors",
@@ -23,7 +23,7 @@ var (
 func InitMetrics() {
     once.Do(func() {
         // Register metrics
-        prometheus.MustRegister(uploadErrorsTotal)
+        prometheus.MustRegister(UploadErrorsTotal)
         // Register other metrics
         logrus.Info("Prometheus metrics initialized.")
     })

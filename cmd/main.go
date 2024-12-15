@@ -37,7 +37,8 @@ import (
 )
 
 var (
-	conf              *config.Config
+	conf              config.Config
+	log               = logrus.New()
 	versionString     = "2.1-dev"
 	uploadQueue       chan workers.UploadTask
 	scanQueue         chan workers.ScanTask
@@ -137,9 +138,13 @@ func setDefaults() {
 	}
 }
 
-func readConfig(configFile string) error {
+func readConfig(configFile string, conf *config.Config) error {
 	var err error
-	conf, err = config.LoadConfig(configFile)
+	confPtr, err := config.LoadConfig(configFile)
+	if err != nil {
+		return err
+	}
+	*conf = *confPtr
 	return err
 }
 
@@ -608,9 +613,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request, fileStorePath string
 }
 
 func main() {
-	// Initialize the conf variable
-	conf = &config.Config{}
-
+	logSystemInfo()
 	// Set default configuration values
 	setDefaults()
 
@@ -620,28 +623,42 @@ func main() {
 	flag.Parse()
 
 	// Load configuration
-	err := readConfig(configFile)
+	err := readConfig(configFile, &conf)
 	if err != nil {
-		logrus.Fatalf("Error reading configuration file: %v", err)
+		log.Fatalf("Error reading config: %v", err)
 	}
-	logrus.Info("Configuration loaded successfully.")
+	log.Info("Configuration loaded successfully.")
 
 	// Setup logging
 	setupLogging()
+	log.Info("Logging initialized.")
 
-	// Log system information
-	logSystemInfo()
+	// Initialize Prometheus metrics once
+	metrics.InitMetrics()
 
-	// Verify and create ISO container if it doesn't exist
-	if conf.ISO.Enabled {
-		err = verifyAndCreateISOContainer()
-		if err != nil {
-			logrus.Fatalf("Failed to verify or create ISO container: %v", err)
-		}
+	// Start metrics server if enabled
+	if conf.Server.MetricsEnabled {
+		go func() {
+			metricsMux := http.NewServeMux()
+			metricsMux.Handle("/metrics", promhttp.Handler())
+
+			metricsServer := &http.Server{
+				Addr:    ":" + conf.Server.MetricsPort,
+				Handler: metricsMux,
+			}
+
+			log.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
+			if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("Metrics server failed: %v", err)
+			}
+		}()
 	}
 
-	// Initialize file info cache
-	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
+	// Initialize the conf variable
+	conf = config.Config{}
+
+	// Set default configuration values
+	setDefaults()
 
 	// Create store directory
 	err = os.MkdirAll(conf.Server.StoragePath, os.ModePerm)
@@ -690,6 +707,12 @@ func main() {
 		} else {
 			logrus.Info("ClamAV client initialized successfully.")
 		}
+	}
+
+	// Verify and create ISO container if needed
+	err = verifyAndCreateISOContainer()
+	if err != nil {
+		logrus.Warnf("Failed to verify or create ISO container: %v", err)
 	}
 
 	// Initialize Redis client if enabled
