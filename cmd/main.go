@@ -540,7 +540,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, 
 
     // Validate the HMAC
     if hmac.Equal([]byte(macString), []byte(a.Get(protocolVersion))) {
-		err := saveFile(fileStorePath, fileStorePath, w, r)
+		err := saveFile(fileStorePath, w, r)
         if err != nil {
             log.Error(err)
         }
@@ -554,7 +554,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, 
 
 }
 
-func saveFile(absFilename, fileStorePath string, w http.ResponseWriter, r *http.Request) error {
+func saveFile(fileStorePath string, w http.ResponseWriter, r *http.Request) error {
 	file, err := os.Create(fileStorePath)
 	if err != nil {
 		logrus.Errorf("Failed to create file: %v", err)
