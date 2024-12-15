@@ -70,12 +70,8 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func setupRouter() *http.ServeMux {
 	router := http.NewServeMux()
-	if conf.Server.ResumeableUploads {
-		router.HandleFunc("/upload", handlers.UploadHandler)
-	}
-	if conf.Server.ResumeableDownloads {
-		router.HandleFunc("/download", handlers.DownloadHandler)
-	}
+	router.HandleFunc("/upload", handlers.UploadHandler)
+	// Define additional routes here
 	return router
 }
 
@@ -451,7 +447,7 @@ func main() {
 
 	// Load configuration
 	err := readConfig(configFile)
-	if err != nil {
+	if (err != nil) {
 		logrus.Fatalf("Error reading configuration file: %v", err)
 	}
 	logrus.Info("Configuration loaded successfully.")
@@ -550,7 +546,7 @@ func main() {
 	}
 
 	// Setup router
-	router := setupRouter()
+	// router := setupRouter()
 
 	// Start file cleaner
 	fileTTL, err := parseCustomDuration(conf.Server.FileTTL)
@@ -579,7 +575,7 @@ func main() {
 	// Configure HTTP server
 	server := &http.Server{
 		Addr:         ":" + conf.Server.ListenPort, // Prepend colon to ListenPort
-		Handler:      corsMiddleware(router),
+		Handler:      corsMiddleware(setupRouter()),
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		IdleTimeout:  idleTimeout,
