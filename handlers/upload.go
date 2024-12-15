@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Config struct {
+type UploadConfig struct {
 	Server struct {
 		StoragePath          string
 		DeduplicationEnabled bool
@@ -34,7 +34,7 @@ type Config struct {
 	}
 }
 
-var conf *Config
+var conf *UploadConfig
 
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	if !conf.Uploads.ChunkedUploadsEnabled {
