@@ -13,7 +13,7 @@ import (
     "github.com/PlusOne/hmac-file-server/workers"
     "github.com/shirou/gopsutil/cpu"
     "github.com/dutchcoders/go-clamd"
-    "context"
+    "golang.org/x/net/context"
 )
 
 var ctx = context.Background()
@@ -56,14 +56,17 @@ func UploadHandlerV2(w http.ResponseWriter, r *http.Request) {
         logrus.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
     }
 
-    // Start a goroutine to log system metrics every 10 seconds if LogLimiter is enabled
+    // Start a goroutine to log system metrics every 60 seconds if LogLimiter is enabled
     if conf.Server.LogLimiter {
         go func() {
-            ticker := time.NewTicker(10 * time.Second)
+            ticker := time.NewTicker(60 * time.Second) // Adjusted to 60 seconds
             defer ticker.Stop()
-            for range ticker.C {
+            for {
+                select {
+                case <-ticker.C:
                     logrus.Info("Updating system metrics...")
                     // Add your system metrics update logic here
+                }
             }
         }()
     }
