@@ -234,12 +234,22 @@ func logSystemInfo() {
 
 	hInfo, _ := host.Info()
 	logrus.Infof("Hostname: %s", hInfo.Hostname)
-	logrus.Infof("Uptime: %v seconds", hInfo.Uptime)
+	logrus.Infof("Uptime: %s", formatUptime(hInfo.Uptime))
 	logrus.Infof("Boot Time: %v", time.Unix(int64(hInfo.BootTime), 0))
 	logrus.Infof("Platform: %s", hInfo.Platform)
 	logrus.Infof("Platform Family: %s", hInfo.PlatformFamily)
 	logrus.Infof("Platform Version: %s", hInfo.PlatformVersion)
 	logrus.Infof("Kernel Version: %s", hInfo.KernelVersion)
+}
+
+func formatUptime(seconds uint64) string {
+	days := seconds / (24 * 3600)
+	seconds %= 24 * 3600
+	hours := seconds / 3600
+	seconds %= 3600
+	minutes := seconds / 60
+	seconds %= 60
+	return fmt.Sprintf("%d days, %d hours, %d minutes, %d seconds", days, hours, minutes, seconds)
 }
 
 func setupLogging() {
@@ -409,7 +419,7 @@ func main() {
     flag.Parse()
 
     // Load configuration
-	err := readConfig(configFile)
+    err := readConfig(configFile)
     if err != nil {
         logrus.Fatalf("Error reading configuration file: %v", err)
     }
