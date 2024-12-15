@@ -12,6 +12,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -20,7 +21,6 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-	"net/url"
 
 	"github.com/PlusOne/hmac-file-server/config"
 	"github.com/PlusOne/hmac-file-server/metrics"
@@ -37,15 +37,14 @@ import (
 )
 
 var (
-	conf           *config.Config
-	versionString  = "2.1-dev"
-	log            = logrus.New()
-	uploadQueue    chan workers.UploadTask
-	scanQueue      chan workers.ScanTask
-	networkEvents  chan NetworkEvent
-	fileInfoCache  *cache.Cache
-	clamClient     *workers.ClamAVClient
-	redisClient    *redis.Client
+	conf              *config.Config
+	versionString     = "2.1-dev"
+	uploadQueue       chan workers.UploadTask
+	scanQueue         chan workers.ScanTask
+	networkEvents     chan NetworkEvent
+	fileInfoCache     *cache.Cache
+	clamClient        *workers.ClamAVClient
+	redisClient       *redis.Client
 	uploadErrorsTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "upload_errors_total",
@@ -96,13 +95,13 @@ func setupRouter() *http.ServeMux {
 
 func setDefaults() {
 	conf.Server = config.ServerConfig{
-		StoragePath:             "./storage",
-		FileTTL:                 "24h",
-		MetricsEnabled:          true,
-		MetricsPort:             "2112",
-		UnixSocket:              false,
-		LogFile:                 "./logs/server.log",
-		LogLevel:                "info",
+		StoragePath:    "./storage",
+		FileTTL:        "24h",
+		MetricsEnabled: true,
+		MetricsPort:    "2112",
+		UnixSocket:     false,
+		LogFile:        "./logs/server.log",
+		LogLevel:       "info",
 		// ResumableUploads:       true,
 	}
 
@@ -491,87 +490,95 @@ func handleUploadWrapper(w http.ResponseWriter, r *http.Request) {
 
 // Handle file uploads with extension restrictions and HMAC validation
 func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, a url.Values) {
-    // Log the storage path being used
-    logrus.Infof("Using storage path: %s", conf.Server.StoragePath)
-
-    // Determine protocol version based on query parameters
-    var protocolVersion string
-    if a.Get("v2") != "" {
-        protocolVersion = "v2"
-    } else if a.Get("token") != "" {
-        protocolVersion = "token"
-    } else if a.Get("v") != "" {
-        protocolVersion = "v"
-    } else {
-        logrus.Warn("No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC")
-        http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
-        uploadErrorsTotal.Inc()
-        return
-    }
-    logrus.Debugf("Protocol version determined: %s", protocolVersion)
-
-    // Initialize HMAC
-    mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
-    macString := ""
-
-    // Calculate MAC based on protocolVersion
-    if protocolVersion == "v" {
-        mac.Write([]byte(fileStorePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
-        macString = hex.EncodeToString(mac.Sum(nil))
-	} else if protocolVersion == "v2" || protocolVersion == "token" {
-        contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
-        if contentType == "" {
-            contentType = "application/octet-stream"
-        }
-        mac.Write([]byte(fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType))
-        macString = hex.EncodeToString(mac.Sum(nil))
-    }
-
-	// Validate file extension
 	if !isExtensionAllowed(fileStorePath) {
-		logrus.WithFields(logrus.Fields{
-			"file":  fileStorePath,
-			"error": "Invalid file extension",
-		}).Warn("Invalid file path")
-		http.Error(w, "Invalid file path", http.StatusBadRequest)
+		logrus.Warnf("Disallowed file extension for file: %s", fileStorePath)
+		http.Error(w, "Disallowed file extension", http.StatusForbidden)
 		uploadErrorsTotal.Inc()
 		return
 	}
+	logrus.Debug("handleUpload called")
+	logrus.Debugf("Request method: %s", r.Method)
+	logrus.Debugf("File store path: %s", fileStorePath)
+	logrus.Debugf("Query parameters: %v", a)
 
-    // Validate the HMAC
-    if hmac.Equal([]byte(macString), []byte(a.Get(protocolVersion))) {
-		err := saveFile(fileStorePath, w, r)
-        if err != nil {
-            log.Error(err)
-        }
-        return
-    } else {
-        log.Warn("Invalid MAC.")
-        http.Error(w, "Invalid MAC", http.StatusForbidden)
-        uploadErrorsTotal.Inc()
-        return
-    }
+	// Log the storage path being used
+	logrus.Infof("Using storage path: %s", conf.Server.StoragePath)
 
+	// Determine protocol version based on query parameters
+	var protocolVersion string
+	if a.Get("v2") != "" {
+		protocolVersion = "v2"
+	} else if a.Get("token") != "" {
+		protocolVersion = "token"
+	} else if a.Get("v") != "" {
+		protocolVersion = "v"
+	} else {
+		logrus.Warn("No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC")
+		http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
+		uploadErrorsTotal.Inc()
+		return
+	}
+	logrus.Debugf("Protocol version determined: %s", protocolVersion)
+
+	// Initialize HMAC
+	mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
+	macString := ""
+
+	// Calculate MAC based on protocolVersion
+	if protocolVersion == "v" {
+		mac.Write([]byte(fileStorePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
+		macString = hex.EncodeToString(mac.Sum(nil))
+	} else if protocolVersion == "v2" || protocolVersion == "token" {
+		contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		mac.Write([]byte(fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType))
+		macString = hex.EncodeToString(mac.Sum(nil))
+	}
+
+	logrus.Debugf("Calculated MAC: %s", macString)
+
+	// Validate the HMAC
+	if hmac.Equal([]byte(macString), []byte(a.Get(protocolVersion))) {
+		err := createFile(fileStorePath, w, r)
+		if err != nil {
+			logrus.Error(err)
+		}
+		return
+	} else {
+		logrus.Warn("Invalid MAC.")
+		http.Error(w, "Invalid MAC", http.StatusForbidden)
+		uploadErrorsTotal.Inc()
+		return
+	}
 }
 
-func saveFile(fileStorePath string, w http.ResponseWriter, r *http.Request) error {
-	file, err := os.Create(fileStorePath)
+func createFile(fileStorePath string, w http.ResponseWriter, r *http.Request) error {
+	// Make sure the directory path exists
+	absDirectory := filepath.Dir(fileStorePath)
+	err := os.MkdirAll(absDirectory, os.ModePerm)
 	if err != nil {
-		logrus.Errorf("Failed to create file: %v", err)
-		http.Error(w, "Failed to create file", http.StatusInternalServerError)
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, r.Body)
-	if err != nil {
-		logrus.Errorf("Failed to save file: %v", err)
-		http.Error(w, "Failed to save file", http.StatusInternalServerError)
-		return err
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return fmt.Errorf("failed to create directory %s: %s", absDirectory, err)
 	}
 
-	logrus.Infof("File saved successfully: %s", fileStorePath)
-	w.WriteHeader(http.StatusOK)
+	// Make sure the target file exists (MUST NOT exist before! -> O_EXCL)
+	targetFile, err := os.OpenFile(fileStorePath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	if err != nil {
+		http.Error(w, "Conflict", http.StatusConflict)
+		return fmt.Errorf("failed to create file %s: %s", fileStorePath, err)
+	}
+	defer targetFile.Close()
+
+	// Copy file contents to file
+	_, err = io.Copy(targetFile, r.Body)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return fmt.Errorf("failed to copy file contents to %s: %s", fileStorePath, err)
+	}
+
+	w.WriteHeader(http.StatusCreated)
 	return nil
 }
 
@@ -589,7 +596,7 @@ func main() {
 
 	// Load configuration
 	err := readConfig(configFile)
-	if (err != nil) {
+	if err != nil {
 		logrus.Fatalf("Error reading configuration file: %v", err)
 	}
 	logrus.Info("Configuration loaded successfully.")
