@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -53,6 +52,20 @@ func initClamAV(socket string) (*workers.ClamAVClient, error) {
 
 	logrus.Printf("Initializing ClamAV client with socket: %s", socket)
 	return &workers.ClamAVClient{Socket: socket}, nil
+}
+
+// corsMiddleware handles CORS by setting appropriate headers
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func setupRouter() *http.ServeMux {
@@ -266,20 +279,25 @@ func formatUptime(seconds uint64) string {
 }
 
 func setupLogging() {
+	// Parse and set log level
 	level, err := logrus.ParseLevel(conf.Server.LogLevel)
 	if err != nil {
 		logrus.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
 	}
 	logrus.SetLevel(level)
 
+	// Configure log output
 	if conf.Server.LogFile != "" {
+		// Open the log file
 		logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
-			log.Fatalf("Failed to open log file: %v", err)
+			logrus.Fatalf("Failed to open log file %s: %v", conf.Server.LogFile, err)
 		}
-		log.SetOutput(io.MultiWriter(os.Stdout, logFile))
+		// Set log output to both stdout and the log file
+		logrus.SetOutput(io.MultiWriter(os.Stdout, logFile))
 	} else {
-		log.SetOutput(os.Stdout)
+		// If no log file is specified, log only to stdout
+		logrus.SetOutput(os.Stdout)
 	}
 
 	// Use Text formatter for human-readable logs
@@ -561,7 +579,7 @@ func main() {
 	// Configure HTTP server
 	server := &http.Server{
 		Addr:         ":" + conf.Server.ListenPort, // Prepend colon to ListenPort
-		Handler:      router,
+		Handler:      corsMiddleware(router),
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		IdleTimeout:  idleTimeout,

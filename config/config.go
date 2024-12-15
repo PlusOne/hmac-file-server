@@ -23,10 +23,7 @@ type ServerConfig struct {
 }
 
 type ISOConfig struct {
-	Enabled    bool   `mapstructure:"enabled"`
-	Size       string `mapstructure:"size"`
-	MountPoint string `mapstructure:"mountpoint"`
-	Charset    string `mapstructure:"charset"`
+	Enabled bool `mapstructure:"enabled"`
 }
 
 type TimeoutsConfig struct {
