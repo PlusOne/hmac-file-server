@@ -6,8 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"/home/renz/source/hmac-file-server/config"
-	"/home/renz/source/hmac-file-server/handlers"
+	"github.com/PlusOne/hmac-file-server/config"
 
 	"github.com/sirupsen/logrus"
 )
@@ -41,12 +40,12 @@ func (c *ClamAVClient) ScanFile(filePath string) error {
 }
 
 var (
-	UploadQueue chan handlers.UploadTask
+	UploadQueue chan UploadTask
 	ScanQueue   chan ScanTask
 )
 
 func InitializeWorkers(ctx context.Context) {
-	UploadQueue = make(chan handlers.UploadTask, config.Conf.Workers.UploadQueueSize)
+	UploadQueue = make(chan UploadTask, config.Conf.Workers.UploadQueueSize)
 	ScanQueue = make(chan ScanTask, config.Conf.Workers.ScanQueueSize)
 
 	for i := 0; i < config.Conf.Workers.NumWorkers; i++ {
@@ -69,7 +68,7 @@ func scanWorker(ctx context.Context, id int) {
 }
 
 type UploadTask struct {
-	// Define the fields for the upload task
+	FilePath string
 }
 
 func InitializeUploadWorkerPool(ctx context.Context, uploadQueue chan UploadTask, queueSize int) {

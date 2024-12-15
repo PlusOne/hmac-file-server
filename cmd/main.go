@@ -281,8 +281,8 @@ func main() {
 	metrics.InitMetrics()
 	logrus.Info("Prometheus metrics initialized.")
 
-	uploadQueue = make(chan workers.UploadTask, conf.Workers.UploadQueueSize)
-	scanQueue = make(chan workers.ScanTask, conf.Workers.UploadQueueSize)
+	uploadQueue = make(chan handlers.UploadTask, conf.Workers.UploadQueueSize)
+	scanQueue = make(chan handlers.ScanTask, conf.Workers.UploadQueueSize)
 	networkEvents = make(chan NetworkEvent, 100)
 	logrus.Info("Upload, scan, and network event channels initialized.")
 
