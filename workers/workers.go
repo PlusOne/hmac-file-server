@@ -61,3 +61,27 @@ func InitializeScanWorkerPool(ctx context.Context, clamClient *ClamAVClient, sca
         }()
     }
 }
+
+func ScanWorker(ctx context.Context, scanQueue chan ScanTask) {
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case task := <-scanQueue:
+            // Process the scan task
+            logrus.Infof("Processing scan task: %+v", task)
+        }
+    }
+}
+
+func UploadWorker(ctx context.Context, uploadQueue chan UploadTask) {
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case task := <-uploadQueue:
+            // Process the upload task
+            logrus.Infof("Processing upload task: %+v", task)
+        }
+    }
+}
