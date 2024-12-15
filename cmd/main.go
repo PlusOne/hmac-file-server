@@ -38,7 +38,7 @@ var (
 	conf          *config.Config
 	clamClient    *workers.ClamAVClient
 	networkEvents chan NetworkEvent
-	versionString = "1.0.0"
+	versionString = "2.1-dev"
 )
 
 type NetworkEvent struct {
