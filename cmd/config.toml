@@ -23,7 +23,7 @@ charset = "utf-8"
 [timeouts]
 readtimeout = "3600s"
 writetimeout = "3600s"
-idletimeout = "3600s"
+idletimeout = "65s"
 
 [security]
 secret = "a-orc-and-a-humans-is-drinking-ale"
