@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -315,11 +316,24 @@ func main() {
 
 	// Configure HTTP server
 	server := &http.Server{
-		Addr:         ":" + conf.Server.ListenPort, // Prepend colon to ListenPort
-		Handler:      router,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		IdleTimeout:  idleTimeout,
+		Addr:                         ":" + conf.Server.ListenPort,
+		Handler:                      router,
+		DisableGeneralOptionsHandler: false,
+		TLSConfig:                    &tls.Config{},
+		ReadTimeout:                  readTimeout,
+		ReadHeaderTimeout:            readTimeout,
+		WriteTimeout:                 writeTimeout,
+		IdleTimeout:                  idleTimeout,
+		MaxHeaderBytes:               0,
+		TLSNextProto:                 map[string]func(*http.Server, *tls.Conn, http.Handler){},
+		ConnState: func(net.Conn, http.ConnState) {
+		},
+		ErrorLog: logrus.New().Writer(),
+		BaseContext: func(net.Listener) context.Context {
+			return context.Background()
+		},
+		ConnContext: func(ctx context.Context, c net.Conn) context.Context {
+		},
 	}
 
 	// Start metrics server if enabled
@@ -847,28 +861,28 @@ func processUpload(task UploadTask) error {
 
 // Improved uploadWorker function with better concurrency handling
 func uploadWorker(ctx context.Context, workerID int) {
-    log.Infof("Upload worker %d started.", workerID)
-    defer log.Infof("Upload worker %d stopped.", workerID)
-    for {
-        select {
-        case <-ctx.Done():
-            return
-        case task, ok := <-uploadQueue:
-            if !ok {
-                return
-            }
-            err := processUpload(task)
-            task.Result <- err
-        }
-    }
+	log.Infof("Upload worker %d started.", workerID)
+	defer log.Infof("Upload worker %d stopped.", workerID)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case task, ok := <-uploadQueue:
+			if !ok {
+				return
+			}
+			err := processUpload(task)
+			task.Result <- err
+		}
+	}
 }
 
 // Improved initializeUploadWorkerPool function
 func initializeUploadWorkerPool(ctx context.Context) {
-    for i := 0; i < conf.Workers.NumWorkers; i++ {
-        go uploadWorker(ctx, i)
-    }
-    log.Infof("Initialized %d upload workers", conf.Workers.NumWorkers)
+	for i := 0; i < conf.Workers.NumWorkers; i++ {
+		go uploadWorker(ctx, i)
+	}
+	log.Infof("Initialized %d upload workers", conf.Workers.NumWorkers)
 }
 
 // Worker function to process scan tasks
@@ -919,7 +933,7 @@ func initializeScanWorkerPool(ctx context.Context) {
 func setupRouter() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleRequest)
-	if (conf.Server.MetricsEnabled) {
+	if conf.Server.MetricsEnabled {
 		mux.Handle("/metrics", promhttp.Handler())
 	}
 
@@ -957,16 +971,16 @@ func recoveryMiddleware(next http.Handler) http.Handler {
 
 // corsMiddleware handles CORS by setting appropriate headers
 func corsMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Access-Control-Allow-Origin", "*")
-        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        if r.Method == "OPTIONS" {
-            w.WriteHeader(http.StatusOK)
-            return
-        }
-        next.ServeHTTP(w, r)
-    })
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // Handle file uploads and downloads
@@ -1214,53 +1228,53 @@ func handleDownload(w http.ResponseWriter, r *http.Request, absFilename, fileSto
 
 // Improved createFile function with proper resource management and larger buffer size
 func createFile(tempFilename string, r *http.Request) error {
-    absDirectory := filepath.Dir(tempFilename)
-    err := os.MkdirAll(absDirectory, os.ModePerm)
-    if err != nil {
-        return fmt.Errorf("failed to create directory: %v", err)
-    }
+	absDirectory := filepath.Dir(tempFilename)
+	err := os.MkdirAll(absDirectory, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("failed to create directory: %v", err)
+	}
 
-    // Open the file for writing
-    targetFile, err := os.OpenFile(tempFilename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-    if err != nil {
-        return fmt.Errorf("failed to open file: %v", err)
-    }
-    defer targetFile.Close()
+	// Open the file for writing
+	targetFile, err := os.OpenFile(tempFilename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %v", err)
+	}
+	defer targetFile.Close()
 
-    // Use a larger buffer for efficient file writing
-    bufferSize := 8 * 1024 * 1024 // 8 MB buffer
-    writer := bufio.NewWriterSize(targetFile, bufferSize)
-    buffer := make([]byte, bufferSize)
+	// Use a larger buffer for efficient file writing
+	bufferSize := 8 * 1024 * 1024 // 8 MB buffer
+	writer := bufio.NewWriterSize(targetFile, bufferSize)
+	buffer := make([]byte, bufferSize)
 
-    totalBytes := int64(0)
-    for {
-        n, err := r.Body.Read(buffer)
-        if err != nil && err != io.EOF {
-            return fmt.Errorf("failed to read request body: %v", err)
-        }
-        if n == 0 {
-            break
-        }
+	totalBytes := int64(0)
+	for {
+		n, err := r.Body.Read(buffer)
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("failed to read request body: %v", err)
+		}
+		if n == 0 {
+			break
+		}
 
-        _, err = writer.Write(buffer[:n])
-        if err != nil {
-            return fmt.Errorf("failed to write to file: %v", err)
-        }
-        totalBytes += int64(n)
-    }
+		_, err = writer.Write(buffer[:n])
+		if err != nil {
+			return fmt.Errorf("failed to write to file: %v", err)
+		}
+		totalBytes += int64(n)
+	}
 
-    err = writer.Flush()
-    if err != nil {
-        return fmt.Errorf("failed to flush writer: %v", err)
-    }
+	err = writer.Flush()
+	if err != nil {
+		return fmt.Errorf("failed to flush writer: %v", err)
+	}
 
-    log.WithFields(logrus.Fields{
-        "temp_file":   tempFilename,
-        "total_bytes": totalBytes,
-    }).Info("File uploaded successfully")
+	log.WithFields(logrus.Fields{
+		"temp_file":   tempFilename,
+		"total_bytes": totalBytes,
+	}).Info("File uploaded successfully")
 
-    uploadSizeBytes.Observe(float64(totalBytes))
-    return nil
+	uploadSizeBytes.Observe(float64(totalBytes))
+	return nil
 }
 
 // Scan the uploaded file with ClamAV (Optional)
