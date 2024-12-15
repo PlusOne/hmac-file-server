@@ -16,6 +16,7 @@ type ServerConfig struct {
     NetworkChangeMonitoring bool   `mapstructure:"NetworkChangeMonitoring"`
     ResumeableUploads       bool   `mapstructure:"ResumeableUploads"`
     ResumeableDownloads     bool   `mapstructure:"ResumeableDownloads"`
+    AutoAdjustWorkers       bool   `mapstructure:"AutoAdjustWorkers"`
 }
 
 type ISOConfig struct {
@@ -30,6 +31,8 @@ type TimeoutsConfig struct {
 
 type WorkersConfig struct {
     UploadQueueSize int `mapstructure:"UploadQueueSize"`
+    NumWorkers      int `mapstructure:"NumWorkers"`
+    NumScanWorkers  int `mapstructure:"NumScanWorkers"`
 }
 
 type ClamAVConfig struct {

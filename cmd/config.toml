@@ -52,8 +52,9 @@ redispassword = ""
 redishealthcheckinterval = "120s"
 
 [workers]
-numworkers = 4
-uploadqueuesize = 1000
+UploadQueueSize = 1000
+NumWorkers = 4
+NumScanWorkers = 4
 
 [file]
 filerevision = 1

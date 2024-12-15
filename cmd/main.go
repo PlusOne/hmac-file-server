@@ -13,22 +13,22 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
-	"runtime"
 
 	"github.com/PlusOne/hmac-file-server/config"
 	"github.com/PlusOne/hmac-file-server/handlers"
 	"github.com/PlusOne/hmac-file-server/workers"
+	"github.com/go-redis/redis/v8"
 	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/go-redis/redis/v8"
-	"github.com/sirupsen/logrus"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/mem"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -56,53 +56,56 @@ func initClamAV(socket string) (*workers.ClamAVClient, error) {
 }
 
 func setupRouter() *http.ServeMux {
-    router := http.NewServeMux()
-    if conf.Server.ResumeableUploads {
-        router.HandleFunc("/upload", handlers.UploadHandler)
-    }
-    if conf.Server.ResumeableDownloads {
-        router.HandleFunc("/download", handlers.DownloadHandler)
-    }
-    return router
+	router := http.NewServeMux()
+	if conf.Server.ResumeableUploads {
+		router.HandleFunc("/upload", handlers.UploadHandler)
+	}
+	if conf.Server.ResumeableDownloads {
+		router.HandleFunc("/download", handlers.DownloadHandler)
+	}
+	return router
 }
 
 func setDefaults() {
-    conf.Server = config.ServerConfig{
-        StoragePath:             "./storage",
-        FileTTL:                 "24h",
-        MetricsEnabled:          true,
-        MetricsPort:             "2112",
-        UnixSocket:              false,
-        LogFile:                 "./logs/server.log",
-        LogLevel:                "info",
-        NetworkChangeMonitoring: true,
-        ResumeableUploads:       true,
-        ResumeableDownloads:     true,
-    }
+	conf.Server = config.ServerConfig{
+		StoragePath:             "./storage",
+		FileTTL:                 "24h",
+		MetricsEnabled:          true,
+		MetricsPort:             "2112",
+		UnixSocket:              false,
+		LogFile:                 "./logs/server.log",
+		LogLevel:                "info",
+		NetworkChangeMonitoring: true,
+		ResumeableUploads:       true,
+		ResumeableDownloads:     true,
+		AutoAdjustWorkers:       true,
+	}
 
-    conf.ISO = config.ISOConfig{
-        Enabled: false,
-    }
+	conf.ISO = config.ISOConfig{
+		Enabled: false,
+	}
 
-    conf.Timeouts = config.TimeoutsConfig{
-        ReadTimeout:  "10s",
-        WriteTimeout: "10s",
-        IdleTimeout:  "60s",
-    }
+	conf.Timeouts = config.TimeoutsConfig{
+		ReadTimeout:  "10s",
+		WriteTimeout: "10s",
+		IdleTimeout:  "60s",
+	}
 
-    conf.Workers = config.WorkersConfig{
-        UploadQueueSize: 10,
-    }
+	conf.Workers = config.WorkersConfig{
+		UploadQueueSize: 10,
+		NumWorkers:      4,
+		NumScanWorkers:  4,
+	}
 
-    conf.ClamAV = config.ClamAVConfig{
-        ClamAVEnabled: false,
-        ClamAVSocket:  "/var/run/clamav/clamd.ctl",
-    }
+	conf.ClamAV = config.ClamAVConfig{
+		ClamAVEnabled: false,
+		ClamAVSocket:  "/var/run/clamav/clamd.ctl",
+	}
 
-    conf.Redis = config.RedisConfig{
-        RedisEnabled:             false,
-        RedisHealthCheckInterval: "30s",
-    }
+	conf.Redis = config.RedisConfig{
+		RedisEnabled:             false,
+		RedisHealthCheckInterval: "30s",
+	}
 }
 
 func readConfig(configFile string) error {
@@ -386,7 +389,7 @@ func initRedis() {
 }
 
 func initializeUploadWorkerPool(ctx context.Context) {
-	for i := 0; i < conf.Workers.UploadQueueSize; i++ {
+	for i := 0; i < conf.Workers.NumWorkers; i++ {
 		go workers.UploadWorker(ctx, uploadQueue)
 	}
 }
@@ -411,185 +414,192 @@ func MonitorRedisHealth(ctx context.Context, client *redis.Client, interval time
 }
 
 func initializeScanWorkerPool(ctx context.Context) {
-	for i := 0; i < conf.Workers.UploadQueueSize; i++ {
+	for i := 0; i < conf.Workers.NumScanWorkers; i++ {
 		go workers.ScanWorker(ctx, scanQueue)
 	}
 }
 
 func main() {
-    // Initialize the conf variable
-    conf = &config.Config{}
+	// Initialize the conf variable
+	conf = &config.Config{}
 
-    // Set default configuration values
-    setDefaults()
+	// Set default configuration values
+	setDefaults()
 
-    // Flags for configuration file
-    var configFile string
-    flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
-    flag.Parse()
+	// Flags for configuration file
+	var configFile string
+	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
+	flag.Parse()
 
-    // Load configuration
-    err := readConfig(configFile)
-    if (err != nil) {
-        logrus.Fatalf("Error reading configuration file: %v", err)
-    }
-    logrus.Info("Configuration loaded successfully.")
+	// Load configuration
+	err := readConfig(configFile)
+	if err != nil {
+		logrus.Fatalf("Error reading configuration file: %v", err)
+	}
+	logrus.Info("Configuration loaded successfully.")
 
-    // Setup logging
-    setupLogging()
+	// Setup logging
+	setupLogging()
 
-    // Log system information
-    logSystemInfo()
+	// Log system information
+	logSystemInfo()
 
-    // Verify and create ISO container if it doesn't exist
-    if conf.ISO.Enabled {
-        err = verifyAndCreateISOContainer()
-        if err != nil {
-            logrus.Fatalf("Failed to verify or create ISO container: %v", err)
-        }
-    }
+	// Verify and create ISO container if it doesn't exist
+	if conf.ISO.Enabled {
+		err = verifyAndCreateISOContainer()
+		if err != nil {
+			logrus.Fatalf("Failed to verify or create ISO container: %v", err)
+		}
+	}
 
-    // Initialize file info cache
-    fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
+	// Initialize file info cache
+	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
 
-    // Create store directory
-    err = os.MkdirAll(conf.Server.StoragePath, os.ModePerm)
-    if err != nil {
-        logrus.Fatalf("Failed to create storage directory: %v", err)
-    }
-    logrus.Infof("Storage directory '%s' is ready", conf.Server.StoragePath)
+	// Create store directory
+	err = os.MkdirAll(conf.Server.StoragePath, os.ModePerm)
+	if err != nil {
+		logrus.Fatalf("Failed to create storage directory: %v", err)
+	}
+	logrus.Infof("Storage directory '%s' is ready", conf.Server.StoragePath)
 
-    // Check free space with retry
-    err = checkFreeSpaceWithRetry(conf.Server.StoragePath, 3, 5*time.Second)
-    if err != nil {
-        logrus.Fatalf("Insufficient free space: %v", err)
-    }
+	// Check free space with retry
+	err = checkFreeSpaceWithRetry(conf.Server.StoragePath, 3, 5*time.Second)
+	if err != nil {
+		logrus.Fatalf("Insufficient free space: %v", err)
+	}
 
-    // Initialize Prometheus metrics
-    initMetrics()
-    logrus.Info("Prometheus metrics initialized.")
+	// Initialize Prometheus metrics
+	initMetrics()
+	logrus.Info("Prometheus metrics initialized.")
 
-    // Initialize upload and scan queues
-    uploadQueue = make(chan workers.UploadTask, conf.Workers.UploadQueueSize)
-    logrus.Infof("Upload queue initialized with size: %d", conf.Workers.UploadQueueSize)
-    scanQueue = make(chan workers.ScanTask, conf.Workers.UploadQueueSize)
-    networkEvents = make(chan NetworkEvent, 100)
-    logrus.Info("Upload, scan, and network event channels initialized.")
+	// Initialize upload and scan queues
+	uploadQueue = make(chan workers.UploadTask, conf.Workers.UploadQueueSize)
+	logrus.Infof("Upload queue initialized with size: %d", conf.Workers.UploadQueueSize)
+	scanQueue = make(chan workers.ScanTask, conf.Workers.UploadQueueSize)
+	networkEvents = make(chan NetworkEvent, 100)
+	logrus.Info("Upload, scan, and network event channels initialized.")
 
-    // Context for goroutines
-    ctx, cancel := context.WithCancel(context.Background())
-    defer cancel()
+	// Context for goroutines
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-    // Start network monitoring if enabled
-    if conf.Server.NetworkChangeMonitoring {
-        go monitorNetwork(ctx)
-        go handleNetworkEvents(ctx)
-    }
+	// Start network monitoring if enabled
+	if conf.Server.NetworkChangeMonitoring {
+		go monitorNetwork(ctx)
+		go handleNetworkEvents(ctx)
+	}
 
-    // Update system metrics
-    go updateSystemMetrics(ctx)
+	// Update system metrics
+	go updateSystemMetrics(ctx)
 
-    // Initialize ClamAV client if enabled
-    if conf.ClamAV.ClamAVEnabled {
-        clamClient, err = initClamAV(conf.ClamAV.ClamAVSocket)
-        if err != nil {
-            logrus.WithFields(logrus.Fields{
-                "error": err.Error(),
-            }).Warn("Failed to initialize ClamAV client. Continuing without ClamAV.")
-        } else {
-            logrus.Info("ClamAV client initialized successfully.")
-        }
-    }
+	// Initialize ClamAV client if enabled
+	if conf.ClamAV.ClamAVEnabled {
+		clamClient, err = initClamAV(conf.ClamAV.ClamAVSocket)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"error": err.Error(),
+			}).Warn("Failed to initialize ClamAV client. Continuing without ClamAV.")
+		} else {
+			logrus.Info("ClamAV client initialized successfully.")
+		}
+	}
 
-    // Initialize Redis client if enabled
-    if conf.Redis.RedisEnabled {
+	// Initialize Redis client if enabled
+	if conf.Redis.RedisEnabled {
 		initRedis()
-    }
+	}
 
-    // Initialize worker pools
-    initializeUploadWorkerPool(ctx)
-    if conf.ClamAV.ClamAVEnabled && clamClient != nil {
-        initializeScanWorkerPool(ctx)
-    }
+	// Dynamically adjust workers if AutoAdjustWorkers is enabled
+	if conf.Server.AutoAdjustWorkers {
+		conf.Workers.NumWorkers = runtime.NumCPU()
+		conf.Workers.NumScanWorkers = runtime.NumCPU()
+		logrus.Infof("AutoAdjustWorkers enabled: NumWorkers set to %d, NumScanWorkers set to %d", conf.Workers.NumWorkers, conf.Workers.NumScanWorkers)
+	}
 
-    // Start Redis health monitor if Redis is enabled
-    if conf.Redis.RedisEnabled && redisClient != nil {
+	// Initialize worker pools
+	initializeUploadWorkerPool(ctx)
+	if conf.ClamAV.ClamAVEnabled && clamClient != nil {
+		initializeScanWorkerPool(ctx)
+	}
+
+	// Start Redis health monitor if Redis is enabled
+	if conf.Redis.RedisEnabled && redisClient != nil {
 		redisHealthCheckInterval, err := parseCustomDuration(conf.Redis.RedisHealthCheckInterval)
 		if err != nil {
 			logrus.Fatalf("Invalid RedisHealthCheckInterval: %v", err)
 		}
 		go MonitorRedisHealth(ctx, redisClient, redisHealthCheckInterval)
-    }
+	}
 
-    // Setup router
-    router := setupRouter()
+	// Setup router
+	router := setupRouter()
 
-    // Start file cleaner
-    fileTTL, err := parseCustomDuration(conf.Server.FileTTL)
-    if err != nil {
-        logrus.Warnf("Invalid duration '%s', defaulting to 30s", conf.Server.FileTTL)
-        fileTTL = 30 * time.Second
-    }
-    go runFileCleaner(ctx, conf.Server.StoragePath, fileTTL)
+	// Start file cleaner
+	fileTTL, err := parseCustomDuration(conf.Server.FileTTL)
+	if err != nil {
+		logrus.Warnf("Invalid duration '%s', defaulting to 30s", conf.Server.FileTTL)
+		fileTTL = 30 * time.Second
+	}
+	go runFileCleaner(ctx, conf.Server.StoragePath, fileTTL)
 
-    // Parse timeout durations
-    readTimeout, err := parseCustomDuration(conf.Timeouts.ReadTimeout)
-    if err != nil {
-        logrus.Fatalf("Invalid ReadTimeout: %v", err)
-    }
+	// Parse timeout durations
+	readTimeout, err := parseCustomDuration(conf.Timeouts.ReadTimeout)
+	if err != nil {
+		logrus.Fatalf("Invalid ReadTimeout: %v", err)
+	}
 
-    writeTimeout, err := parseCustomDuration(conf.Timeouts.WriteTimeout)
-    if err != nil {
-        logrus.Fatalf("Invalid WriteTimeout: %v", err)
-    }
+	writeTimeout, err := parseCustomDuration(conf.Timeouts.WriteTimeout)
+	if err != nil {
+		logrus.Fatalf("Invalid WriteTimeout: %v", err)
+	}
 
-    idleTimeout, err := parseCustomDuration(conf.Timeouts.IdleTimeout)
-    if err != nil {
-        logrus.Fatalf("Invalid IdleTimeout: %v", err)
-    }
+	idleTimeout, err := parseCustomDuration(conf.Timeouts.IdleTimeout)
+	if err != nil {
+		logrus.Fatalf("Invalid IdleTimeout: %v", err)
+	}
 
-    // Configure HTTP server
-    server := &http.Server{
-        Addr:         ":" + conf.Server.ListenPort, // Prepend colon to ListenPort
-        Handler:      router,
-        ReadTimeout:  readTimeout,
-        WriteTimeout: writeTimeout,
-        IdleTimeout:  idleTimeout,
-    }
+	// Configure HTTP server
+	server := &http.Server{
+		Addr:         ":" + conf.Server.ListenPort, // Prepend colon to ListenPort
+		Handler:      router,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		IdleTimeout:  idleTimeout,
+	}
 
-    // Start metrics server if enabled
-    if conf.Server.MetricsEnabled {
-        go func() {
-            http.Handle("/metrics", promhttp.Handler())
-            logrus.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
-            if err := http.ListenAndServe(":"+conf.Server.MetricsPort, nil); err != nil {
-                logrus.Fatalf("Metrics server failed: %v", err)
-            }
-        }()
-    }
+	// Start metrics server if enabled
+	if conf.Server.MetricsEnabled {
+		go func() {
+			http.Handle("/metrics", promhttp.Handler())
+			logrus.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
+			if err := http.ListenAndServe(":"+conf.Server.MetricsPort, nil); err != nil {
+				logrus.Fatalf("Metrics server failed: %v", err)
+			}
+		}()
+	}
 
-    // Setup graceful shutdown
-    setupGracefulShutdown(server, cancel)
+	// Setup graceful shutdown
+	setupGracefulShutdown(server, cancel)
 
-    // Start server
-    logrus.Infof("Starting HMAC file server %s...", versionString)
-    if conf.Server.UnixSocket {
-        // Listen on Unix socket
-        if err := os.RemoveAll(conf.Server.ListenPort); err != nil {
-            logrus.Fatalf("Failed to remove existing Unix socket: %v", err)
-        }
-        listener, err := net.Listen("unix", conf.Server.ListenPort)
-        if err != nil {
-            logrus.Fatalf("Failed to listen on Unix socket %s: %v", conf.Server.ListenPort, err)
-        }
-        defer listener.Close()
-        if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
-            logrus.Fatalf("Server failed: %v", err)
-        }
-    } else {
-        // Listen on TCP port
-        if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-            logrus.Fatalf("Server failed: %v", err)
-        }
-    }
+	// Start server
+	logrus.Infof("Starting HMAC file server %s...", versionString)
+	if conf.Server.UnixSocket {
+		// Listen on Unix socket
+		if err := os.RemoveAll(conf.Server.ListenPort); err != nil {
+			logrus.Fatalf("Failed to remove existing Unix socket: %v", err)
+		}
+		listener, err := net.Listen("unix", conf.Server.ListenPort)
+		if err != nil {
+			logrus.Fatalf("Failed to listen on Unix socket %s: %v", conf.Server.ListenPort, err)
+		}
+		defer listener.Close()
+		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
+			logrus.Fatalf("Server failed: %v", err)
+		}
+	} else {
+		// Listen on TCP port
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logrus.Fatalf("Server failed: %v", err)
+		}
+	}
 }
