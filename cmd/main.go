@@ -246,15 +246,21 @@ func runFileCleaner(ctx context.Context, storagePath string, ttl time.Duration) 
 }
 
 func main() {
+	// Initialize the conf variable
+	conf = &config.Config{}
+
+	// Set default configuration values
 	setDefaults()
 
+	// Flags for configuration file
 	var configFile string
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
 	flag.Parse()
 
+	// Load configuration
 	err := readConfig(configFile)
 	if err != nil {
-		logrus.Fatalf("Error reading config: %v", err)
+		logrus.Fatalf("Error reading config: %v", err) // Fatal: application cannot proceed
 	}
 	logrus.Info("Configuration loaded successfully.")
 
