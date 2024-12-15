@@ -7,12 +7,16 @@ import (
     "path/filepath"
     "time"
 
+    "github.com/go-redis/redis/v8"
     "github.com/sirupsen/logrus"
     "github.com/PlusOne/hmac-file-server/config"
     "github.com/PlusOne/hmac-file-server/workers"
     "github.com/shirou/gopsutil/cpu"
     "github.com/dutchcoders/go-clamd"
+    "context"
 )
+
+var ctx = context.Background()
 
 func corsMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -57,12 +61,9 @@ func UploadHandlerV2(w http.ResponseWriter, r *http.Request) {
         go func() {
             ticker := time.NewTicker(10 * time.Second)
             defer ticker.Stop()
-            for {
-                select {
-                case <-ticker.C:
+            for range ticker.C {
                     logrus.Info("Updating system metrics...")
                     // Add your system metrics update logic here
-                }
             }
         }()
     }
@@ -106,6 +107,32 @@ func UploadHandlerV2(w http.ResponseWriter, r *http.Request) {
                 return
             }
         }
+    }
+
+    // Check if Redis is enabled and perform Redis operations
+    if conf.Redis.RedisEnabled {
+        rdb := redis.NewClient(&redis.Options{
+            Addr:     conf.Redis.RedisAddr,
+            Password: conf.Redis.RedisPassword,
+            DB:       conf.Redis.RedisDBIndex,
+        })
+
+        // Example Redis operation: Set a key with the file path
+        err := rdb.Set(ctx, "uploaded_file:"+header.Filename, filePath, 0).Err()
+        if err != nil {
+            logrus.Errorf("Error setting Redis key: %v", err)
+            http.Error(w, "Failed to set Redis key", http.StatusInternalServerError)
+            return
+        }
+
+        // Example Redis operation: Get the key value
+        val, err := rdb.Get(ctx, "uploaded_file:"+header.Filename).Result()
+        if err != nil {
+            logrus.Errorf("Error getting Redis key: %v", err)
+            http.Error(w, "Failed to get Redis key", http.StatusInternalServerError)
+            return
+        }
+        logrus.Infof("Redis key value: %s", val)
     }
 
     w.WriteHeader(http.StatusCreated)
