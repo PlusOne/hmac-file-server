@@ -2,6 +2,7 @@ package handlers
 
 import (
     "net/http"
+    "time"
 
     "github.com/sirupsen/logrus"
     "github.com/PlusOne/hmac-file-server/config"
@@ -22,28 +23,16 @@ func UploadHandlerV2(w http.ResponseWriter, r *http.Request) {
         logrus.Infof("ListenPort is set to %s.", conf.Server.ListenPort)
     }
 
-    if !conf.Server.UnixSocket {
-        logrus.Info("UnixSocket is set to false.")
-    } else {
-        logrus.Info("UnixSocket is set to true.")
-    }
-
-    if conf.Server.DeduplicationEnabled {
-        logrus.Info("Deduplication is enabled.")
-    } else {
-        logrus.Info("Deduplication is not enabled.")
-    }
-
-    if conf.Server.MinFreeBytes == "100GB" {
-        logrus.Info("MinFreeBytes is set to 100GB.")
-    } else {
-        logrus.Infof("MinFreeBytes is set to %s.", conf.Server.MinFreeBytes)
-    }
-
-    if conf.File.FileRevision == 1 {
-        logrus.Info("FileRevision is set to 1.")
-    } else {
-        logrus.Infof("FileRevision is set to %d.", conf.File.FileRevision)
+    // Start a goroutine to log system metrics every 10 seconds if LogLimiter is enabled
+    if conf.Server.LogLimiter {
+        go func() {
+            ticker := time.NewTicker(10 * time.Second)
+            defer ticker.Stop()
+            for range ticker.C {
+                    logrus.Info("Updating system metrics...")
+                    // Add your system metrics update logic here
+            }
+        }()
     }
 
     // Implement the upload handler logic here
@@ -61,6 +50,7 @@ type Config struct {
         StoragePath          string
         DeduplicationEnabled bool
         MinFreeBytes         string
+        LogLimiter           bool
     }
     Uploads struct {
         ChunkedUploadsEnabled bool

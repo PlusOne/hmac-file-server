@@ -19,6 +19,7 @@ type ServerConfig struct {
     AutoAdjustWorkers       bool   `mapstructure:"AutoAdjustWorkers"`
     DeduplicationEnabled    bool   `mapstructure:"DeduplicationEnabled"`
     MinFreeBytes            string `mapstructure:"minfreebytes"`
+    LogLimiter              bool   `mapstructure:"LogLimiter"`
 }
 
 type ISOConfig struct {
