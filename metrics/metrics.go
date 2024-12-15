@@ -20,6 +20,17 @@ var (
             Help: "Total number of upload errors",
         },
     )
+    // Use sync.Once to ensure metrics are registered only once
+    initOnce sync.Once
+
+    // Define your metrics
+    UploadCounter = prometheus.NewCounter(
+        prometheus.CounterOpts{
+            Name: "upload_counter",
+            Help: "Number of file uploads",
+        },
+    )
+    // ... other metrics ...
 )
 
 func InitMetrics() {
@@ -27,6 +38,11 @@ func InitMetrics() {
         // Register Prometheus metrics
         prometheus.MustRegister(uploadErrorsTotal)
         logrus.Info("Prometheus metrics initialized.")
+    })
+    initOnce.Do(func() {
+        // Register metrics
+        prometheus.MustRegister(UploadCounter)
+        // Register other metrics
     })
 }
 
