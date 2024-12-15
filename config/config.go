@@ -8,6 +8,46 @@ import (
 
 // Configuration structures...
 
+type ServerConfig struct {
+	ListenPort     string `toml:"listen_port"`
+	UnixSocket     bool   `toml:"unix_socket"`
+	MetricsEnabled bool   `toml:"metrics_enabled"`
+	// Define server configuration fields
+}
+
+type TimeoutConfig struct {
+	ReadTimeout  string
+	WriteTimeout string
+	IdleTimeout  string
+}
+
+type SecurityConfig struct {
+	// Define security configuration fields
+}
+
+type VersioningConfig struct {
+	// Define versioning configuration fields
+}
+
+type UploadsConfig struct {
+	// Define uploads configuration fields
+}
+
+type ClamAVConfig struct {
+	// Define ClamAV configuration fields
+	ClamAVEnabled bool
+}
+
+type RedisConfig struct {
+	// Define Redis configuration fields
+}
+
+type WorkersConfig struct {
+	NumWorkers      int
+	UploadQueueSize int
+	ScanQueueSize   int
+}
+
 type Config struct {
 	Server     ServerConfig     `mapstructure:"server"`
 	Timeouts   TimeoutConfig    `mapstructure:"timeouts"`
@@ -51,7 +91,7 @@ func setDefaults() {
 	// ...
 }
 
-func validateConfig(conf *Config) error {
+func validateConfig(_ *Config) error {
 	// Validation logic as in main.go
 	// ...
 	return nil

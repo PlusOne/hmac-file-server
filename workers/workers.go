@@ -2,9 +2,16 @@ package workers
 
 import (
 	"context"
-	"hmac-file-server/config"
-	"hmac-file-server/handlers"
+
+	"github.com/PlusOne/hmac-file-server/config"
+	"github.com/PlusOne/hmac-file-server/handlers"
 )
+
+type WorkersConfig struct {
+	NumWorkers      int
+	UploadQueueSize int
+	ScanQueueSize   int
+}
 
 var (
 	UploadQueue chan handlers.UploadTask
@@ -13,14 +20,14 @@ var (
 
 func InitializeWorkers(ctx context.Context) {
 	UploadQueue = make(chan handlers.UploadTask, config.Conf.Workers.UploadQueueSize)
-	ScanQueue = make(chan handlers.ScanTask, config.Conf.Workers.UploadQueueSize)
+	ScanQueue = make(chan handlers.ScanTask, config.Conf.Workers.ScanQueueSize)
 
 	for i := 0; i < config.Conf.Workers.NumWorkers; i++ {
 		go uploadWorker(ctx, i)
 	}
 
 	if config.Conf.ClamAV.ClamAVEnabled {
-		for i := 0; i < config.Conf.ClamAV.NumScanWorkers; i++ {
+		for i := 0; i < config.Conf.Workers.NumWorkers; i++ {
 			go scanWorker(ctx, i)
 		}
 	}
