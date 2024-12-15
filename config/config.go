@@ -17,7 +17,7 @@ type ServerConfig struct {
 	ResumeableUploads       bool   `mapstructure:"ResumeableUploads"`
 	ResumeableDownloads     bool   `mapstructure:"ResumeableDownloads"`
 	AutoAdjustWorkers       bool   `mapstructure:"AutoAdjustWorkers"`
-	DeduplicationEnabled    bool   `mapstructure:"DeduplicationEnabled"`
+	DeduplicationEnabled    bool   `mapstructure:"deduplication_enabled"`
 	MinFreeBytes            string `mapstructure:"minfreebytes"`
 	LogLimiter              bool   `mapstructure:"LogLimiter"`
 }

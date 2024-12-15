@@ -23,7 +23,6 @@ import (
 	"net/url"
 
 	"github.com/PlusOne/hmac-file-server/config"
-	"github.com/PlusOne/hmac-file-server/handlers"
 	"github.com/PlusOne/hmac-file-server/metrics"
 	"github.com/PlusOne/hmac-file-server/workers"
 	"github.com/go-redis/redis/v8"
@@ -497,75 +496,135 @@ func handleUploadWrapper(w http.ResponseWriter, r *http.Request) {
 
 // Handle file uploads with extension restrictions and HMAC validation
 func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, a url.Values) {
-	// Log the storage path being used
-	logrus.Infof("Using storage path: %s", conf.Server.StoragePath)
+    // Log the storage path being used
+    logrus.Infof("Using storage path: %s", conf.Server.StoragePath)
 
-	// Determine protocol version based on query parameters
-	var protocolVersion string
-	if a.Get("v2") != "" {
-		protocolVersion = "v2"
-	} else if a.Get("token") != "" {
-		protocolVersion = "token"
-	} else if a.Get("v") != "" {
-		protocolVersion = "v"
-	} else {
-		logrus.Warn("No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC")
-		http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
-		uploadErrorsTotal.Inc()
-		return
-	}
-	logrus.Debugf("Protocol version determined: %s", protocolVersion)
+    // Determine protocol version based on query parameters
+    var protocolVersion string
+    if a.Get("v2") != "" {
+        protocolVersion = "v2"
+    } else if a.Get("token") != "" {
+        protocolVersion = "token"
+    } else if a.Get("v") != "" {
+        protocolVersion = "v"
+    } else {
+        logrus.Warn("No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC")
+        http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
+        uploadErrorsTotal.Inc()
+        return
+    }
+    logrus.Debugf("Protocol version determined: %s", protocolVersion)
 
-	// Initialize HMAC
-	mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
+    // Initialize HMAC
+    mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
 
-	// Calculate MAC based on protocolVersion
-	if protocolVersion == "v" {
-		mac.Write([]byte(fileStorePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
-	} else if protocolVersion == "v2" || protocolVersion == "token" {
-		contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
-		if contentType == "" {
-			contentType = "application/octet-stream"
-		}
-		mac.Write([]byte(fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType))
-	}
+    // Calculate MAC based on protocolVersion
+    if protocolVersion == "v" {
+        mac.Write([]byte(fileStorePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
+    } else if protocolVersion == "v2" || protocolVersion == "token" {
+        contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
+        if contentType == "" {
+            contentType = "application/octet-stream"
+        }
+        mac.Write([]byte(fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType))
+    }
 
-	calculatedMAC := mac.Sum(nil)
-	logrus.Debugf("Calculated MAC: %x", calculatedMAC)
+    calculatedMAC := mac.Sum(nil)
+    logrus.Debugf("Calculated MAC: %x", calculatedMAC)
 
-	// Decode provided MAC from hex
-	providedMACHex := a.Get(protocolVersion)
-	providedMAC, err := hex.DecodeString(providedMACHex)
-	if err != nil {
-		logrus.Warn("Invalid MAC encoding")
-		http.Error(w, "Invalid MAC encoding", http.StatusForbidden)
-		uploadErrorsTotal.Inc()
-		return
-	}
-	logrus.Debugf("Provided MAC: %x", providedMAC)
+    // Decode provided MAC from hex
+    providedMACHex := a.Get(protocolVersion)
+    providedMAC, err := hex.DecodeString(providedMACHex)
+    if err != nil {
+        logrus.Warn("Invalid MAC encoding")
+        http.Error(w, "Invalid MAC encoding", http.StatusForbidden)
+        uploadErrorsTotal.Inc()
+        return
+    }
+    logrus.Debugf("Provided MAC: %x", providedMAC)
 
-	// Validate the HMAC
-	if !hmac.Equal(calculatedMAC, providedMAC) {
-		logrus.Warn("Invalid MAC")
-		http.Error(w, "Invalid MAC", http.StatusForbidden)
-		uploadErrorsTotal.Inc()
-		return
-	}
-	logrus.Debug("HMAC validation successful")
+    // Validate the HMAC
+    if !hmac.Equal(calculatedMAC, providedMAC) {
+        logrus.Warn("Invalid MAC")
+        http.Error(w, "Invalid MAC", http.StatusForbidden)
+        uploadErrorsTotal.Inc()
+        return
+    }
+    logrus.Debug("HMAC validation successful")
 
-	// Validate file extension
-	if !isExtensionAllowed(fileStorePath) {
-		logrus.WithFields(logrus.Fields{
-			"file":  fileStorePath,
-			"error": "Invalid file extension",
-		}).Warn("Invalid file path")
-		http.Error(w, "Invalid file path", http.StatusBadRequest)
-		uploadErrorsTotal.Inc()
-		return
-	}
+    // Validate file extension
+    if !isExtensionAllowed(fileStorePath) {
+        logrus.WithFields(logrus.Fields{
+            "file":  fileStorePath,
+            "error": "Invalid file extension",
+        }).Warn("Invalid file path")
+        http.Error(w, "Invalid file path", http.StatusBadRequest)
+        uploadErrorsTotal.Inc()
+        return
+    }
 
-	// Proceed with upload handling
-	handlers.UploadHandler(w, r)
+    // Proceed with upload handling
+    file, header, err := r.FormFile("file")
+    if err != nil {
+        http.Error(w, "Failed to get file from request", http.StatusBadRequest)
+        return
+    }
+    defer file.Close()
+
+    // Calculate SHA-256 hash of the file
+    hash := sha256.New()
+    if _, err := io.Copy(hash, file); err != nil {
+        http.Error(w, "Failed to calculate file hash", http.StatusInternalServerError)
+        return
+    }
+    fileHash := hex.EncodeToString(hash.Sum(nil))
+    logrus.Infof("Calculated SHA-256 hash: %s", fileHash)
+
+    // Check for deduplication
+    if conf.Server.DeduplicationEnabled {
+        existingFilePath := filepath.Join(conf.Server.StoragePath, fileHash)
+        if _, err := os.Stat(existingFilePath); err == nil {
+            // File with the same hash already exists, create a hardlink
+            hardlinkPath := filepath.Join(conf.Server.StoragePath, header.Filename)
+            if err := os.Link(existingFilePath, hardlinkPath); err != nil {
+                http.Error(w, "Failed to create hardlink", http.StatusInternalServerError)
+                return
+            }
+            logrus.Infof("File %s deduplicated successfully, hardlinked to %s", header.Filename, existingFilePath)
+            w.WriteHeader(http.StatusOK)
+            return
+        }
+    }
+
+    // Reset file pointer to the beginning
+    if _, err := file.Seek(0, io.SeekStart); err != nil {
+        http.Error(w, "Failed to reset file pointer", http.StatusInternalServerError)
+        return
+    }
+
+    // Save the file
+    filePath := filepath.Join(conf.Server.StoragePath, fileHash)
+    outFile, err := os.Create(filePath)
+    if err != nil {
+        http.Error(w, "Failed to create file", http.StatusInternalServerError)
+        return
+    }
+    defer outFile.Close()
+
+    if _, err := io.Copy(outFile, file); err != nil {
+        http.Error(w, "Failed to save file", http.StatusInternalServerError)
+        return
+    }
+
+    // Create a hardlink with the original filename
+    hardlinkPath := filepath.Join(conf.Server.StoragePath, header.Filename)
+    if err := os.Link(filePath, hardlinkPath); err != nil {
+        http.Error(w, "Failed to create hardlink", http.StatusInternalServerError)
+        return
+    }
+
+    logrus.Infof("File %s uploaded and deduplicated successfully", header.Filename)
+    w.WriteHeader(http.StatusOK)
 }
 
 func main() {
