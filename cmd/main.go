@@ -37,15 +37,15 @@ import (
 )
 
 var (
-	fileInfoCache *cache.Cache
-	uploadQueue   chan workers.UploadTask
-	scanQueue     chan workers.ScanTask
-	conf          *config.Config
-	clamClient    *workers.ClamAVClient
-	networkEvents chan NetworkEvent
-	versionString = "2.1-dev"
-
-	// Prometheus metrics
+	conf           *config.Config
+	versionString  = "2.1-dev"
+	log            = logrus.New()
+	uploadQueue    chan workers.UploadTask
+	scanQueue      chan workers.ScanTask
+	networkEvents  chan NetworkEvent
+	fileInfoCache  *cache.Cache
+	clamClient     *workers.ClamAVClient
+	redisClient    *redis.Client
 	uploadErrorsTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "upload_errors_total",
@@ -103,17 +103,14 @@ func setDefaults() {
 		UnixSocket:              false,
 		LogFile:                 "./logs/server.log",
 		LogLevel:                "info",
-		NetworkChangeMonitoring: true,
-		ResumeableUploads:       true,
-		ResumeableDownloads:     true,
-		AutoAdjustWorkers:       true,
+		// ResumableUploads:       true,
 	}
 
 	conf.ISO = config.ISOConfig{
 		Enabled: false,
 	}
 
-	conf.Timeouts = config.TimeoutsConfig{
+	conf.Timeouts = config.TimeoutConfig{
 		ReadTimeout:  "10s",
 		WriteTimeout: "10s",
 		IdleTimeout:  "60s",
@@ -136,7 +133,7 @@ func setDefaults() {
 	}
 
 	conf.Security = config.SecurityConfig{
-		SecretKey: "your-secret-key",
+		// SecretKey: "your-secret-key",
 	}
 }
 
@@ -418,8 +415,6 @@ func initMetrics() {
 	metrics.InitMetrics()
 	logrus.Info("Prometheus metrics initialized.")
 }
-
-var redisClient *redis.Client
 
 func initRedis() {
 	// Initialize Redis client here
