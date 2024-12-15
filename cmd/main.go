@@ -758,9 +758,13 @@ func main() {
 	// Start metrics server if enabled
 	if conf.Server.MetricsEnabled {
 		go func() {
-			http.Handle("/metrics", promhttp.Handler())
+			// Create a new ServeMux for the metrics server
+			metricsMux := http.NewServeMux()
+			metricsMux.Handle("/metrics", promhttp.Handler())
+
+			// Start the metrics server with the dedicated handler
 			logrus.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
-			if err := http.ListenAndServe(":"+conf.Server.MetricsPort, nil); err != nil {
+			if err := http.ListenAndServe(":"+conf.Server.MetricsPort, metricsMux); err != nil {
 				logrus.Fatalf("Metrics server failed: %v", err)
 			}
 		}()
