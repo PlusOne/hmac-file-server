@@ -7,7 +7,7 @@ logfile = "./hmac-file-server.log"
 metricsenabled = true
 metricsport = "9090"
 DeduplicationEnabled = true
-filettl = "1y"
+filettl = "356D"
 minfreebytes = "100GB"
 
 [iso]

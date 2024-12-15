@@ -5,15 +5,17 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"syscall"
 	"time"
-	"io"
 
 	"github.com/PlusOne/hmac-file-server/config"
 	"github.com/PlusOne/hmac-file-server/handlers"
@@ -55,37 +57,37 @@ func setupRouter() *http.ServeMux {
 }
 
 func setDefaults() {
-    conf.Server = config.ServerConfig{
-        StoragePath:    "./storage",
-        FileTTL:        "24h",
-        MetricsEnabled: true,
-        MetricsPort:    "2112",
-        UnixSocket:     false,
-    }
+	conf.Server = config.ServerConfig{
+		StoragePath:    "./storage",
+		FileTTL:        "24h",
+		MetricsEnabled: true,
+		MetricsPort:    "2112",
+		UnixSocket:     false,
+	}
 
-    conf.ISO = config.ISOConfig{
-        Enabled: false,
-    }
+	conf.ISO = config.ISOConfig{
+		Enabled: false,
+	}
 
-    conf.Timeouts = config.TimeoutsConfig{
-        ReadTimeout:  "10s",
-        WriteTimeout: "10s",
-        IdleTimeout:  "60s",
-    }
+	conf.Timeouts = config.TimeoutsConfig{
+		ReadTimeout:  "10s",
+		WriteTimeout: "10s",
+		IdleTimeout:  "60s",
+	}
 
-    conf.Workers = config.WorkersConfig{
-        UploadQueueSize: 10,
-    }
+	conf.Workers = config.WorkersConfig{
+		UploadQueueSize: 10,
+	}
 
-    conf.ClamAV = config.ClamAVConfig{
-        ClamAVEnabled: false,
-        ClamAVSocket:  "/var/run/clamav/clamd.ctl",
-    }
+	conf.ClamAV = config.ClamAVConfig{
+		ClamAVEnabled: false,
+		ClamAVSocket:  "/var/run/clamav/clamd.ctl",
+	}
 
-    conf.Redis = config.RedisConfig{
-        RedisEnabled:             false,
-        RedisHealthCheckInterval: "30s",
-    }
+	conf.Redis = config.RedisConfig{
+		RedisEnabled:             false,
+		RedisHealthCheckInterval: "30s",
+	}
 }
 
 func readConfig(configFile string) error {
@@ -165,13 +167,33 @@ func checkFreeSpace(path string) bool {
 	return freeSpace > requiredSpace
 }
 
-func parseDuration(durationStr string) (time.Duration, error) {
-	duration, err := time.ParseDuration(durationStr)
-	if err != nil {
-		logrus.Warnf("Invalid duration '%s', defaulting to 30s", durationStr)
-		return 30 * time.Second, fmt.Errorf("invalid duration: %v", err)
+func parseCustomDuration(durationStr string) (time.Duration, error) {
+	re := regexp.MustCompile(`^(\d+)([HhDdMmYySsMm])$`)
+	matches := re.FindStringSubmatch(durationStr)
+	if len(matches) != 3 {
+		return 0, errors.New("invalid duration format")
 	}
-	return duration, nil
+
+	value, err := strconv.Atoi(matches[1])
+	if err != nil {
+		return 0, err
+	}
+
+	unit := matches[2]
+	switch unit {
+	case "H", "h":
+		return time.Duration(value) * time.Hour, nil
+	case "D", "d":
+		return time.Duration(value) * 24 * time.Hour, nil
+	case "M", "m":
+		return time.Duration(value) * time.Minute, nil
+	case "Y", "y":
+		return time.Duration(value) * 365 * 24 * time.Hour, nil
+	case "S", "s":
+		return time.Duration(value) * time.Second, nil
+	default:
+		return 0, errors.New("unknown duration unit")
+	}
 }
 
 func logSystemInfo() {
@@ -179,27 +201,27 @@ func logSystemInfo() {
 }
 
 func setupLogging() {
-    level, err := logrus.ParseLevel(conf.Server.LogLevel)
-    if err != nil {
+	level, err := logrus.ParseLevel(conf.Server.LogLevel)
+	if err != nil {
 		logrus.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
-    }
+	}
 	logrus.SetLevel(level)
 
-    if conf.Server.LogFile != "" {
-        logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-        if err != nil {
-            log.Fatalf("Failed to open log file: %v", err)
-        }
-        log.SetOutput(io.MultiWriter(os.Stdout, logFile))
-    } else {
-        log.SetOutput(os.Stdout)
-    }
+	if conf.Server.LogFile != "" {
+		logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			log.Fatalf("Failed to open log file: %v", err)
+		}
+		log.SetOutput(io.MultiWriter(os.Stdout, logFile))
+	} else {
+		log.SetOutput(os.Stdout)
+	}
 
-    // Use Text formatter for human-readable logs
+	// Use Text formatter for human-readable logs
 	logrus.SetFormatter(&logrus.TextFormatter{
-        FullTimestamp: true,
-        TimestampFormat: "2006-01-02 15:04:05",
-    })
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05",
+	})
 }
 
 func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
@@ -296,22 +318,22 @@ func main() {
 	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute) // Cache with a 5-minute TTL and 10-minute cleanup interval
 
 	// Parse durations with error handling
-	fileTTL, err := parseDuration(conf.Server.FileTTL)
+	fileTTL, err := parseCustomDuration(conf.Server.FileTTL)
 	if err != nil {
 		logrus.Fatalf("Invalid FileTTL: %v", err)
 	}
 
-	readTimeout, err := parseDuration(conf.Timeouts.ReadTimeout)
+	readTimeout, err := parseCustomDuration(conf.Timeouts.ReadTimeout)
 	if err != nil {
 		logrus.Fatalf("Invalid ReadTimeout: %v", err)
 	}
 
-	writeTimeout, err := parseDuration(conf.Timeouts.WriteTimeout)
+	writeTimeout, err := parseCustomDuration(conf.Timeouts.WriteTimeout)
 	if err != nil {
 		logrus.Fatalf("Invalid WriteTimeout: %v", err)
 	}
 
-	idleTimeout, err := parseDuration(conf.Timeouts.IdleTimeout)
+	idleTimeout, err := parseCustomDuration(conf.Timeouts.IdleTimeout)
 	if err != nil {
 		logrus.Fatalf("Invalid IdleTimeout: %v", err)
 	}
