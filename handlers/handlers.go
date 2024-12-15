@@ -1,16 +1,17 @@
 package handlers
 
 import (
+    "io"
     "net/http"
+    "os"
+    "path/filepath"
     "time"
 
     "github.com/sirupsen/logrus"
     "github.com/PlusOne/hmac-file-server/config"
     "github.com/PlusOne/hmac-file-server/workers"
     "github.com/shirou/gopsutil/cpu"
-    "path/filepath"
-    "os"
-    "io"
+    "github.com/dutchcoders/go-clamd"
 )
 
 func corsMiddleware(next http.Handler) http.Handler {
@@ -56,9 +57,12 @@ func UploadHandlerV2(w http.ResponseWriter, r *http.Request) {
         go func() {
             ticker := time.NewTicker(10 * time.Second)
             defer ticker.Stop()
-            for range ticker.C {
+            for {
+                select {
+                case <-ticker.C:
                     logrus.Info("Updating system metrics...")
                     // Add your system metrics update logic here
+                }
             }
         }()
     }
@@ -83,6 +87,25 @@ func UploadHandlerV2(w http.ResponseWriter, r *http.Request) {
     if err != nil {
         http.Error(w, "Failed to save file", http.StatusInternalServerError)
         return
+    }
+
+    // Check if ClamAV is enabled and scan the file
+    if conf.ClamAV.ClamAVEnabled {
+        clamClient := clamd.NewClamd("unix:" + conf.ClamAV.ClamAVSocket)
+        response, err := clamClient.ScanFile(filePath)
+        if err != nil {
+            logrus.Errorf("Error scanning file with ClamAV: %v", err)
+            http.Error(w, "Failed to scan file", http.StatusInternalServerError)
+            return
+        }
+
+        for result := range response {
+            if result.Status == clamd.RES_FOUND {
+                logrus.Warnf("ClamAV found a virus in the file: %s", result.Description)
+                http.Error(w, "File contains a virus", http.StatusForbidden)
+                return
+            }
+        }
     }
 
     w.WriteHeader(http.StatusCreated)
@@ -118,6 +141,10 @@ type Config struct {
     }
     File struct {
         FileRevision int
+    }
+    ClamAV struct {
+        ClamAVEnabled bool
+        ClamAVSocket  string
     }
 }
 
