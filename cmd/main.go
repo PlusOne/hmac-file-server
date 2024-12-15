@@ -89,6 +89,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 func setupRouter() *http.ServeMux {
 	router := http.NewServeMux()
 	router.HandleFunc("/upload", handleUploadWrapper)
+	router.HandleFunc("/request", handleRequest) // Add this line to use handleRequest
 	// Define additional routes here
 	return router
 }
@@ -154,7 +155,6 @@ func getFileInfo(filePath string) (os.FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	// Store the file info in the cache with a TTL (e.g., 5 minutes)
 	fileInfoCache.Set(filePath, info, cache.DefaultExpiration)
 	logrus.Infof("Cache miss for file: %s, reading from disk", filePath)
@@ -580,6 +580,31 @@ func createFile(fileStorePath string, w http.ResponseWriter, r *http.Request) er
 
 	w.WriteHeader(http.StatusCreated)
 	return nil
+}
+
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+    // Existing code...
+
+	queryParams := r.URL.Query()
+    switch r.Method {
+    case http.MethodPut, http.MethodPost:
+		absFilename := queryParams.Get("filename")
+		handleUpload(w, r, absFilename, queryParams)
+    case http.MethodHead, http.MethodGet:
+		absFilename := queryParams.Get("filename")
+		handleDownload(w, r, absFilename)
+    case http.MethodOptions:
+        w.Header().Set("Allow", "OPTIONS, GET, PUT, POST, HEAD")
+        return
+    default:
+        http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+        return
+    }
+}
+
+func handleDownload(w http.ResponseWriter, r *http.Request, fileStorePath string) {
+	// Implement the download logic here
+	http.ServeFile(w, r, fileStorePath)
 }
 
 func main() {
