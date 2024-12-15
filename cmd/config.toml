@@ -13,6 +13,7 @@ NetworkChangeMonitoring = false
 AutoAdjustWorkers = true
 ResumeableUploads = true
 ResumeableDownloads = true
+LogLimiter = true
 
 [iso]
 enabled = false
