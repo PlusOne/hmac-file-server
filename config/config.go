@@ -11,16 +11,18 @@ type ServerConfig struct {
     MetricsEnabled bool   `mapstructure:"MetricsEnabled"`
     MetricsPort    string `mapstructure:"MetricsPort"`
     UnixSocket     bool   `mapstructure:"UnixSocket"`
+    LogFile        string `mapstructure:"LogFile"`
+    LogLevel       string `mapstructure:"LogLevel"`
 }
 
 type ISOConfig struct {
     Enabled bool `mapstructure:"Enabled"`
 }
 
-type TimeoutConfig struct {
-    ReadTimeout  string `mapstructure:"ReadTimeout"`
-    WriteTimeout string `mapstructure:"WriteTimeout"`
-    IdleTimeout  string `mapstructure:"IdleTimeout"`
+type TimeoutsConfig struct {
+    ReadTimeout  string
+    WriteTimeout string
+    IdleTimeout  string
 }
 
 type WorkersConfig struct {
@@ -40,7 +42,7 @@ type RedisConfig struct {
 type Config struct {
     Server   ServerConfig   `mapstructure:"server"`
     ISO      ISOConfig      `mapstructure:"iso"`
-    Timeouts TimeoutConfig  `mapstructure:"timeouts"`
+    Timeouts TimeoutsConfig `mapstructure:"timeouts"`
     Workers  WorkersConfig  `mapstructure:"workers"`
     ClamAV   ClamAVConfig   `mapstructure:"clamav"`
     Redis    RedisConfig    `mapstructure:"redis"`

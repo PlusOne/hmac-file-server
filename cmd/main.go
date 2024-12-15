@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+	"io"
 
 	"github.com/PlusOne/hmac-file-server/config"
 	"github.com/PlusOne/hmac-file-server/handlers"
@@ -53,26 +55,37 @@ func setupRouter() *http.ServeMux {
 }
 
 func setDefaults() {
-	conf.Server.ListenPort = "8080"
-	conf.Server.StoragePath = "./storage"
-	conf.Server.FileTTL = "24h"
-	conf.Server.MetricsEnabled = true
-	conf.Server.MetricsPort = "2112"
-	conf.Server.UnixSocket = false
+    conf.Server = config.ServerConfig{
+        StoragePath:    "./storage",
+        FileTTL:        "24h",
+        MetricsEnabled: true,
+        MetricsPort:    "2112",
+        UnixSocket:     false,
+    }
 
-	conf.ISO.Enabled = false
+    conf.ISO = config.ISOConfig{
+        Enabled: false,
+    }
 
-	conf.Timeouts.ReadTimeout = "10s"
-	conf.Timeouts.WriteTimeout = "10s"
-	conf.Timeouts.IdleTimeout = "60s"
+    conf.Timeouts = config.TimeoutsConfig{
+        ReadTimeout:  "10s",
+        WriteTimeout: "10s",
+        IdleTimeout:  "60s",
+    }
 
-	conf.Workers.UploadQueueSize = 10
+    conf.Workers = config.WorkersConfig{
+        UploadQueueSize: 10,
+    }
 
-	conf.ClamAV.ClamAVEnabled = false
-	conf.ClamAV.ClamAVSocket = "/var/run/clamav/clamd.ctl"
+    conf.ClamAV = config.ClamAVConfig{
+        ClamAVEnabled: false,
+        ClamAVSocket:  "/var/run/clamav/clamd.ctl",
+    }
 
-	conf.Redis.RedisEnabled = false
-	conf.Redis.RedisHealthCheckInterval = "30s"
+    conf.Redis = config.RedisConfig{
+        RedisEnabled:             false,
+        RedisHealthCheckInterval: "30s",
+    }
 }
 
 func readConfig(configFile string) error {
@@ -166,11 +179,27 @@ func logSystemInfo() {
 }
 
 func setupLogging() {
+    level, err := logrus.ParseLevel(conf.Server.LogLevel)
+    if err != nil {
+		logrus.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
+    }
+	logrus.SetLevel(level)
+
+    if conf.Server.LogFile != "" {
+        logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+        if err != nil {
+            log.Fatalf("Failed to open log file: %v", err)
+        }
+        log.SetOutput(io.MultiWriter(os.Stdout, logFile))
+    } else {
+        log.SetOutput(os.Stdout)
+    }
+
+    // Use Text formatter for human-readable logs
 	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
-	logrus.SetOutput(os.Stdout)
-	logrus.SetLevel(logrus.InfoLevel)
+        FullTimestamp: true,
+        TimestampFormat: "2006-01-02 15:04:05",
+    })
 }
 
 func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
