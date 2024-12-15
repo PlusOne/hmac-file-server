@@ -2,11 +2,9 @@ package workers
 
 import (
     "context"
-    "fmt"
-    "os/exec"
-    "strings"
-    "github.com/sirupsen/logrus"
     "net/http"
+
+    "github.com/sirupsen/logrus"
 )
 
 type UploadTask struct {
@@ -24,24 +22,6 @@ type ClamAVClient struct {
     Socket string
 }
 
-func (c *ClamAVClient) ScanFile(filePath string) error {
-    cmd := exec.Command("clamscan", filePath)
-    output, err := cmd.CombinedOutput()
-    if err != nil {
-        return fmt.Errorf("error executing clamscan: %v, output: %s", err, string(output))
-    }
-
-    if string(output) == "" {
-        return fmt.Errorf("unexpected clamscan output")
-    }
-
-    if !strings.Contains(string(output), "OK") {
-        return fmt.Errorf("file %s is infected: %s", filePath, string(output))
-    }
-
-    return nil
-}
-
 func InitializeUploadWorkerPool(ctx context.Context, numWorkers int, uploadQueue chan UploadTask) {
     for i := 0; i < numWorkers; i++ {
         go uploadWorker(ctx, i, uploadQueue)
@@ -57,13 +37,19 @@ func uploadWorker(ctx context.Context, workerID int, uploadQueue chan UploadTask
         case <-ctx.Done():
             return
         case task, ok := <-uploadQueue:
-            if (!ok) {
+            if !ok {
                 return
             }
             err := processUpload(task)
             task.Result <- err
         }
     }
+}
+
+func processUpload(task UploadTask) error {
+    logrus.Infof("Processing upload for file: %s", task.AbsFilename)
+    // Implement the upload processing logic here
+    return nil
 }
 
 func InitializeScanWorkerPool(ctx context.Context, numWorkers int, scanQueue chan ScanTask) {
@@ -88,12 +74,6 @@ func scanWorker(ctx context.Context, workerID int, scanQueue chan ScanTask) {
             task.Result <- err
         }
     }
-}
-
-func processUpload(task UploadTask) error {
-    logrus.Infof("Processing upload for file: %s", task.AbsFilename)
-    // Implement the upload processing logic here
-    return nil
 }
 
 func processScan(task ScanTask) error {
