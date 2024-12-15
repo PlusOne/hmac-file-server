@@ -17,10 +17,9 @@ type ServerConfig struct {
 	LogFile                 string `mapstructure:"LogFile"`
 	LogLevel                string `mapstructure:"LogLevel"`
 	DeduplicationEnabled    bool   `mapstructure:"DeduplicationEnabled"`
-	NetworkChangeMonitoring bool
-	AutoAdjustWorkers       bool
-	MinFreeBytes            string
-	LogLimiter              bool
+	NetworkChangeMonitoring bool   `mapstructure:"NetworkChangeMonitoring"`
+	AutoAdjustWorkers       bool   `mapstructure:"AutoAdjustWorkers"`
+	LogLimiter              bool   `mapstructure:"LogLimiter"`
 }
 
 type TimeoutConfig struct {
@@ -78,10 +77,6 @@ func LoadConfig(configFile string) (*Config, error) {
 
 	err := viper.Unmarshal(&config)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := validateConfig(&config); err != nil {
 		return nil, err
 	}
 
