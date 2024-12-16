@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/PlusOne/hmac-file-server/metrics"
 	"github.com/sirupsen/logrus"
 )
 
@@ -124,6 +125,9 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	logrus.Infof("File %s uploaded successfully", header.Filename)
 	w.WriteHeader(http.StatusOK)
+
+	// Increment the centralized upload errors metric
+	metrics.UploadErrorsTotal.Inc()
 }
 
 func parseChunkSize(sizeStr string) (int64, error) {

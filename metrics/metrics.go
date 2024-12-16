@@ -17,14 +17,14 @@ var (
             Help: "Total number of upload errors",
         },
     )
-    // ... other metrics ...
+    // ... define other metrics here ...
 )
 
 func InitMetrics() {
     once.Do(func() {
         // Register metrics
         prometheus.MustRegister(UploadErrorsTotal)
-        // Register other metrics
+        // Register other metrics here
         logrus.Info("Prometheus metrics initialized.")
     })
 }

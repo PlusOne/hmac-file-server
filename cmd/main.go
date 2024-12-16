@@ -61,7 +61,7 @@ type NetworkEvent struct {
 
 func init() {
 	// Register Prometheus metrics
-	prometheus.MustRegister(uploadErrorsTotal)
+	// prometheus.MustRegister(uploadErrorsTotal)
 }
 
 func initClamAV(socket string) (*workers.ClamAVClient, error) {
@@ -588,23 +588,23 @@ func createFile(fileStorePath string, w http.ResponseWriter, r *http.Request) er
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
-    // Existing code...
+	// Existing code...
 
 	queryParams := r.URL.Query()
-    switch r.Method {
-    case http.MethodPut, http.MethodPost:
+	switch r.Method {
+	case http.MethodPut, http.MethodPost:
 		absFilename := queryParams.Get("filename")
 		handleUpload(w, r, absFilename, queryParams)
-    case http.MethodHead, http.MethodGet:
+	case http.MethodHead, http.MethodGet:
 		absFilename := queryParams.Get("filename")
 		handleDownload(w, r, absFilename)
-    case http.MethodOptions:
-        w.Header().Set("Allow", "OPTIONS, GET, PUT, POST, HEAD")
-        return
-    default:
-        http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-        return
-    }
+	case http.MethodOptions:
+		w.Header().Set("Allow", "OPTIONS, GET, PUT, POST, HEAD")
+		return
+	default:
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
 }
 
 func handleDownload(w http.ResponseWriter, r *http.Request, fileStorePath string) {
