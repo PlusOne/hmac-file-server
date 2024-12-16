@@ -2,9 +2,9 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
-	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -34,8 +34,6 @@ var (
 	)
 )
 
-var once sync.Once
-
 // InitMetrics initializes and registers Prometheus metrics.
 func InitMetrics() {
 	metricsOnce.Do(func() {
@@ -52,38 +50,15 @@ func InitMetrics() {
 
 		logrus.Info("Prometheus metrics initialized successfully.")
 	})
-	once.Do(func() {
-		// Register metrics here
-	})
-
-	// Example usage of validateConfig
-	conf := &Config{}
-	if err := validateConfig(conf); err != nil {
-		logrus.Fatalf("Configuration validation failed: %v", err)
-	}
 }
 
 // StartMetricsServer starts the Prometheus metrics HTTP server.
 func StartMetricsServer(port string) {
-	serverOnce.Do(func() {
-		logrus.Infof("Metrics server starting on port %s", port)
-
-		mux := http.NewServeMux()
-		mux.Handle("/metrics", promhttp.Handler())
-
-		metricsServer = &http.Server{
-			Addr:    ":" + port,
-			Handler: mux,
-		}
-
-		go func() {
-			if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				logrus.Fatalf("Metrics server failed: %v", err)
-			}
-		}()
-
-		logrus.Infof("Metrics server started on port %s", port)
-	})
+	http.Handle("/metrics", promhttp.Handler())
+	logrus.Infof("Metrics server started on port %s", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		logrus.Fatalf("Metrics server failed: %v", err)
+	}
 }
 
 // ShutdownMetricsServer gracefully shuts down the metrics server.
@@ -102,9 +77,9 @@ type Config struct {
 }
 
 func validateConfig(conf *Config) error {
-    if conf.Server.MetricsPort == "" {
+	if conf.Server.MetricsPort == "" {
 		return fmt.Errorf("metrics port is not set in configuration")
-    }
-    // Add more validation as needed
-    return nil
+	}
+	// Add more validation as needed
+	return nil
 }

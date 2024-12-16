@@ -1,14 +1,16 @@
 [server]
-listenport = "8075"
-unixsocket = false
-storagepath = "./uploadING"
-loglevel = "info"
+ListenPort = "8075"
+UnixSocket = false
+StoragePath = "./uploadING"
+LogLevel = "info"
 logfile = "./hmac-file-server.log"
+MetricsEnabled = true
+MetricsPort = "9111"
 metricsenabled = true
-metricsport = "9111"
+metricsport = "2112"  # Replace "2112" with your desired port
 DeduplicationEnabled = true
-filettl = "356D"
-minfreebytes = "100GB"
+FileTTL = "356D"
+MinFreeBytes = "100GB"
 NetworkChangeMonitoring = false
 AutoAdjustWorkers = true
 ResumeableUploads = true
@@ -36,6 +38,11 @@ maxversions = 1
 [uploads]
 resumableuploadsenabled = true
 chunkeduploadsenabled = true
+chunksize = "32MB"
+
+[downloads]
+resumabledownloadsenabled = true
+chunkeddownloadsenabled = true
 chunksize = "32MB"
 
 [clamav]

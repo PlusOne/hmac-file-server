@@ -6,6 +6,7 @@ import (
 
 	"github.com/PlusOne/hmac-file-server/config"
 	"github.com/PlusOne/hmac-file-server/workers"
+	"github.com/gorilla/mux"
 )
 
 // UploadTask represents a task for uploading files
@@ -18,7 +19,6 @@ type UploadTask struct {
 type ScanTask struct {
 	// Add relevant fields here
 }
-
 
 var uploadQueue chan workers.UploadTask
 
@@ -72,4 +72,17 @@ func InitHandlers(uploadQueue chan workers.UploadTask, scanQueue chan workers.Sc
 	http.HandleFunc("/upload", HandleUpload)
 	http.HandleFunc("/download", HandleDownload)
 	http.HandleFunc("/", HandleRequest)
+}
+
+// SetupRouter sets up the HTTP routes and returns a router
+func SetupRouter() *mux.Router {
+	router := mux.NewRouter()
+	// Define your routes here
+	router.HandleFunc("/example", exampleHandler).Methods("GET")
+	return router
+}
+
+// exampleHandler is a sample handler function
+func exampleHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Example route"))
 }

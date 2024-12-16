@@ -37,15 +37,15 @@ import (
 )
 
 var (
-	conf              config.Config
-	log               = logrus.New()
-	versionString     = "2.1-dev"
-	uploadQueue       chan workers.UploadTask
-	scanQueue         chan workers.ScanTask
-	networkEvents     chan NetworkEvent
-	fileInfoCache     *cache.Cache
-	clamClient        *workers.ClamAVClient
-	redisClient       *redis.Client
+	conf          config.Config
+	log           = logrus.New()
+	versionString = "2.1-dev"
+	uploadQueue   chan workers.UploadTask
+	scanQueue     chan workers.ScanTask
+	networkEvents chan NetworkEvent
+	fileInfoCache *cache.Cache
+	clamClient    *workers.ClamAVClient
+	redisClient   *redis.Client
 )
 
 type NetworkEvent struct {
@@ -92,12 +92,12 @@ func setupRouter() *http.ServeMux {
 func setDefaults() {
 	conf.Server = config.ServerConfig{
 		StoragePath:    "./storage",
-		FileTTL:        "24h",
+		// FileTTL field removed or replaced with a valid field
 		MetricsEnabled: true,
 		//MetricsPort:    "2112",
-		UnixSocket:     false,
-		LogFile:        "./logs/server.log",
-		LogLevel:       "info",
+		UnixSocket: false,
+		LogFile:    "./logs/server.log",
+		LogLevel:   "info",
 		// ResumableUploads:       true,
 	}
 
@@ -313,27 +313,27 @@ func formatUptime(seconds uint64) string {
 }
 
 func setupLogging() {
-    log.SetFormatter(&logrus.TextFormatter{
-        FullTimestamp:   true,
-        TimestampFormat: "2006-01-02 15:04:05", // Custom timestamp format
-        ForceColors:     true,                    // Enable colored output
-        DisableColors:   false,                   // Ensure colors are enabled
-        PadLevelText:    true,                    // Align log levels
-    })
-    log.SetOutput(os.Stdout)
-    log.SetLevel(logrus.InfoLevel)
+	log.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05", // Custom timestamp format
+		ForceColors:     true,                  // Enable colored output
+		DisableColors:   false,                 // Ensure colors are enabled
+		PadLevelText:    true,                  // Align log levels
+	})
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.InfoLevel)
 }
 
 func setupGracefulShutdown(cancel context.CancelFunc) {
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
-    go func() {
-        <-c
-        logrus.Info("Shutting down server...")
-        cancel()
-        // Additional shutdown logic if necessary
-        os.Exit(0)
-    }()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		logrus.Info("Shutting down server...")
+		cancel()
+		// Additional shutdown logic if necessary
+		os.Exit(0)
+	}()
 }
 
 func verifyAndCreateISOContainer() error {
@@ -491,7 +491,7 @@ func handleUploadWrapper(w http.ResponseWriter, r *http.Request) {
 
 // Handle file uploads with extension restrictions and HMAC validation
 func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, a url.Values) {
-	if (!isExtensionAllowed(fileStorePath)) {
+	if !isExtensionAllowed(fileStorePath) {
 		logrus.Warnf("Disallowed file extension for file: %s", fileStorePath)
 		http.Error(w, "Disallowed file extension", http.StatusForbidden)
 		return
@@ -606,24 +606,36 @@ func handleDownload(w http.ResponseWriter, r *http.Request, fileStorePath string
 }
 
 func initializeWorkers(ctx context.Context) {
-    for i := 0; i < conf.Workers.NumWorkers; i++ {
-        go workers.UploadWorker(ctx, uploadQueue)
-    }
-    for i := 0; i < conf.Workers.NumScanWorkers; i++ {
-        go workers.ScanWorker(ctx, scanQueue)
-    }
-    logrus.Infof("Initialized %d upload workers and %d scan workers",
-        conf.Workers.NumWorkers, conf.Workers.NumScanWorkers)
+	for i := 0; i < conf.Workers.NumWorkers; i++ {
+		go workers.UploadWorker(ctx, uploadQueue)
+	}
+	for i := 0; i < conf.Workers.NumScanWorkers; i++ {
+		go workers.ScanWorker(ctx, scanQueue)
+	}
+	logrus.Infof("Initialized %d upload workers and %d scan workers",
+		conf.Workers.NumWorkers, conf.Workers.NumScanWorkers)
 }
 
 // Removed unused gracefulShutdown function
 
 func startMetricsServer() {
-    http.Handle("/metrics", promhttp.Handler())
-    logrus.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
-    if err := http.ListenAndServe(":"+conf.Server.MetricsPort, nil); err != nil {
-        logrus.Fatalf("Metrics server failed: %v", err)
-    }
+	http.Handle("/metrics", promhttp.Handler())
+	logrus.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
+	if err := http.ListenAndServe(":"+conf.Server.MetricsPort, nil); err != nil {
+		logrus.Fatalf("Metrics server failed: %v", err)
+	}
+}
+
+func DownloadHandler(w http.ResponseWriter, r *http.Request) {
+	if conf.Downloads.ResumableDownloadsEnabled {
+		// Implement resumable download logic
+	}
+
+	if conf.Downloads.ChunkedDownloadsEnabled {
+		// Implement chunked download logic
+	}
+
+	// Use conf.Downloads.ChunkSize as needed
 }
 
 func main() {
@@ -637,11 +649,11 @@ func main() {
 	flag.Parse()
 
 	// Log current working directory for debugging
-    cwd, err := os.Getwd()
-    if err != nil {
-        logrus.Fatalf("Error getting current working directory: %v", err)
-    }
-    logrus.Infof("Current working directory: %s", cwd)
+	cwd, err := os.Getwd()
+	if err != nil {
+		logrus.Fatalf("Error getting current working directory: %v", err)
+	}
+	logrus.Infof("Current working directory: %s", cwd)
 
 	// Load configuration
 	err = readConfig(configFile, &conf)

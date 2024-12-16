@@ -14,6 +14,7 @@ type Config struct {
 	Security   SecurityConfig   `mapstructure:"security"`
 	Versioning VersioningConfig `mapstructure:"versioning"`
 	Uploads    UploadsConfig    `mapstructure:"uploads"`
+	Downloads  DownloadsConfig  `mapstructure:"downloads"`
 	ClamAV     ClamAVConfig     `mapstructure:"clamav"`
 	Redis      RedisConfig      `mapstructure:"redis"`
 	Workers    WorkersConfig    `mapstructure:"workers"`
@@ -29,13 +30,12 @@ type ServerConfig struct {
 	MetricsEnabled          bool   `mapstructure:"metricsenabled"`
 	MetricsPort             string `mapstructure:"metricsport"`
 	DeduplicationEnabled    bool   `mapstructure:"deduplicationenabled"`
-	FileTTL                 string `mapstructure:"filettl"`
-	MinFreeBytes            string `mapstructure:"minfreebytes"`
 	NetworkChangeMonitoring bool   `mapstructure:"networkchangemonitoring"`
 	AutoAdjustWorkers       bool   `mapstructure:"autoadjustworkers"`
-	ResumableUploads        bool   `mapstructure:"resumeableuploads"`
-	ResumableDownloads      bool   `mapstructure:"resumeabledownloads"`
+	ResumableUploads        bool   `mapstructure:"resumableuploads"`
+	ResumableDownloads      bool   `mapstructure:"resumabledownloads"`
 	LogLimiter              bool   `mapstructure:"loglimiter"`
+	FileTTL                 string `mapstructure:"filettl"` // Add this line
 }
 
 type ISOConfig struct {
@@ -64,6 +64,12 @@ type UploadsConfig struct {
 	ResumableUploadsEnabled bool   `mapstructure:"resumableuploadsenabled"`
 	ChunkedUploadsEnabled   bool   `mapstructure:"chunkeduploadsenabled"`
 	ChunkSize               string `mapstructure:"chunksize"`
+}
+
+type DownloadsConfig struct {
+	ResumableDownloadsEnabled bool   `mapstructure:"resumabledownloadsenabled"`
+	ChunkedDownloadsEnabled   bool   `mapstructure:"chunkeddownloadsenabled"`
+	ChunkSize                 string `mapstructure:"chunksize"`
 }
 
 type ClamAVConfig struct {
