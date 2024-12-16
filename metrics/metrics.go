@@ -11,7 +11,9 @@ import (
 )
 
 var (
-	once          sync.Once
+	metricsOnce sync.Once
+	serverOnce  sync.Once
+
 	metricsServer *http.Server
 
 	// UploadErrorsTotal tracks the total number of upload errors.
@@ -33,7 +35,7 @@ var (
 
 // InitMetrics initializes and registers Prometheus metrics.
 func InitMetrics() {
-	once.Do(func() {
+	metricsOnce.Do(func() {
 		logrus.Info("Registering Prometheus metrics...")
 
 		// Register metrics
@@ -53,7 +55,7 @@ func InitMetrics() {
 
 // StartMetricsServer starts the Prometheus metrics HTTP server.
 func StartMetricsServer(port string) {
-	once.Do(func() {
+	serverOnce.Do(func() {
 		logrus.Infof("Metrics server starting on port %s", port)
 
 		mux := http.NewServeMux()

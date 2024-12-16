@@ -313,32 +313,15 @@ func formatUptime(seconds uint64) string {
 }
 
 func setupLogging() {
-	// Parse and set log level
-	level, err := logrus.ParseLevel(conf.Server.LogLevel)
-	if err != nil {
-		logrus.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
-	}
-	logrus.SetLevel(level)
-
-	// Configure log output
-	if conf.Server.LogFile != "" {
-		// Open the log file
-		logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			logrus.Fatalf("Failed to open log file %s: %v", conf.Server.LogFile, err)
-		}
-		// Set log output to both stdout and the log file
-		logrus.SetOutput(io.MultiWriter(os.Stdout, logFile))
-	} else {
-		// If no log file is specified, log only to stdout
-		logrus.SetOutput(os.Stdout)
-	}
-
-	// Use Text formatter for human-readable logs
-	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-	})
+    log.SetFormatter(&logrus.TextFormatter{
+        FullTimestamp:   true,
+        TimestampFormat: "2006-01-02 15:04:05", // Custom timestamp format
+        ForceColors:     true,                    // Enable colored output
+        DisableColors:   false,                   // Ensure colors are enabled
+        PadLevelText:    true,                    // Align log levels
+    })
+    log.SetOutput(os.Stdout)
+    log.SetLevel(logrus.InfoLevel)
 }
 
 func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
@@ -509,7 +492,7 @@ func handleUploadWrapper(w http.ResponseWriter, r *http.Request) {
 
 // Handle file uploads with extension restrictions and HMAC validation
 func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, a url.Values) {
-	if !isExtensionAllowed(fileStorePath) {
+	if (!isExtensionAllowed(fileStorePath)) {
 		logrus.Warnf("Disallowed file extension for file: %s", fileStorePath)
 		http.Error(w, "Disallowed file extension", http.StatusForbidden)
 		return
@@ -623,7 +606,34 @@ func handleDownload(w http.ResponseWriter, r *http.Request, fileStorePath string
 	http.ServeFile(w, r, fileStorePath)
 }
 
+func initializeWorkers() {
+    for i := 0; i < conf.Workers.NumWorkers; i++ {
+        go workers.UploadWorker(ctx, uploadQueue)
+    }
+    for i := 0; i < conf.Workers.NumScanWorkers; i++ {
+        go workers.ScanWorker(ctx, scanQueue)
+    }
+    logrus.Infof("Initialized %d upload workers and %d scan workers",
+        conf.Workers.NumWorkers, conf.Workers.NumScanWorkers)
+}
 
+func gracefulShutdown() {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Info("Shutting down server...")
+
+	// Gracefully shutdown metrics server
+	if conf.Server.MetricsEnabled {
+		if err := metrics.ShutdownMetricsServer(context.Background()); err != nil {
+			log.Errorf("Metrics server forced to shutdown: %v", err)
+		}
+	}
+
+	// Add other shutdown procedures here...
+
+	log.Info("Server exiting")
+}
 
 func main() {
 	logSystemInfo()
@@ -811,6 +821,9 @@ func main() {
 
 	// Setup graceful shutdown
 	setupGracefulShutdown(server, cancel)
+
+	// Initialize workers
+	initializeWorkers()
 
 	// Start server
 	logrus.Infof("Starting HMAC file server %s...", versionString)

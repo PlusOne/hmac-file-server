@@ -138,3 +138,16 @@ func parseChunkSize(sizeStr string) (int64, error) {
 	}
 	return size * 1024 * 1024, nil // Convert MB to bytes
 }
+
+// Wrapper for handleUpload to match handler signature
+func handleUploadWrapper(w http.ResponseWriter, r *http.Request) {
+    absFilename := r.URL.Query().Get("filename") // Retrieve absolute filename as needed
+    fileStorePath := filepath.Join(conf.Server.StoragePath, absFilename) // Determine file store path
+    queryParams := r.URL.Query()
+    handleUpload(w, r, fileStorePath, queryParams)
+}
+
+// Handle file uploads with extension restrictions, HMAC validation, and deduplication
+func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, a url.Values) {
+    // Existing upload logic...
+}
