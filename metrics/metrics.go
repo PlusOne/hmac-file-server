@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"sync"
-	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -46,31 +45,4 @@ func InitMetrics() {
 
 		logrus.Info("Prometheus metrics initialized successfully.")
 	})
-}
-
-func TestInitMetrics(t *testing.T) {
-	InitMetrics()
-
-	// Attempt to register the metrics again
-	// This should not cause a panic due to sync.Once
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("InitMetrics caused a panic: %v", r)
-		}
-	}()
-
-	InitMetrics()
-}
-
-func TestMetricsAreRegistered(t *testing.T) {
-	InitMetrics()
-
-	// Check if the metrics are registered
-	uploader := prometheus.NewRegistry()
-	uploader.MustRegister(UploadErrorsTotal)
-
-	_, err := uploader.Gather()
-	if err != nil {
-		t.Errorf("Failed to gather metrics: %v", err)
-	}
 }
