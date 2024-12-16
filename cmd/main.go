@@ -416,7 +416,7 @@ func updateSystemMetrics(ctx context.Context) {
 
 func initMetrics() {
 	// Initialize Prometheus metrics here
-	metrics.InitMetrics()
+	// metrics.InitMetrics()
 	logrus.Info("Prometheus metrics initialized.")
 }
 
