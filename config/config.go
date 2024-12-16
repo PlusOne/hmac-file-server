@@ -11,8 +11,8 @@ type ServerConfig struct {
 	ListenPort              string `mapstructure:"ListenPort"`
 	StoragePath             string `mapstructure:"StoragePath"`
 	FileTTL                 string `mapstructure:"FileTTL"`
-	MetricsEnabled          bool   `mapstructure:"MetricsEnabled"`
-	MetricsPort             string `mapstructure:"MetricsPort"`
+	MetricsEnabled          bool   `mapstructure:"metricsenabled"`
+	MetricsPort             string `mapstructure:"metricsport"`
 	UnixSocket              bool   `mapstructure:"UnixSocket"`
 	LogFile                 string `mapstructure:"LogFile"`
 	LogLevel                string `mapstructure:"LogLevel"`
