@@ -29,7 +29,6 @@ var (
 )
 
 // InitMetrics initializes and registers Prometheus metrics.
-// It uses sync.Once to ensure metrics are registered only once.
 func InitMetrics() {
 	once.Do(func() {
 		logrus.Info("Registering Prometheus metrics...")
