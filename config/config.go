@@ -108,8 +108,15 @@ func LoadConfig(configFile string) (*Config, error) {
 }
 
 func validateConfig(conf *Config) error {
+	// Check for required configuration fields
 	if conf.Server.ListenPort == "" {
-		return fmt.Errorf("ListenPort must be set")
+		return fmt.Errorf("Server listen port is not configured")
+	}
+	if conf.Server.MetricsEnabled && conf.Server.MetricsPort == "" {
+		return fmt.Errorf("Metrics port is not configured")
+	}
+	if conf.Server.MetricsPort == conf.Server.ListenPort {
+		return fmt.Errorf("Metrics port and server port cannot be the same")
 	}
 	if conf.Security.Secret == "" {
 		return fmt.Errorf("secret must be set")

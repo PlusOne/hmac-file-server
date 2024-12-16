@@ -618,10 +618,10 @@ func initializeWorkers(ctx context.Context) {
 
 // Removed unused gracefulShutdown function
 
-func startMetricsServer(port string) {
+func startMetricsServer() {
     http.Handle("/metrics", promhttp.Handler())
-    logrus.Infof("Metrics server started on port %s", port)
-    if err := http.ListenAndServe(":"+port, nil); err != nil {
+    logrus.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
+    if err := http.ListenAndServe(":"+conf.Server.MetricsPort, nil); err != nil {
         logrus.Fatalf("Metrics server failed: %v", err)
     }
 }
@@ -655,11 +655,11 @@ func main() {
 	log.Info("Logging initialized.")
 
 	// Initialize Prometheus metrics once
-	// metrics.InitMetrics()
+	metrics.InitMetrics()
 
 	// Start metrics server if enabled
 	if conf.Server.MetricsEnabled {
-		go startMetricsServer(conf.Server.MetricsPort)
+		go startMetricsServer()
 	}
 
 	// Initialize the conf variable
@@ -718,9 +718,10 @@ func main() {
 	}
 
 	// Verify and create ISO container if needed
-	err = verifyAndCreateISOContainer()
-	if err != nil {
-		logrus.Warnf("Failed to verify or create ISO container: %v", err)
+	if conf.ISO.Enabled {
+		if err := verifyAndCreateISOContainer(); err != nil {
+			logrus.Warnf("Failed to verify or create ISO container: %v", err)
+		}
 	}
 
 	// Initialize Redis client if enabled
