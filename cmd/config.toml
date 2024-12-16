@@ -1,11 +1,11 @@
 [server]
-listenport = "8080"
+listenport = "8075"
 unixsocket = false
 storagepath = "./upload"
 loglevel = "info"
 logfile = "./hmac-file-server.log"
 metricsenabled = true
-metricsport = "9090"
+metricsport = "9075"
 DeduplicationEnabled = true
 filettl = "356D"
 minfreebytes = "100GB"

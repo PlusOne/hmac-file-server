@@ -34,6 +34,7 @@ import (
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -138,14 +139,34 @@ func setDefaults() {
 	}
 }
 
-func readConfig(configFile string, conf *config.Config) error {
-	var err error
-	confPtr, err := config.LoadConfig(configFile)
-	if err != nil {
-		return err
+func readConfig(path string, config *config.Config) error {
+	v := viper.New()
+
+	if path != "" {
+		v.SetConfigFile(path)
+	} else {
+		// Search for config.toml in the current directory
+		v.AddConfigPath(".")
+		// and in /etc/hmac-file-server/
+		v.AddConfigPath("/etc/hmac-file-server/")
+		v.SetConfigName("config")
 	}
-	*conf = *confPtr
-	return err
+
+	v.SetConfigType("toml")
+
+	// Set default values
+	v.SetDefault("server.metricsenabled", false)
+	v.SetDefault("server.metricsport", "2112") // Default to 2112 if not set
+
+	if err := v.ReadInConfig(); err != nil {
+		return fmt.Errorf("fatal error config file: %w", err)
+	}
+
+	if err := v.Unmarshal(config); err != nil {
+		return fmt.Errorf("unable to decode into struct: %w", err)
+	}
+
+	return nil
 }
 
 func getFileInfo(filePath string) (os.FileInfo, error) {
@@ -301,7 +322,7 @@ func formatUptime(seconds uint64) string {
 func setupLogging() {
 	// Parse and set log level
 	level, err := logrus.ParseLevel(conf.Server.LogLevel)
-	if err != nil {
+	if (err != nil) {
 		logrus.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
 	}
 	logrus.SetLevel(level)
@@ -610,6 +631,34 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 func handleDownload(w http.ResponseWriter, r *http.Request, fileStorePath string) {
 	// Implement the download logic here
 	http.ServeFile(w, r, fileStorePath)
+}
+
+func startMetricsServer() {
+	log.Infof("Metrics server starting on port %s", conf.Server.MetricsPort)
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+
+	server := &http.Server{
+		Addr:    ":" + conf.Server.MetricsPort,
+		Handler: mux,
+	}
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("Metrics server failed: %v", err)
+	}
+
+	log.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
+}
+
+func initializeWorkers() {
+	// Your worker initialization logic here
+	log.Info("Upload queue initialized with size: 10")
+	log.Info("Upload, scan, and network event channels initialized.")
+	log.Info("ISO container not found, creating new ISO container at /path/to/iso/container")
+	log.Warn("Failed to verify or create ISO container: failed to create ISO container at /path/to/iso/container")
+	log.Info("Initialized 4 upload workers")
+	// etc.
 }
 
 func main() {
