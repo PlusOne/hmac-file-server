@@ -322,7 +322,7 @@ func formatUptime(seconds uint64) string {
 func setupLogging() {
 	// Parse and set log level
 	level, err := logrus.ParseLevel(conf.Server.LogLevel)
-	if (err != nil) {
+	if err != nil {
 		logrus.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
 	}
 	logrus.SetLevel(level)
