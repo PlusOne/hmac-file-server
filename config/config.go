@@ -90,6 +90,8 @@ func LoadConfig(configFile string) (*Config, error) {
 	viper.SetConfigType("toml")
 	viper.AutomaticEnv()
 
+	viper.SetDefault("server.metricsport", "2112")
+
 	var config Config
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err

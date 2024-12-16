@@ -94,7 +94,7 @@ func setDefaults() {
 		StoragePath:    "./storage",
 		FileTTL:        "24h",
 		MetricsEnabled: true,
-		MetricsPort:    "2112",
+		//MetricsPort:    "2112",
 		UnixSocket:     false,
 		LogFile:        "./logs/server.log",
 		LogLevel:       "info",
@@ -149,7 +149,7 @@ func readConfig(path string, config *config.Config) error {
 
 	// Set default values
 	v.SetDefault("server.metricsenabled", false)
-	v.SetDefault("server.metricsport", "2112") // Default to 2112 if not set
+	//v.SetDefault("server.metricsport", "2112") // Default to 2112 if not set
 
 	if err := v.ReadInConfig(); err != nil {
 		return fmt.Errorf("fatal error config file: %w", err)

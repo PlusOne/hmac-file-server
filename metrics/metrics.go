@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"sync"
+	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -33,10 +34,13 @@ var (
 	)
 )
 
+var once sync.Once
+
 // InitMetrics initializes and registers Prometheus metrics.
 func InitMetrics() {
 	metricsOnce.Do(func() {
 		logrus.Info("Registering Prometheus metrics...")
+		logrus.SetLevel(logrus.DebugLevel)
 
 		// Register metrics
 		prometheus.MustRegister(UploadErrorsTotal)
@@ -47,6 +51,9 @@ func InitMetrics() {
 		// Register other metrics here
 
 		logrus.Info("Prometheus metrics initialized successfully.")
+	})
+	once.Do(func() {
+		// Register metrics here
 	})
 }
 
@@ -82,3 +89,16 @@ func ShutdownMetricsServer(ctx context.Context) error {
 	return nil
 }
 
+type Config struct {
+	Server struct {
+		MetricsPort string
+	}
+}
+
+func validateConfig(conf *Config) error {
+    if conf.Server.MetricsPort == "" {
+        return fmt.Errorf("Metrics port is not set in configuration")
+    }
+    // Add more validation as needed
+    return nil
+}
