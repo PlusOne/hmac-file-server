@@ -15,6 +15,7 @@ type Config struct {
 	ClamAV   ClamAVConfig
 	Security SecurityConfig
 	Redis    RedisConfig
+	Version  string
 
 	Versioning struct {
 		EnableVersioning bool
@@ -29,59 +30,59 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	ListenPort              string
-	UnixSocket              bool
-	StoragePath             string
-	LogLevel                string
-	LogFile                 string
-	MetricsEnabled          bool
-	MetricsPort             string
-	DeduplicationEnabled    bool
-	FileTTL                 string
-	MinFreeBytes            string
-	NetworkChangeMonitoring bool
-	AutoAdjustWorkers       bool
-	ResumableUploads        bool
-	ResumableDownloads      bool
-	LogLimiter              bool
+	ListenPort              string `mapstructure:"listenport"`
+	UnixSocket              bool   `mapstructure:"unixsocket"`
+	StoragePath             string `mapstructure:"storagepath"`
+	LogLevel                string `mapstructure:"loglevel"`
+	LogFile                 string `mapstructure:"logfile"`
+	MetricsEnabled          bool   `mapstructure:"metricsenabled"`
+	MetricsPort             string `mapstructure:"metricsport"`
+	DeduplicationEnabled    bool   `mapstructure:"deduplicationenabled"`
+	FileTTL                 string `mapstructure:"filettl"`
+	MinFreeBytes            string `mapstructure:"minfreebytes"`
+	NetworkChangeMonitoring bool   `mapstructure:"networkchangemonitoring"`
+	AutoAdjustWorkers       bool   `mapstructure:"autoadjustworkers"`
+	ResumableUploads        bool   `mapstructure:"resumableuploads"`
+	ResumableDownloads      bool   `mapstructure:"resumabledownloads"`
+	LogLimiter              bool   `mapstructure:"loglimiter"`
 }
 
 type ISOConfig struct {
-	Enabled    bool
-	Size       string
-	Mountpoint string
-	Charset    string
+	Enabled    bool   `mapstructure:"enabled"`
+	Size       string `mapstructure:"size"`
+	Mountpoint string `mapstructure:"mountpoint"`
+	Charset    string `mapstructure:"charset"`
 }
 
 type TimeoutConfig struct {
-	ReadTimeout  string
-	WriteTimeout string
-	IdleTimeout  string
+	ReadTimeout  string `mapstructure:"readtimeout"`
+	WriteTimeout string `mapstructure:"writetimeout"`
+	IdleTimeout  string `mapstructure:"idletimeout"`
 }
 
 type WorkersConfig struct {
-	UploadQueueSize int
-	NumWorkers      int
-	NumScanWorkers  int `toml:"workers"`
+	UploadQueueSize int `mapstructure:"uploadqueuesize"`
+	NumWorkers      int `mapstructure:"numworkers"`
+	NumScanWorkers  int `mapstructure:"numscanworkers"`
 }
 
 type ClamAVConfig struct {
-	ClamAVEnabled       bool
-	ClamAVSocket        string
-	NumScanWorkers      int
-	ScanFileExtensions  []string `toml:"clamav"`
+	ClamAVEnabled      bool     `mapstructure:"clamavenabled"`
+	ClamAVSocket       string   `mapstructure:"clamavsocket"`
+	NumScanWorkers     int      `mapstructure:"numscanworkers"`
+	ScanFileExtensions []string `mapstructure:"scanfileextensions"`
 }
 
 type RedisConfig struct {
-	RedisEnabled             bool
-	RedisAddr                string
-	RedisPassword            string
-	RedisDBIndex             int
-	RedisHealthCheckInterval string
+	RedisEnabled             bool   `mapstructure:"redisenabled"`
+	RedisAddr                string `mapstructure:"redisaddr"`
+	RedisPassword            string `mapstructure:"redispassword"`
+	RedisDBIndex             int    `mapstructure:"redisdbindex"`
+	RedisHealthCheckInterval string `mapstructure:"redishealthcheckinterval"`
 }
 
 type SecurityConfig struct {
-	Secret string `mapstructure:"secret_key"`
+	Secret string `mapstructure:"secret"`
 }
 
 func LoadConfig(configFile string) (*Config, error) {

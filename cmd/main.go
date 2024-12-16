@@ -324,17 +324,16 @@ func setupLogging() {
     log.SetLevel(logrus.InfoLevel)
 }
 
-func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
-		logrus.Info("Shutting down server...")
-		if err := server.Shutdown(context.Background()); err != nil {
-			logrus.Fatalf("Server Shutdown Failed:%+v", err)
-		}
-		cancel()
-	}()
+func setupGracefulShutdown(cancel context.CancelFunc) {
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, os.Interrupt)
+    go func() {
+        <-c
+        logrus.Info("Shutting down server...")
+        cancel()
+        // Additional shutdown logic if necessary
+        os.Exit(0)
+    }()
 }
 
 func verifyAndCreateISOContainer() error {
@@ -617,22 +616,14 @@ func initializeWorkers(ctx context.Context) {
         conf.Workers.NumWorkers, conf.Workers.NumScanWorkers)
 }
 
-func gracefulShutdown() {
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Info("Shutting down server...")
+// Removed unused gracefulShutdown function
 
-	// Gracefully shutdown metrics server
-	if conf.Server.MetricsEnabled {
-		if err := metrics.ShutdownMetricsServer(context.Background()); err != nil {
-			log.Errorf("Metrics server forced to shutdown: %v", err)
-		}
-	}
-
-	// Add other shutdown procedures here...
-
-	log.Info("Server exiting")
+func startMetricsServer(port string) {
+    http.Handle("/metrics", promhttp.Handler())
+    logrus.Infof("Metrics server started on port %s", port)
+    if err := http.ListenAndServe(":"+port, nil); err != nil {
+        logrus.Fatalf("Metrics server failed: %v", err)
+    }
 }
 
 func main() {
@@ -645,8 +636,15 @@ func main() {
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
 	flag.Parse()
 
+	// Log current working directory for debugging
+    cwd, err := os.Getwd()
+    if err != nil {
+        logrus.Fatalf("Error getting current working directory: %v", err)
+    }
+    logrus.Infof("Current working directory: %s", cwd)
+
 	// Load configuration
-	err := readConfig(configFile, &conf)
+	err = readConfig(configFile, &conf)
 	if err != nil {
 		log.Fatalf("Error reading config: %v", err)
 	}
@@ -661,20 +659,7 @@ func main() {
 
 	// Start metrics server if enabled
 	if conf.Server.MetricsEnabled {
-		go func() {
-			metricsMux := http.NewServeMux()
-			metricsMux.Handle("/metrics", promhttp.Handler())
-
-			metricsServer := &http.Server{
-				Addr:    ":" + conf.Server.MetricsPort,
-				Handler: metricsMux,
-			}
-
-			log.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
-			if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("Metrics server failed: %v", err)
-			}
-		}()
+		go startMetricsServer(conf.Server.MetricsPort)
 	}
 
 	// Initialize the conf variable
@@ -820,7 +805,7 @@ func main() {
 	}
 
 	// Setup graceful shutdown
-	setupGracefulShutdown(server, cancel)
+	setupGracefulShutdown(cancel)
 
 	// Initialize workers
 	initializeWorkers(ctx)

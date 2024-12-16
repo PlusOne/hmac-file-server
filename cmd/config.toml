@@ -1,7 +1,7 @@
 [server]
 listenport = "8075"
 unixsocket = false
-storagepath = "./upload"
+storagepath = "./uploadING"
 loglevel = "info"
 logfile = "./hmac-file-server.log"
 metricsenabled = true
