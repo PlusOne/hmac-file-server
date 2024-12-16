@@ -27,7 +27,6 @@ import (
 	"github.com/PlusOne/hmac-file-server/workers"
 	"github.com/go-redis/redis/v8"
 	"github.com/patrickmn/go-cache"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
@@ -47,12 +46,6 @@ var (
 	fileInfoCache     *cache.Cache
 	clamClient        *workers.ClamAVClient
 	redisClient       *redis.Client
-	uploadErrorsTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "upload_errors_total",
-			Help: "Total number of upload errors",
-		},
-	)
 )
 
 type NetworkEvent struct {
@@ -519,7 +512,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, 
 	if !isExtensionAllowed(fileStorePath) {
 		logrus.Warnf("Disallowed file extension for file: %s", fileStorePath)
 		http.Error(w, "Disallowed file extension", http.StatusForbidden)
-		uploadErrorsTotal.Inc()
 		return
 	}
 	logrus.Debug("handleUpload called")
@@ -541,7 +533,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, 
 	} else {
 		logrus.Warn("No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC")
 		http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
-		uploadErrorsTotal.Inc()
 		return
 	}
 	logrus.Debugf("Protocol version determined: %s", protocolVersion)
@@ -575,7 +566,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, 
 	} else {
 		logrus.Warn("Invalid MAC.")
 		http.Error(w, "Invalid MAC", http.StatusForbidden)
-		uploadErrorsTotal.Inc()
 		return
 	}
 }
@@ -633,33 +623,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request, fileStorePath string
 	http.ServeFile(w, r, fileStorePath)
 }
 
-func startMetricsServer() {
-	log.Infof("Metrics server starting on port %s", conf.Server.MetricsPort)
 
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
-
-	server := &http.Server{
-		Addr:    ":" + conf.Server.MetricsPort,
-		Handler: mux,
-	}
-
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Metrics server failed: %v", err)
-	}
-
-	log.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
-}
-
-func initializeWorkers() {
-	// Your worker initialization logic here
-	log.Info("Upload queue initialized with size: 10")
-	log.Info("Upload, scan, and network event channels initialized.")
-	log.Info("ISO container not found, creating new ISO container at /path/to/iso/container")
-	log.Warn("Failed to verify or create ISO container: failed to create ISO container at /path/to/iso/container")
-	log.Info("Initialized 4 upload workers")
-	// etc.
-}
 
 func main() {
 	logSystemInfo()
