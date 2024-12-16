@@ -55,6 +55,12 @@ func InitMetrics() {
 	once.Do(func() {
 		// Register metrics here
 	})
+
+	// Example usage of validateConfig
+	conf := &Config{}
+	if err := validateConfig(conf); err != nil {
+		logrus.Fatalf("Configuration validation failed: %v", err)
+	}
 }
 
 // StartMetricsServer starts the Prometheus metrics HTTP server.
@@ -97,7 +103,7 @@ type Config struct {
 
 func validateConfig(conf *Config) error {
     if conf.Server.MetricsPort == "" {
-        return fmt.Errorf("Metrics port is not set in configuration")
+		return fmt.Errorf("metrics port is not set in configuration")
     }
     // Add more validation as needed
     return nil
