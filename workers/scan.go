@@ -6,11 +6,12 @@ import (
     "github.com/sirupsen/logrus"
 )
 
-type ScanTask struct {
-    // Define the fields for your scan task
+type ScanTaskV2 struct {
+    AbsFilename string
+    Result      chan error
 }
 
-func ScanWorker(ctx context.Context, scanQueue chan ScanTask) {
+func ScanWorkerV2(ctx context.Context, scanQueue chan ScanTaskV2) {
     for {
         select {
         case <-ctx.Done():

@@ -2,14 +2,15 @@ package workers
 
 import (
     "context"
-    "net/http"
 
     "github.com/sirupsen/logrus"
 )
 
+// UploadTask represents a task for uploading files
 type UploadTask struct {
+    FilePath    string
     AbsFilename string
-    Request     *http.Request
+    UserID   int
     Result      chan error
 }
 

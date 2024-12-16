@@ -37,7 +37,6 @@ maxversions = 1
 resumableuploadsenabled = true
 chunkeduploadsenabled = true
 chunksize = "32MB"
-allowedextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"]
 
 [clamav]
 clamavenabled = false

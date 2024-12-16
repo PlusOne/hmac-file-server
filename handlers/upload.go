@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"net/url"
 
 	"github.com/PlusOne/hmac-file-server/metrics"
 	"github.com/sirupsen/logrus"
@@ -17,18 +18,17 @@ type UploadConfig struct {
 		StoragePath          string
 		DeduplicationEnabled bool
 		MinFreeBytes         string // Ensure this field is present
-	}
-	Uploads struct {
-		ChunkedUploadsEnabled bool
-		ChunkSize             string
-		AllowedExtensions     []string
-	}
-	Redis struct {
-		RedisEnabled             bool
-		RedisDBIndex             int
-		RedisAddr                string
-		RedisPassword            string
-		RedisHealthCheckInterval string
+		Redis struct {
+			RedisEnabled            bool
+			RedisAddr               string
+			RedisDBIndex            int
+			RedisHealthCheckInterval string
+			Uploads struct {
+				ChunkedUploadsEnabled bool
+				AllowedExtensions     []string
+				ChunkSize             string
+			} `json:"uploads"`
+		}
 	}
 	File struct {
 		FileRevision int
@@ -38,7 +38,7 @@ type UploadConfig struct {
 var conf *UploadConfig
 
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
-	if !conf.Uploads.ChunkedUploadsEnabled {
+	if !conf.Server.Redis.Uploads.ChunkedUploadsEnabled {
 		http.Error(w, "Chunked uploads are not enabled", http.StatusForbidden)
 		return
 	}
@@ -64,11 +64,11 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		logrus.Infof("FileRevision is set to %d.", conf.File.FileRevision)
 	}
 
-	if !conf.Redis.RedisEnabled {
+	if !conf.Server.Redis.RedisEnabled {
 		logrus.Info("Redis is disabled.")
 	} else {
 		logrus.Infof("Redis is enabled. Addr: %s, DBIndex: %d, HealthCheckInterval: %s",
-			conf.Redis.RedisAddr, conf.Redis.RedisDBIndex, conf.Redis.RedisHealthCheckInterval)
+			conf.Server.Redis.RedisAddr, conf.Server.Redis.RedisDBIndex, conf.Server.Redis.RedisHealthCheckInterval)
 	}
 
 	file, header, err := r.FormFile("file")
@@ -81,7 +81,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the file extension is allowed
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	allowed := false
-	for _, allowedExt := range conf.Uploads.AllowedExtensions {
+	for _, allowedExt := range conf.Server.Redis.Uploads.AllowedExtensions {
 		if ext == allowedExt {
 			allowed = true
 			break
@@ -92,7 +92,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chunkSize, err := parseChunkSize(conf.Uploads.ChunkSize)
+	chunkSize, err := parseChunkSize(conf.Server.Redis.Uploads.ChunkSize)
 	if err != nil {
 		http.Error(w, "Invalid chunk size", http.StatusInternalServerError)
 		return

@@ -1,181 +1,75 @@
 package handlers
 
 import (
-    "io"
-    "net/http"
-    "os"
-    "path/filepath"
-    "time"
+	"net/http"
+	"strconv"
 
-    "github.com/go-redis/redis/v8"
-    "github.com/sirupsen/logrus"
-    "github.com/PlusOne/hmac-file-server/config"
-    "github.com/PlusOne/hmac-file-server/workers"
-    "github.com/shirou/gopsutil/cpu"
-    "github.com/dutchcoders/go-clamd"
-    "golang.org/x/net/context"
+	"github.com/PlusOne/hmac-file-server/config"
+	"github.com/PlusOne/hmac-file-server/workers"
 )
 
-var ctx = context.Background()
-
-func corsMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Access-Control-Allow-Origin", "*")
-        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        if r.Method == "OPTIONS" {
-            w.WriteHeader(http.StatusOK)
-            return
-        }
-        next.ServeHTTP(w, r)
-    })
+// UploadTask represents a task for uploading files
+type UploadTask struct {
+	FilePath string
+	UserID   int
+	// Add other relevant fields
 }
 
-func UploadHandlerV2(w http.ResponseWriter, r *http.Request) {
-    // Load configuration
-    conf, err := config.LoadConfig("./config.toml")
-    if err != nil {
-        logrus.Fatalf("Error loading configuration: %v", err)
-    }
+type ScanTask struct {
+	// Add relevant fields here
+}
 
-    // Check configuration values
-    if conf.Server.ListenPort == "8080" {
-        logrus.Info("ListenPort is set to 8080.")
-    } else {
-        logrus.Infof("ListenPort is set to %s.", conf.Server.ListenPort)
-    }
 
-    // Gather CPU information
-    cpuInfo, err := cpu.Info()
-    if err != nil {
-        logrus.Fatalf("Error gathering CPU information: %v", err)
-    }
+var uploadQueue chan workers.UploadTask
 
-    // Log CPU information in a cumulative manner
-    for _, info := range cpuInfo {
-        logrus.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
-    }
+func HandleRequest(w http.ResponseWriter, r *http.Request) {
+	// Implementation from main.go's handleRequest
+	// Utilize config.Conf, metrics, workers
+	// Example:
+	switch r.Method {
+	case http.MethodPost:
+		HandleUpload(w, r)
+	case http.MethodGet:
+		HandleDownload(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
 
-    // Start a goroutine to log system metrics every 60 seconds if LogLimiter is enabled
-    if conf.Server.LogLimiter {
-        go func() {
-            ticker := time.NewTicker(60 * time.Second) // Adjusted to 60 seconds
-            defer ticker.Stop()
-            for {
-                select {
-                case <-ticker.C:
-                    logrus.Info("Updating system metrics...")
-                    // Add your system metrics update logic here
-                }
-            }
-        }()
-    }
+func atoi(s string) int {
+	i, _ := strconv.Atoi(s)
+	return i
+}
 
-    // Implement the upload handler logic here
-    file, header, err := r.FormFile("file")
-    if err != nil {
-        http.Error(w, "Failed to get file from request", http.StatusBadRequest)
-        return
-    }
-    defer file.Close()
+func HandleUpload(w http.ResponseWriter, r *http.Request) {
+	// Implementation from main.go's handleUpload
+	// Example:
+	uploadTask := workers.UploadTask{
+		FilePath: r.FormValue("filePath"),
+		UserID:   atoi(r.FormValue("userID")),
+	}
+	uploadQueue <- uploadTask
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Upload successful"))
+}
 
-    filePath := filepath.Join(conf.Server.StoragePath, header.Filename)
-    outFile, err := os.Create(filePath)
-    if err != nil {
-        http.Error(w, "Failed to create file", http.StatusInternalServerError)
-        return
-    }
-    defer outFile.Close()
-
-    _, err = io.Copy(outFile, file)
-    if err != nil {
-        http.Error(w, "Failed to save file", http.StatusInternalServerError)
-        return
-    }
-
-    // Check if ClamAV is enabled and scan the file
-    if conf.ClamAV.ClamAVEnabled {
-        clamClient := clamd.NewClamd("unix:" + conf.ClamAV.ClamAVSocket)
-        response, err := clamClient.ScanFile(filePath)
-        if err != nil {
-            logrus.Errorf("Error scanning file with ClamAV: %v", err)
-            http.Error(w, "Failed to scan file", http.StatusInternalServerError)
-            return
-        }
-
-        for result := range response {
-            if result.Status == clamd.RES_FOUND {
-                logrus.Warnf("ClamAV found a virus in the file: %s", result.Description)
-                http.Error(w, "File contains a virus", http.StatusForbidden)
-                return
-            }
-        }
-    }
-
-    // Check if Redis is enabled and perform Redis operations
-    if conf.Redis.RedisEnabled {
-        rdb := redis.NewClient(&redis.Options{
-            Addr:     conf.Redis.RedisAddr,
-            Password: conf.Redis.RedisPassword,
-            DB:       conf.Redis.RedisDBIndex,
-        })
-
-        // Example Redis operation: Set a key with the file path
-        err := rdb.Set(ctx, "uploaded_file:"+header.Filename, filePath, 0).Err()
-        if err != nil {
-            logrus.Errorf("Error setting Redis key: %v", err)
-            http.Error(w, "Failed to set Redis key", http.StatusInternalServerError)
-            return
-        }
-
-        // Example Redis operation: Get the key value
-        val, err := rdb.Get(ctx, "uploaded_file:"+header.Filename).Result()
-        if err != nil {
-            logrus.Errorf("Error getting Redis key: %v", err)
-            http.Error(w, "Failed to get Redis key", http.StatusInternalServerError)
-            return
-        }
-        logrus.Infof("Redis key value: %s", val)
-    }
-
-    w.WriteHeader(http.StatusCreated)
-    w.Write([]byte("Upload successful"))
+func HandleDownload(w http.ResponseWriter, r *http.Request) {
+	// Implementation from main.go's handleDownload
+	// Example:
+	filePath := r.URL.Query().Get("filePath")
+	if filePath == "" {
+		http.Error(w, "filePath is required", http.StatusBadRequest)
+		return
+	}
+	// Add logic to handle file download using filePath
+	// ...
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Download successful: " + filePath))
 }
 
 func InitHandlers(uploadQueue chan workers.UploadTask, scanQueue chan workers.ScanTask, conf *config.Config) {
-    mux := http.NewServeMux()
-    mux.HandleFunc("/upload", UploadHandlerV2)
-    handler := corsMiddleware(mux)
-    http.ListenAndServe(":"+conf.Server.ListenPort, handler)
+	// Initialize handlers with access to the queues and configuration
+	http.HandleFunc("/upload", HandleUpload)
+	http.HandleFunc("/download", HandleDownload)
+	http.HandleFunc("/", HandleRequest)
 }
-
-type Config struct {
-    Server struct {
-        ListenPort           string
-        StoragePath          string
-        DeduplicationEnabled bool
-        MinFreeBytes         string
-        LogLimiter           bool
-    }
-    Uploads struct {
-        ChunkedUploadsEnabled bool
-        ChunkSize             string
-        AllowedExtensions     []string
-    }
-    Redis struct {
-        RedisEnabled             bool
-        RedisDBIndex             int
-        RedisAddr                string
-        RedisPassword            string
-        RedisHealthCheckInterval string
-    }
-    File struct {
-        FileRevision int
-    }
-    ClamAV struct {
-        ClamAVEnabled bool
-        ClamAVSocket  string
-    }
-}
-
-// Example function where you might want to check the ListenPort value

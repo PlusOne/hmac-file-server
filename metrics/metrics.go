@@ -39,10 +39,7 @@ func InitMetrics() {
 		logrus.Info("Registering Prometheus metrics...")
 
 		// Register metrics
-		if err := prometheus.Register(UploadErrorsTotal); err != nil {
-			logrus.Fatalf("Failed to register UploadErrorsTotal: %v", err)
-		}
-
+		prometheus.MustRegister(UploadErrorsTotal)
 		if err := prometheus.Register(UploadTotal); err != nil {
 			logrus.Fatalf("Failed to register UploadTotal: %v", err)
 		}

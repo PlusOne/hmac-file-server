@@ -6,11 +6,13 @@ import (
     "github.com/sirupsen/logrus"
 )
 
-type UploadTask struct {
-    // Define the fields for your upload task
+type FileUploadTask struct {
+    FilePath string
+    UserID   int
+    // Add other relevant fields
 }
 
-func UploadWorker(ctx context.Context, uploadQueue chan UploadTask) {
+func FileUploadWorker(ctx context.Context, uploadQueue chan FileUploadTask) {
     for {
         select {
         case <-ctx.Done():

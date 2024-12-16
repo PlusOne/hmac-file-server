@@ -7,62 +7,81 @@ import (
 	"github.com/spf13/viper"
 )
 
+type Config struct {
+	Server   ServerConfig
+	ISO      ISOConfig
+	Timeouts TimeoutConfig
+	Workers  WorkersConfig
+	ClamAV   ClamAVConfig
+	Security SecurityConfig
+	Redis    RedisConfig
+
+	Versioning struct {
+		EnableVersioning bool
+		MaxVersions      int
+	} `toml:"versioning"`
+
+	Uploads struct {
+		ResumableUploadsEnabled bool
+		ChunkedUploadsEnabled   bool
+		ChunkSize               string
+	} `toml:"uploads"`
+}
+
 type ServerConfig struct {
-	ListenPort              string `mapstructure:"ListenPort"`
-	StoragePath             string `mapstructure:"StoragePath"`
-	FileTTL                 string `mapstructure:"FileTTL"`
-	MetricsEnabled          bool   `mapstructure:"metricsenabled"`
-	MetricsPort             string `mapstructure:"metricsport"`
-	UnixSocket              bool   `mapstructure:"UnixSocket"`
-	LogFile                 string `mapstructure:"LogFile"`
-	LogLevel                string `mapstructure:"LogLevel"`
-	DeduplicationEnabled    bool   `mapstructure:"DeduplicationEnabled"`
-	NetworkChangeMonitoring bool   `mapstructure:"NetworkChangeMonitoring"`
-	AutoAdjustWorkers       bool   `mapstructure:"AutoAdjustWorkers"`
-	LogLimiter              bool   `mapstructure:"LogLimiter"`
-}
-
-type TimeoutConfig struct {
-	ReadTimeout  string `mapstructure:"ReadTimeout"`
-	WriteTimeout string `mapstructure:"WriteTimeout"`
-	IdleTimeout  string `mapstructure:"IdleTimeout"`
-}
-
-type SecurityConfig struct {
-	Secret string `mapstructure:"secret"`
+	ListenPort              string
+	UnixSocket              bool
+	StoragePath             string
+	LogLevel                string
+	LogFile                 string
+	MetricsEnabled          bool
+	MetricsPort             string
+	DeduplicationEnabled    bool
+	FileTTL                 string
+	MinFreeBytes            string
+	NetworkChangeMonitoring bool
+	AutoAdjustWorkers       bool
+	ResumableUploads        bool
+	ResumableDownloads      bool
+	LogLimiter              bool
 }
 
 type ISOConfig struct {
-	Enabled bool `mapstructure:"enabled"`
+	Enabled    bool
+	Size       string
+	Mountpoint string
+	Charset    string
+}
+
+type TimeoutConfig struct {
+	ReadTimeout  string
+	WriteTimeout string
+	IdleTimeout  string
 }
 
 type WorkersConfig struct {
-	UploadQueueSize int `mapstructure:"upload_queue_size"`
-	NumWorkers      int `mapstructure:"num_workers"`
-	NumScanWorkers  int `mapstructure:"num_scan_workers"`
+	UploadQueueSize int
+	NumWorkers      int
+	NumScanWorkers  int `toml:"workers"`
 }
 
 type ClamAVConfig struct {
-	ClamAVEnabled bool   `mapstructure:"clamav_enabled"`
-	ClamAVSocket  string `mapstructure:"clamav_socket"`
+	ClamAVEnabled       bool
+	ClamAVSocket        string
+	NumScanWorkers      int
+	ScanFileExtensions  []string `toml:"clamav"`
 }
 
 type RedisConfig struct {
-	RedisEnabled             bool   `mapstructure:"redis_enabled"`
-	RedisAddr                string `mapstructure:"redis_addr"`
-	RedisPassword            string `mapstructure:"redis_password"`
-	RedisDBIndex             int    `mapstructure:"redis_db_index"`
-	RedisHealthCheckInterval string `mapstructure:"redis_health_check_interval"`
+	RedisEnabled             bool
+	RedisAddr                string
+	RedisPassword            string
+	RedisDBIndex             int
+	RedisHealthCheckInterval string
 }
 
-type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Timeouts TimeoutConfig  `mapstructure:"timeouts"`
-	Workers  WorkersConfig  `mapstructure:"workers"`
-	ClamAV   ClamAVConfig   `mapstructure:"clamav"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	Security SecurityConfig `mapstructure:"security"`
-	ISO      ISOConfig      `mapstructure:"iso"`
+type SecurityConfig struct {
+	Secret string `mapstructure:"secret_key"`
 }
 
 func LoadConfig(configFile string) (*Config, error) {

@@ -606,7 +606,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request, fileStorePath string
 	http.ServeFile(w, r, fileStorePath)
 }
 
-func initializeWorkers() {
+func initializeWorkers(ctx context.Context) {
     for i := 0; i < conf.Workers.NumWorkers; i++ {
         go workers.UploadWorker(ctx, uploadQueue)
     }
@@ -823,7 +823,7 @@ func main() {
 	setupGracefulShutdown(server, cancel)
 
 	// Initialize workers
-	initializeWorkers()
+	initializeWorkers(ctx)
 
 	// Start server
 	logrus.Infof("Starting HMAC file server %s...", versionString)
