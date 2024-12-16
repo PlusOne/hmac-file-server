@@ -8,25 +8,16 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	ISO      ISOConfig
-	Timeouts TimeoutConfig
-	Workers  WorkersConfig
-	ClamAV   ClamAVConfig
-	Security SecurityConfig
-	Redis    RedisConfig
-	Version  string
-
-	Versioning struct {
-		EnableVersioning bool
-		MaxVersions      int
-	} `toml:"versioning"`
-
-	Uploads struct {
-		ResumableUploadsEnabled bool
-		ChunkedUploadsEnabled   bool
-		ChunkSize               string
-	} `toml:"uploads"`
+	Server     ServerConfig     `mapstructure:"server"`
+	ISO        ISOConfig        `mapstructure:"iso"`
+	Timeouts   TimeoutConfig    `mapstructure:"timeouts"`
+	Security   SecurityConfig   `mapstructure:"security"`
+	Versioning VersioningConfig `mapstructure:"versioning"`
+	Uploads    UploadsConfig    `mapstructure:"uploads"`
+	ClamAV     ClamAVConfig     `mapstructure:"clamav"`
+	Redis      RedisConfig      `mapstructure:"redis"`
+	Workers    WorkersConfig    `mapstructure:"workers"`
+	File       FileConfig       `mapstructure:"file"`
 }
 
 type ServerConfig struct {
@@ -42,8 +33,8 @@ type ServerConfig struct {
 	MinFreeBytes            string `mapstructure:"minfreebytes"`
 	NetworkChangeMonitoring bool   `mapstructure:"networkchangemonitoring"`
 	AutoAdjustWorkers       bool   `mapstructure:"autoadjustworkers"`
-	ResumableUploads        bool   `mapstructure:"resumableuploads"`
-	ResumableDownloads      bool   `mapstructure:"resumabledownloads"`
+	ResumableUploads        bool   `mapstructure:"resumeableuploads"`
+	ResumableDownloads      bool   `mapstructure:"resumeabledownloads"`
 	LogLimiter              bool   `mapstructure:"loglimiter"`
 }
 
@@ -60,10 +51,19 @@ type TimeoutConfig struct {
 	IdleTimeout  string `mapstructure:"idletimeout"`
 }
 
-type WorkersConfig struct {
-	UploadQueueSize int `mapstructure:"uploadqueuesize"`
-	NumWorkers      int `mapstructure:"numworkers"`
-	NumScanWorkers  int `mapstructure:"numscanworkers"`
+type SecurityConfig struct {
+	Secret string `mapstructure:"secret"`
+}
+
+type VersioningConfig struct {
+	EnableVersioning bool `mapstructure:"enableversioning"`
+	MaxVersions      int  `mapstructure:"maxversions"`
+}
+
+type UploadsConfig struct {
+	ResumableUploadsEnabled bool   `mapstructure:"resumableuploadsenabled"`
+	ChunkedUploadsEnabled   bool   `mapstructure:"chunkeduploadsenabled"`
+	ChunkSize               string `mapstructure:"chunksize"`
 }
 
 type ClamAVConfig struct {
@@ -81,8 +81,14 @@ type RedisConfig struct {
 	RedisHealthCheckInterval string `mapstructure:"redishealthcheckinterval"`
 }
 
-type SecurityConfig struct {
-	Secret string `mapstructure:"secret"`
+type WorkersConfig struct {
+	UploadQueueSize int `mapstructure:"uploadqueuesize"`
+	NumWorkers      int `mapstructure:"numworkers"`
+	NumScanWorkers  int `mapstructure:"numscanworkers"`
+}
+
+type FileConfig struct {
+	FileRevision int `mapstructure:"filerevision"`
 }
 
 func LoadConfig(configFile string) (*Config, error) {
@@ -112,13 +118,13 @@ func LoadConfig(configFile string) (*Config, error) {
 func validateConfig(conf *Config) error {
 	// Check for required configuration fields
 	if conf.Server.ListenPort == "" {
-		return fmt.Errorf("Server listen port is not configured")
+		return fmt.Errorf("server listen port is not configured")
 	}
 	if conf.Server.MetricsEnabled && conf.Server.MetricsPort == "" {
-		return fmt.Errorf("Metrics port is not configured")
+		return fmt.Errorf("metrics port is not configured")
 	}
 	if conf.Server.MetricsPort == conf.Server.ListenPort {
-		return fmt.Errorf("Metrics port and server port cannot be the same")
+		return fmt.Errorf("metrics port and server port cannot be the same")
 	}
 	if conf.Security.Secret == "" {
 		return fmt.Errorf("secret must be set")
