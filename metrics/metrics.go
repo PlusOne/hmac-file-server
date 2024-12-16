@@ -14,7 +14,7 @@ var (
 	once          sync.Once
 	metricsServer *http.Server
 
-	// Define your metrics
+	// UploadErrorsTotal tracks the total number of upload errors.
 	UploadErrorsTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "upload_errors_total",
@@ -22,7 +22,7 @@ var (
 		},
 	)
 
-	// Example of another metric
+	// UploadTotal tracks the total number of uploads.
 	UploadTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "upload_total",
