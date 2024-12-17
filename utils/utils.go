@@ -1,18 +1,17 @@
 package utils
 
 import (
+	"context" // Standard library
 	"io"
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
-	"context" // Replaced "golang.org/x/net/context" with standard "context"
+	"github.com/prometheus/client_golang/prometheus/promhttp" // Third-party imports
+	"github.com/sirupsen/logrus"                             // Third-party imports
 )
 
 func SetupLogging(logLevel string, logFile string) {

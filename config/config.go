@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/viper"
+	"github.com/spf13/viper" // Third-party imports
 )
 
 type ServerConfig struct {

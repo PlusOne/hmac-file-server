@@ -9,3 +9,4 @@ RELEASE_NOTES.md
 hmac-file-server
 cmd/hmac-file-server.log
 config.toml
+oldcode.txt

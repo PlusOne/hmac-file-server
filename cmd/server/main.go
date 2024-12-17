@@ -1,15 +1,31 @@
 package main
 
 import (
-	"context" // Added missing "context" package
+	// Standard library imports
+	"context"
 	"net"
 	"net/http"
 	"time"
 
+	// Third-party imports
+	"github.com/dutchcoders/go-clamd"   // ClamAV integration
+	"github.com/go-redis/redis/v8"      // Redis integration
+	"github.com/patrickmn/go-cache"     // In-memory cache
 	"github.com/renz/hmac-file-server/config"
 	"github.com/renz/hmac-file-server/handlers"
 	"github.com/renz/hmac-file-server/utils"
 	"github.com/sirupsen/logrus"
+	"github.com/shirou/gopsutil/cpu"      // System metrics
+	"github.com/shirou/gopsutil/disk"     // System metrics
+	"github.com/shirou/gopsutil/host"     // System metrics
+	"github.com/shirou/gopsutil/mem"      // System metrics
+)
+
+var (
+	fileInfoCache *cache.Cache
+	clamClient    *clamd.Clamd
+	redisClient   *redis.Client
+	redisCtx      = context.Background()
 )
 
 func main() {
@@ -24,7 +40,24 @@ func main() {
 	utils.SetupLogging(conf.Server.LogLevel, conf.Server.LogFile)
 
 	// Initialize other components (e.g., ClamAV, Redis) as needed
-	// ...existing initialization code...
+	if conf.ClamAV.ClamAVEnabled {
+		clamClient, err = initClamAV(conf.ClamAV.ClamAVSocket)
+		if err != nil {
+			logrus.Fatalf("Failed to initialize ClamAV: %v", err)
+		}
+		logrus.Info("ClamAV initialized successfully.")
+	}
+
+	if conf.Redis.RedisEnabled {
+		redisClient = initRedis(conf.Redis)
+		if redisClient == nil {
+			logrus.Fatalf("Failed to initialize Redis client.")
+		}
+		logrus.Info("Redis client initialized successfully.")
+	}
+
+	// Initialize in-memory cache
+	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
 
 	// Initialize HTTP handlers
 	router := handlers.SetupRouter(conf)
@@ -33,15 +66,15 @@ func main() {
 	server := &http.Server{
 		Addr:         ":" + conf.Server.ListenPort,
 		Handler:      router,
-		ReadTimeout:  timeParseDuration(conf.Timeouts.ReadTimeout),
-		WriteTimeout: timeParseDuration(conf.Timeouts.WriteTimeout),
-		IdleTimeout:  timeParseDuration(conf.Timeouts.IdleTimeout),
+		ReadTimeout:  utils.ParseDuration(conf.Timeouts.ReadTimeout),
+		WriteTimeout: utils.ParseDuration(conf.Timeouts.WriteTimeout),
+		IdleTimeout:  utils.ParseDuration(conf.Timeouts.IdleTimeout),
 	}
 
 	// Setup graceful shutdown
-	_, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	utils.SetupGracefulShutdown(server, cancelFunc)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	utils.SetupGracefulShutdown(server, cancel)
 
 	// Start the server
 	logrus.Infof("Starting HMAC File Server on port %s...", conf.Server.ListenPort)
@@ -61,11 +94,27 @@ func main() {
 	}
 }
 
-// timeParseDuration parses a duration string and handles the error.
-func timeParseDuration(durationStr string) time.Duration {
-	duration, err := time.ParseDuration(durationStr)
-	if err != nil {
-		logrus.Fatalf("Invalid duration: %s", durationStr)
+// initClamAV initializes the ClamAV client.
+func initClamAV(socket string) (*clamd.Clamd, error) {
+	client := clamd.NewClamdSocket(socket)
+	if err := client.Ping(); err != nil {
+		return nil, err
 	}
-	return duration
+	return client, nil
+}
+
+// initRedis initializes the Redis client.
+func initRedis(conf config.RedisConfig) *redis.Client {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     conf.RedisAddr,
+		Password: conf.RedisPassword,
+		DB:       conf.RedisDBIndex,
+	})
+
+	_, err := rdb.Ping(redisCtx).Result()
+	if err != nil {
+		logrus.Errorf("Redis ping failed: %v", err)
+		return nil
+	}
+	return rdb
 }
