@@ -47,4 +47,46 @@ func handleDownload(w http.ResponseWriter, r *http.Request, conf *config.Config)
 	// ...implementation...
 }
 
+// LoggingMiddleware logs each incoming HTTP request.
+func LoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logrus.WithFields(logrus.Fields{
+			"method": r.Method,
+			"url":    r.URL.String(),
+			"remote": utils.GetClientIP(r),
+		}).Info("Incoming request")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// RecoveryMiddleware recovers from any panics and writes a 500 error.
+func RecoveryMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				logrus.Errorf("Panic recovered: %v", rec)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+// CORSMiddleware handles Cross-Origin Resource Sharing (CORS).
+func CORSMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Adjust the allowed origins, methods, and headers as needed
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		
+		// Handle preflight requests
+		if r.Method == http.MethodOptions {
+			return
+		}
+		
+		next.ServeHTTP(w, r)
+	})
+}
+
 // ...other handler functions...

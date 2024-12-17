@@ -1,12 +1,9 @@
 package main
 
 import (
-	"context"
+	"context" // Added missing "context" package
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/renz/hmac-file-server/config"
@@ -36,14 +33,14 @@ func main() {
 	server := &http.Server{
 		Addr:         ":" + conf.Server.ListenPort,
 		Handler:      router,
-		ReadTimeout:  parseDuration(conf.Timeouts.ReadTimeout),
-		WriteTimeout: parseDuration(conf.Timeouts.WriteTimeout),
-		IdleTimeout:  parseDuration(conf.Timeouts.IdleTimeout),
+		ReadTimeout:  timeParseDuration(conf.Timeouts.ReadTimeout),
+		WriteTimeout: timeParseDuration(conf.Timeouts.WriteTimeout),
+		IdleTimeout:  timeParseDuration(conf.Timeouts.IdleTimeout),
 	}
 
 	// Setup graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	cancel, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
 	utils.SetupGracefulShutdown(server, cancel)
 
 	// Start the server
@@ -62,4 +59,13 @@ func main() {
 			logrus.Fatalf("Server error: %v", err)
 		}
 	}
+}
+
+// timeParseDuration parses a duration string and handles the error.
+func timeParseDuration(durationStr string) time.Duration {
+	duration, err := time.ParseDuration(durationStr)
+	if err != nil {
+		logrus.Fatalf("Invalid duration: %s", durationStr)
+	}
+	return duration
 }

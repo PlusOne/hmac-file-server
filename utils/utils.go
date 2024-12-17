@@ -12,7 +12,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
+	"context" // Replaced "golang.org/x/net/context" with standard "context"
 )
 
 func SetupLogging(logLevel string, logFile string) {
