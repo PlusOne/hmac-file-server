@@ -21,6 +21,7 @@ var (
 	clamClient    *clamd.Clamd
 	redisClient   *redis.Client
 	redisCtx      = context.Background()
+	versionString = "v1.0.0" // Define the version string
 )
 
 func main() {
@@ -31,6 +32,8 @@ func main() {
 	logrus.Info("Configuration loaded successfully.")
 
 	utils.SetupLogging(conf.Server.LogLevel, conf.Server.LogFile)
+
+	utils.LogSystemInfo(versionString) // Log system information
 
 	if conf.ClamAV.ClamAVEnabled {
 		clamClient, err = initClamAV(conf.ClamAV.ClamAVSocket)
@@ -46,9 +49,14 @@ func main() {
 			logrus.Fatalf("Failed to initialize Redis client.")
 		}
 		logrus.Info("Redis client initialized successfully.")
+		handlers.redisClient = redisClient // Pass Redis client to handlers
 	}
 
 	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
+
+	if conf.Server.AutoAdjustWorkers {
+		conf.Workers.NumWorkers, conf.Workers.UploadQueueSize = utils.AutoAdjustWorkers()
+	}
 
 	router := handlers.SetupRouter(conf)
 
