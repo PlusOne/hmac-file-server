@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context" // Standard library
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp" // Third-party imports
 	"github.com/sirupsen/logrus"                              // Third-party imports
+	"gopkg.in/natefinch/lumberjack.v2"                        // Added import for Lumberjack
 )
 
 func SetupLogging(logLevel string, logFile string) {
@@ -23,11 +23,13 @@ func SetupLogging(logLevel string, logFile string) {
 	logrus.SetLevel(level)
 
 	if logFile != "" {
-		file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			logrus.Fatalf("Failed to open log file: %v", err)
-		}
-		logrus.SetOutput(io.MultiWriter(os.Stdout, file))
+		logrus.SetOutput(&lumberjack.Logger{ // Use Lumberjack for log rotation
+			Filename:   logFile,
+			MaxSize:    10, // megabytes
+			MaxBackups: 3,
+			MaxAge:     28, // days
+			Compress:   true, // compress old log files
+		})
 	} else {
 		logrus.SetOutput(os.Stdout)
 	}
