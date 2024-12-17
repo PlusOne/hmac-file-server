@@ -2,7 +2,9 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
+	"os"
 
 	"github.com/spf13/viper" // Third-party imports
 )
@@ -96,7 +98,7 @@ func LoadConfig(configFile string) (*Config, error) {
 
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("HMAC")
-	viper.SetEnvKeyReplacer(nil) // Optional: Define a replacer if needed
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // Define replacer for nested keys
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("error reading config: %w", err)
@@ -110,9 +112,6 @@ func LoadConfig(configFile string) (*Config, error) {
 	if err := validateConfig(&conf); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
-
-	// Remove redundant setting as it's already set via mapstructure
-	// conf.Server.DeduplicationEnabled = viper.GetBool("deduplication.Enabled")
 
 	return &conf, nil
 }
@@ -151,7 +150,7 @@ func setDefaults() {
 	viper.SetDefault("clamav.ClamAVEnabled", true)
 	viper.SetDefault("clamav.ClamAVSocket", "/var/run/clamav/clamd.ctl")
 	viper.SetDefault("clamav.NumScanWorkers", 2)
-	viper.SetDefault("clamav.ScanFileExtensions", []string{}) // Add default if necessary
+	viper.SetDefault("clamav.ScanFileExtensions", []string{".exe", ".dll", ".js", ".php"}) // Added sensible defaults
 
 	viper.SetDefault("redis.RedisEnabled", true)
 	viper.SetDefault("redis.RedisAddr", "localhost:6379")
@@ -161,8 +160,6 @@ func setDefaults() {
 
 	viper.SetDefault("workers.NumWorkers", 4)
 	viper.SetDefault("workers.UploadQueueSize", 50)
-
-	viper.SetDefault("server.DeduplicationEnabled", true) // Corrected key
 
 	viper.SetDefault("iso.Enabled", true)
 	viper.SetDefault("iso.Size", "1GB")
@@ -211,6 +208,15 @@ func validateConfig(conf *Config) error {
 			return fmt.Errorf("ISO charset must be set")
 		}
 	}
+
+	// Example: Validate StoragePath exists or is writable
+	if _, err := os.Stat(conf.Server.StoragePath); os.IsNotExist(err) {
+		return fmt.Errorf("StoragePath does not exist: %s", conf.Server.StoragePath)
+	} else if err != nil {
+		return fmt.Errorf("error accessing StoragePath: %w", err)
+	}
+
+	// ...additional validations if necessary...
 
 	return nil
 }

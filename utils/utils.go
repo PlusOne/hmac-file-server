@@ -53,7 +53,8 @@ func IsMultipart(contentType string) bool {
 	return strings.Contains(contentType, "multipart/form-data")
 }
 
-func SetupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
+// SetupGracefulShutdown sets up a graceful shutdown for the HTTP server.
+func SetupGracefulShutdown(server *http.Server, ctx context.Context, cancel context.CancelFunc) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	go func() {

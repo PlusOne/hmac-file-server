@@ -68,9 +68,10 @@ func main() {
 		IdleTimeout:  utils.ParseDuration(conf.Timeouts.IdleTimeout),
 	}
 
-	// Setup graceful shutdown
-	cancel := func() {}
-	utils.SetupGracefulShutdown(server, cancel)
+	// Setup graceful shutdown with context cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	utils.SetupGracefulShutdown(server, ctx, cancel)
 
 	// Start the server
 	logrus.Infof("Starting HMAC File Server on port %s...", conf.Server.ListenPort)
@@ -98,6 +99,7 @@ func initClamAV(socket string) (*clamd.Clamd, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping ClamAV: %w", err)
 	}
+	// go-clamd's Ping may not return a response, adjust accordingly
 	return client, nil
 }
 

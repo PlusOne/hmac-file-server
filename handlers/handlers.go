@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"net/http"
+	"os" // Added import for os.Stat and http.ServeFile
+	"path/filepath" // Added import for filepath operations
+	"strings" // Added import for strings
 
 	"github.com/renz/hmac-file-server/config" // Local project imports
 	"github.com/renz/hmac-file-server/utils"  // Local project imports
@@ -11,7 +14,7 @@ import (
 func SetupRouter(conf *config.Config) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleRequest(conf))
-	mux.HandleFunc("/download", handleDownload()) // Added download handler
+	mux.HandleFunc("/download", handleDownload(conf)) // Pass conf to handleDownload
 	if conf.Server.MetricsEnabled {
 		mux.Handle("/metrics", utils.PrometheusHandler())
 	}
@@ -40,9 +43,36 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 	// ...implementation...
 }
 
-func handleDownload() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// ...implementation...
+// handleDownload serves the requested file after validating the path.
+func handleDownload(conf *config.Config) http.HandlerFunc { // Receive conf as parameter
+	return func(w http.ResponseWriter, r *http.Request) { // Changed *Request to *http.Request
+		filePath := r.URL.Query().Get("file")
+		if filePath == "" {
+			http.Error(w, "File parameter is missing", http.StatusBadRequest)
+			return
+		}
+
+		// Clean the filePath to prevent path traversal
+		cleanFilePath := filepath.Clean(filePath)
+		fullPath := filepath.Join(conf.Server.StoragePath, cleanFilePath)
+
+		// Ensure that the fullPath is within the StoragePath
+		if !strings.HasPrefix(fullPath, filepath.Clean(conf.Server.StoragePath)+string(os.PathSeparator)) {
+			http.Error(w, "Invalid file path", http.StatusBadRequest)
+			return
+		}
+
+		_, err := os.Stat(fullPath)
+		if os.IsNotExist(err) {
+			http.Error(w, "File not found", http.StatusNotFound)
+			return
+		} else if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			logrus.Errorf("Error accessing file %s: %v", fullPath, err)
+			return
+		}
+
+		http.ServeFile(w, r, fullPath)
 	}
 }
 
