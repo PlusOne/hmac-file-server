@@ -239,63 +239,35 @@ var semaphore = make(chan struct{}, maxConcurrentOperations)
 
 func main() {
 	setDefaults()
+	parseFlags()
 
-	var configFile string
-	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
-	flag.Parse()
-
-	err := readConfig(configFile, &conf)
+	err := readConfig("./config.toml", &conf)
 	if err != nil {
 		log.Fatalf("Error reading config: %v", err)
 	}
-	log.Info("Configuration loaded successfully.")
 
 	initializeWorkerSettings(&conf.Server, &conf.Workers, &conf.ClamAV)
-
 	if conf.ISO.Enabled {
-		err = verifyAndCreateISOContainer()
-		if err != nil {
+		if err := verifyAndCreateISOContainer(); err != nil {
 			log.Fatalf("ISO container verification failed: %v", err)
 		}
 	}
 
-	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
-
-	err = os.MkdirAll(conf.Server.StoragePath, os.ModePerm)
-	if err != nil {
-		log.Fatalf("Error creating store directory: %v", err)
-	}
-	log.WithField("directory", conf.Server.StoragePath).Info("Store directory is ready")
-
-	err = checkFreeSpaceWithRetry(conf.Server.StoragePath, 3, 5*time.Second)
-	if err != nil {
-		log.Fatalf("Insufficient free space: %v", err)
-	}
-
+	setupCaches()
+	setupStorage()
 	setupLogging()
 	logSystemInfo()
 	initMetrics()
-	log.Info("Prometheus metrics initialized.")
-
-	uploadQueue = make(chan UploadTask, conf.Workers.UploadQueueSize)
-	scanQueue = make(chan ScanTask, conf.Workers.UploadQueueSize)
-	networkEvents = make(chan NetworkEvent, 100)
-	log.Info("Upload, scan, and network event channels initialized.")
+	setupChannels()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go monitorNetwork(ctx)
-	go handleNetworkEvents(ctx)
-	go updateSystemMetrics(ctx)
+	startBackgroundWorkers(ctx)
 
-	if conf.ClamAV.ClamAVEnabled {
-		clamClient, err = initClamAV(conf.ClamAV.ClamAVSocket)
-		if err != nil {
-			log.WithError(err).Warn("ClamAV client initialization failed. Continuing without ClamAV.")
-		} else {
-			log.Info("ClamAV client initialized successfully.")
-		}
+	clamClient, err := initClamAV()
+	if err != nil {
+		log.WithError(err).Warn("ClamAV client initialization failed. Continuing without ClamAV.")
 	}
 
 	if conf.Redis.RedisEnabled {
@@ -308,17 +280,296 @@ func main() {
 	}
 
 	if conf.Redis.RedisEnabled && redisClient != nil {
-		go MonitorRedisHealth(ctx, redisClient, parseDuration(conf.Redis.RedisHealthCheckInterval))
+		redisHealthCheckInterval, err := time.ParseDuration(conf.Redis.RedisHealthCheckInterval)
+		if err != nil {
+			log.Fatalf("Invalid RedisHealthCheckInterval: %v", err)
+		}
+		go MonitorRedisHealth(ctx, redisClient, redisHealthCheckInterval)
 	}
 
 	router := setupRouter()
+	scheduleFileCleaner(ctx)
+	setupTimeouts()
 
+	server := setupHTTPServer(router)
+	setupMetricsServer()
+	setupGracefulShutdown(server, cancel)
+
+	if conf.Server.AutoAdjustWorkers {
+		go monitorWorkerPerformance(ctx, &conf.Server, &conf.Workers, &conf.ClamAV)
+	}
+
+	log.Infof("Starting HMAC file server %s...", versionString)
+	startServer(server)
+}
+
+// parseFlags handles command-line flag parsing
+func parseFlags() {
+	var configFile string
+	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
+	flag.Parse()
+}
+
+// initializeWorkerSettings initializes worker configuration
+func initializeWorkerSettings(server *ServerConfig, workers *WorkersConfig, clamav *ClamAVConfig) {
+	if server.AutoAdjustWorkers {
+		numWorkers, queueSize := autoAdjustWorkers()
+		workers.NumWorkers = numWorkers
+		workers.UploadQueueSize = queueSize
+		clamav.NumScanWorkers = max(numWorkers/2, 1)
+
+		log.Infof("AutoAdjustWorkers enabled: NumWorkers=%d, UploadQueueSize=%d, NumScanWorkers=%d",
+			workers.NumWorkers, workers.UploadQueueSize, clamav.NumScanWorkers)
+	} else {
+		log.Infof("Manual configuration in effect: NumWorkers=%d, UploadQueueSize=%d, NumScanWorkers=%d",
+			workers.NumWorkers, workers.UploadQueueSize, clamav.NumScanWorkers)
+	}
+}
+
+// setupCaches initializes caches
+func setupCaches() {
+	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
+}
+
+// setupStorage prepares storage directories
+func setupStorage() {
+	err := os.MkdirAll(conf.Server.StoragePath, os.ModePerm)
+	if err != nil {
+		log.Fatalf("Error creating store directory: %v", err)
+	}
+	log.WithField("directory", conf.Server.StoragePath).Info("Store directory is ready")
+
+	err = checkFreeSpaceWithRetry(conf.Server.StoragePath, 3, 5*time.Second)
+	if err != nil {
+		log.Fatalf("Insufficient free space: %v", err)
+	}
+}
+
+// setupLogging configures logging
+func setupLogging() {
+	level, err := logrus.ParseLevel(conf.Server.LogLevel)
+	if err != nil {
+		log.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
+	}
+	log.SetLevel(level)
+
+	if conf.Server.LogFile != "" {
+		logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			log.Fatalf("Failed to open log file: %v", err)
+		}
+		log.SetOutput(io.MultiWriter(os.Stdout, logFile))
+	} else {
+		log.SetOutput(os.Stdout)
+	}
+
+	log.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+}
+
+// logSystemInfo logs system information
+func logSystemInfo() {
+	log.Info("========================================")
+	log.Infof("       HMAC File Server - %s          ", versionString)
+	log.Info("  Secure File Handling with HMAC Auth   ")
+	log.Info("========================================")
+
+	log.Info("Features: Prometheus Metrics, Chunked Uploads, ClamAV Scanning")
+	log.Info("Build Date: 2024-10-28")
+
+	log.Infof("Operating System: %s", runtime.GOOS)
+	log.Infof("Architecture: %s", runtime.GOARCH)
+	log.Infof("Number of CPUs: %d", runtime.NumCPU())
+	log.Infof("Go Version: %s", runtime.Version())
+
+	v, _ := mem.VirtualMemory()
+	log.Infof("Total Memory: %v MB", v.Total/1024/1024)
+	log.Infof("Free Memory: %v MB", v.Free/1024/1024)
+	log.Infof("Used Memory: %v MB", v.Used/1024/1024)
+
+	cpuInfo, _ := cpu.Info()
+	for _, info := range cpuInfo {
+		log.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
+	}
+
+	partitions, _ := disk.Partitions(false)
+	for _, partition := range partitions {
+		usage, _ := disk.Usage(partition.Mountpoint)
+		log.Infof("Disk Mountpoint: %s, Total: %v GB, Free: %v GB, Used: %v GB",
+			partition.Mountpoint, usage.Total/1024/1024/1024, usage.Free/1024/1024/1024, usage.Used/1024/1024/1024)
+	}
+
+	hInfo, _ := host.Info()
+	log.Infof("Hostname: %s", hInfo.Hostname)
+	log.Infof("Uptime: %v seconds", hInfo.Uptime)
+	log.Infof("Boot Time: %v", time.Unix(int64(hInfo.BootTime), 0))
+	log.Infof("Platform: %s", hInfo.Platform)
+	log.Infof("Platform Family: %s", hInfo.PlatformFamily)
+	log.Infof("Platform Version: %s", hInfo.PlatformVersion)
+	log.Infof("Kernel Version: %s", hInfo.KernelVersion)
+}
+
+// initMetrics initializes Prometheus metrics
+func initMetrics() {
+	uploadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_upload_duration_seconds", Help: "Histogram of file upload duration."})
+	uploadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_upload_errors_total", Help: "Total number of file upload errors."})
+	uploadsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_uploads_total", Help: "Total number of successful file uploads."})
+	downloadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_download_duration_seconds", Help: "Histogram of file download duration."})
+	downloadsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_downloads_total", Help: "Total number of successful file downloads."})
+	downloadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_download_errors_total", Help: "Total number of file download errors."})
+	memoryUsage = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "memory_usage_bytes", Help: "Current memory usage in bytes."})
+	cpuUsage = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "cpu_usage_percent", Help: "CPU usage as a percentage."})
+	activeConnections = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "active_connections_total", Help: "Total number of active connections."})
+	requestsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{Namespace: "hmac", Name: "http_requests_total", Help: "Total HTTP requests."}, []string{"method", "path"})
+	goroutines = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "goroutines_count", Help: "Number of goroutines."})
+	uploadSizeBytes = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_upload_size_bytes", Help: "Histogram of uploaded file sizes."})
+	downloadSizeBytes = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_download_size_bytes", Help: "Histogram of downloaded file sizes."})
+
+	if conf.Server.MetricsEnabled {
+		prometheus.MustRegister(uploadDuration, uploadErrorsTotal, uploadsTotal)
+		prometheus.MustRegister(downloadDuration, downloadsTotal, downloadErrorsTotal)
+		prometheus.MustRegister(memoryUsage, cpuUsage, activeConnections, requestsTotal, goroutines, uploadSizeBytes, downloadSizeBytes)
+	}
+}
+
+// setupChannels initializes channels
+func setupChannels() {
+	uploadQueue = make(chan UploadTask, conf.Workers.UploadQueueSize)
+	scanQueue = make(chan ScanTask, conf.Workers.UploadQueueSize)
+	networkEvents = make(chan NetworkEvent, 100)
+	log.Info("Upload, scan, and network event channels initialized.")
+}
+
+// startBackgroundWorkers starts various background goroutines
+func startBackgroundWorkers(ctx context.Context) {
+	go monitorNetwork(ctx)
+	go handleNetworkEvents(ctx)
+	go updateSystemMetrics(ctx)
+}
+
+// initClamAV initializes ClamAV client
+func initClamAV() (*clamd.Clamd, error) {
+	if conf.ClamAV.ClamAVEnabled {
+		clamClient := clamd.NewClamd(conf.ClamAV.ClamAVSocket)
+		if clamClient == nil {
+			return nil, fmt.Errorf("ClamAV client initialization failed")
+		}
+		log.Info("ClamAV client initialized successfully.")
+		return clamClient, nil
+	}
+	return nil, nil
+}
+
+// initRedis initializes Redis client
+func initRedis() {
+	if !conf.Redis.RedisEnabled {
+		log.Info("Redis is disabled in configuration.")
+		return
+	}
+
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     conf.Redis.RedisAddr,
+		Password: conf.Redis.RedisPassword,
+		DB:       conf.Redis.RedisDBIndex,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := redisClient.Ping(ctx).Result()
+	if err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	log.Info("Connected to Redis successfully")
+
+	mu.Lock()
+	redisConnected = true
+	mu.Unlock()
+}
+
+// initializeUploadWorkerPool initializes upload workers
+func initializeUploadWorkerPool(ctx context.Context, w *WorkersConfig) {
+	for i := 0; i < w.NumWorkers; i++ {
+		go uploadWorker(ctx, i)
+		log.Infof("Upload worker %d started.", i)
+	}
+	log.Infof("Initialized %d upload workers", w.NumWorkers)
+}
+
+// initializeScanWorkerPool initializes scan workers
+func initializeScanWorkerPool(ctx context.Context) {
+	for i := 0; i < conf.ClamAV.NumScanWorkers; i++ {
+		go scanWorker(ctx, i)
+	}
+	log.Infof("Initialized %d scan workers", conf.ClamAV.NumScanWorkers)
+}
+
+// MonitorRedisHealth monitors Redis health
+func MonitorRedisHealth(ctx context.Context, client *redis.Client, checkInterval time.Duration) {
+	ticker := time.NewTicker(checkInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Stopping Redis health monitor.")
+			return
+		case <-ticker.C:
+			err := client.Ping(ctx).Err()
+			mu.Lock()
+			if err != nil {
+				if redisConnected {
+					log.Errorf("Redis health check failed: %v", err)
+				}
+				redisConnected = false
+			} else {
+				if !redisConnected {
+					log.Info("Redis reconnected successfully")
+				}
+				redisConnected = true
+				log.Debug("Redis health check succeeded.")
+			}
+			mu.Unlock()
+		}
+	}
+}
+
+// setupRouter sets up HTTP router
+func setupRouter() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handleRequest)
+	if conf.Server.MetricsEnabled {
+		mux.Handle("/metrics", promhttp.Handler())
+	}
+	handler := loggingMiddleware(mux)
+	handler = recoveryMiddleware(handler)
+	handler = corsMiddleware(handler)
+	return handler
+}
+
+// scheduleFileCleaner schedules file cleaning
+func scheduleFileCleaner(ctx context.Context) {
 	fileTTL, err := parseTTL(conf.Server.FileTTL)
 	if err != nil {
 		log.Fatalf("Invalid FileTTL: %v", err)
 	}
 	go runFileCleaner(ctx, conf.Server.StoragePath, fileTTL)
+}
 
+// setupTimeouts configures server timeouts
+func setupTimeouts() {
+	if _, err := time.ParseDuration(conf.Timeouts.WriteTimeout); err != nil {
+		log.Fatalf("Invalid WriteTimeout: %v", err)
+	}
+
+	if _, err := time.ParseDuration(conf.Timeouts.IdleTimeout); err != nil {
+		log.Fatalf("Invalid IdleTimeout: %v", err)
+	}
+}
+
+// setupHTTPServer configures the HTTP server
+func setupHTTPServer(router http.Handler) *http.Server {
 	readTimeout, err := time.ParseDuration(conf.Timeouts.ReadTimeout)
 	if err != nil {
 		log.Fatalf("Invalid ReadTimeout: %v", err)
@@ -341,7 +592,11 @@ func main() {
 		WriteTimeout: writeTimeout,
 		IdleTimeout:  idleTimeout,
 	}
+	return server
+}
 
+// setupMetricsServer configures metrics server
+func setupMetricsServer() {
 	if conf.Server.MetricsEnabled {
 		go func() {
 			http.Handle("/metrics", promhttp.Handler())
@@ -351,14 +606,65 @@ func main() {
 			}
 		}()
 	}
+}
 
-	setupGracefulShutdown(server, cancel)
+// setupGracefulShutdown configures graceful shutdown
+func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-quit
+		log.Infof("Received signal %s. Initiating shutdown...", sig)
 
-	if conf.Server.AutoAdjustWorkers {
-		go monitorWorkerPerformance(ctx, &conf.Server, &conf.Workers, &conf.ClamAV)
+		ctxShutdown, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer shutdownCancel()
+
+		if err := server.Shutdown(ctxShutdown); err != nil {
+			log.Errorf("Server shutdown failed: %v", err)
+		} else {
+			log.Info("Server shutdown gracefully.")
+		}
+
+		cancel()
+
+		close(uploadQueue)
+		log.Info("Upload queue closed.")
+		close(scanQueue)
+		log.Info("Scan queue closed.")
+		close(networkEvents)
+		log.Info("Network events channel closed.")
+
+		log.Info("Shutdown process completed. Exiting application.")
+		os.Exit(0)
+	}()
+}
+
+// monitorWorkerPerformance monitors worker performance
+func monitorWorkerPerformance(ctx context.Context, server *ServerConfig, w *WorkersConfig, clamav *ClamAVConfig) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Stopping worker performance monitor.")
+			return
+		case <-ticker.C:
+			if server.AutoAdjustWorkers {
+				numWorkers, queueSize := autoAdjustWorkers()
+				w.NumWorkers = numWorkers
+				w.UploadQueueSize = queueSize
+				clamav.NumScanWorkers = max(numWorkers/2, 1)
+
+				log.Infof("Re-adjusted workers: NumWorkers=%d, UploadQueueSize=%d, NumScanWorkers=%d",
+					w.NumWorkers, w.UploadQueueSize, clamav.NumScanWorkers)
+			}
+		}
 	}
+}
 
-	log.Infof("Starting HMAC file server %s...", versionString)
+// startServer starts the HTTP server
+func startServer(server *http.Server) {
 	if conf.Server.UnixSocket {
 		if err := os.RemoveAll(conf.Server.ListenPort); err != nil {
 			log.Fatalf("Failed to remove existing Unix socket: %v", err)
@@ -397,44 +703,6 @@ func autoAdjustWorkers() (int, int) {
 
 	log.Infof("Auto-adjusting workers: NumWorkers=%d, UploadQueueSize=%d", numWorkers, queueSize)
 	return numWorkers, queueSize
-}
-
-func initializeWorkerSettings(server *ServerConfig, workers *WorkersConfig, clamav *ClamAVConfig) {
-	if server.AutoAdjustWorkers {
-		numWorkers, queueSize := autoAdjustWorkers()
-		workers.NumWorkers = numWorkers
-		workers.UploadQueueSize = queueSize
-		clamav.NumScanWorkers = max(numWorkers/2, 1)
-
-		log.Infof("AutoAdjustWorkers enabled: NumWorkers=%d, UploadQueueSize=%d, NumScanWorkers=%d",
-			workers.NumWorkers, workers.UploadQueueSize, clamav.NumScanWorkers)
-	} else {
-		log.Infof("Manual configuration in effect: NumWorkers=%d, UploadQueueSize=%d, NumScanWorkers=%d",
-			workers.NumWorkers, workers.UploadQueueSize, clamav.NumScanWorkers)
-	}
-}
-
-func monitorWorkerPerformance(ctx context.Context, server *ServerConfig, w *WorkersConfig, clamav *ClamAVConfig) {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("Stopping worker performance monitor.")
-			return
-		case <-ticker.C:
-			if server.AutoAdjustWorkers {
-				numWorkers, queueSize := autoAdjustWorkers()
-				w.NumWorkers = numWorkers
-				w.UploadQueueSize = queueSize
-				clamav.NumScanWorkers = max(numWorkers/2, 1)
-
-				log.Infof("Re-adjusted workers: NumWorkers=%d, UploadQueueSize=%d, NumScanWorkers=%d",
-					w.NumWorkers, w.UploadQueueSize, clamav.NumScanWorkers)
-			}
-		}
-	}
 }
 
 func readConfig(configFilename string, conf *Config) error {
@@ -560,91 +828,6 @@ func validateConfig(conf *Config) error {
 	}
 
 	return nil
-}
-
-func setupLogging() {
-	level, err := logrus.ParseLevel(conf.Server.LogLevel)
-	if err != nil {
-		log.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
-	}
-	log.SetLevel(level)
-
-	if conf.Server.LogFile != "" {
-		logFile, err := os.OpenFile(conf.Server.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			log.Fatalf("Failed to open log file: %v", err)
-		}
-		log.SetOutput(io.MultiWriter(os.Stdout, logFile))
-	} else {
-		log.SetOutput(os.Stdout)
-	}
-
-	log.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
-}
-
-func logSystemInfo() {
-	log.Info("========================================")
-	log.Infof("       HMAC File Server - %s          ", versionString)
-	log.Info("  Secure File Handling with HMAC Auth   ")
-	log.Info("========================================")
-
-	log.Info("Features: Prometheus Metrics, Chunked Uploads, ClamAV Scanning")
-	log.Info("Build Date: 2024-10-28")
-
-	log.Infof("Operating System: %s", runtime.GOOS)
-	log.Infof("Architecture: %s", runtime.GOARCH)
-	log.Infof("Number of CPUs: %d", runtime.NumCPU())
-	log.Infof("Go Version: %s", runtime.Version())
-
-	v, _ := mem.VirtualMemory()
-	log.Infof("Total Memory: %v MB", v.Total/1024/1024)
-	log.Infof("Free Memory: %v MB", v.Free/1024/1024)
-	log.Infof("Used Memory: %v MB", v.Used/1024/1024)
-
-	cpuInfo, _ := cpu.Info()
-	for _, info := range cpuInfo {
-		log.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
-	}
-
-	partitions, _ := disk.Partitions(false)
-	for _, partition := range partitions {
-		usage, _ := disk.Usage(partition.Mountpoint)
-		log.Infof("Disk Mountpoint: %s, Total: %v GB, Free: %v GB, Used: %v GB",
-			partition.Mountpoint, usage.Total/1024/1024/1024, usage.Free/1024/1024/1024, usage.Used/1024/1024/1024)
-	}
-
-	hInfo, _ := host.Info()
-	log.Infof("Hostname: %s", hInfo.Hostname)
-	log.Infof("Uptime: %v seconds", hInfo.Uptime)
-	log.Infof("Boot Time: %v", time.Unix(int64(hInfo.BootTime), 0))
-	log.Infof("Platform: %s", hInfo.Platform)
-	log.Infof("Platform Family: %s", hInfo.PlatformFamily)
-	log.Infof("Platform Version: %s", hInfo.PlatformVersion)
-	log.Infof("Kernel Version: %s", hInfo.KernelVersion)
-}
-
-func initMetrics() {
-	uploadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_upload_duration_seconds", Help: "Histogram of file upload duration."})
-	uploadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_upload_errors_total", Help: "Total number of file upload errors."})
-	uploadsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_uploads_total", Help: "Total number of successful file uploads."})
-	downloadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_download_duration_seconds", Help: "Histogram of file download duration."})
-	downloadsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_downloads_total", Help: "Total number of successful file downloads."})
-	downloadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_download_errors_total", Help: "Total number of file download errors."})
-	memoryUsage = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "memory_usage_bytes", Help: "Current memory usage in bytes."})
-	cpuUsage = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "cpu_usage_percent", Help: "CPU usage as a percentage."})
-	activeConnections = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "active_connections_total", Help: "Total number of active connections."})
-	requestsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{Namespace: "hmac", Name: "http_requests_total", Help: "Total HTTP requests."}, []string{"method", "path"})
-	goroutines = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "goroutines_count", Help: "Number of goroutines."})
-	uploadSizeBytes = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_upload_size_bytes", Help: "Histogram of uploaded file sizes."})
-	downloadSizeBytes = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_download_size_bytes", Help: "Histogram of downloaded file sizes."})
-
-	if conf.Server.MetricsEnabled {
-		prometheus.MustRegister(uploadDuration, uploadErrorsTotal, uploadsTotal)
-		prometheus.MustRegister(downloadDuration, downloadsTotal, downloadErrorsTotal)
-		prometheus.MustRegister(memoryUsage, cpuUsage, activeConnections, requestsTotal, goroutines, uploadSizeBytes, downloadSizeBytes)
-	}
 }
 
 func updateSystemMetrics(ctx context.Context) {
@@ -909,14 +1092,6 @@ func uploadWorker(ctx context.Context, workerID int) {
 	}
 }
 
-func initializeUploadWorkerPool(ctx context.Context, w *WorkersConfig) {
-	for i := 0; i < w.NumWorkers; i++ {
-		go uploadWorker(ctx, i)
-		log.Infof("Upload worker %d started.", i)
-	}
-	log.Infof("Initialized %d upload workers", w.NumWorkers)
-}
-
 func scanWorker(ctx context.Context, workerID int) {
 	log.WithField("worker_id", workerID).Info("Scan worker started")
 	for {
@@ -940,25 +1115,6 @@ func scanWorker(ctx context.Context, workerID int) {
 			close(task.Result)
 		}
 	}
-}
-
-func initializeScanWorkerPool(ctx context.Context) {
-	for i := 0; i < conf.ClamAV.NumScanWorkers; i++ {
-		go scanWorker(ctx, i)
-	}
-	log.Infof("Initialized %d scan workers", conf.ClamAV.NumScanWorkers)
-}
-
-func setupRouter() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleRequest)
-	if conf.Server.MetricsEnabled {
-		mux.Handle("/metrics", promhttp.Handler())
-	}
-	handler := loggingMiddleware(mux)
-	handler = recoveryMiddleware(handler)
-	handler = corsMiddleware(handler)
-	return handler
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
@@ -1267,23 +1423,6 @@ func scanFileWithClamAV(filePath string) error {
 	}
 }
 
-func initClamAV(socket string) (*clamd.Clamd, error) {
-	if socket == "" {
-		log.Error("ClamAV socket path not configured.")
-		return nil, fmt.Errorf("ClamAV socket path not configured")
-	}
-
-	clamClient := clamd.NewClamd("unix:" + socket)
-	err := clamClient.Ping()
-	if err != nil {
-		log.Errorf("Failed to connect to ClamAV at %s: %v", socket, err)
-		return nil, fmt.Errorf("failed to connect to ClamAV: %w", err)
-	}
-
-	log.Info("Connected to ClamAV successfully.")
-	return clamClient, nil
-}
-
 func handleResumableDownload(absFilename string, w http.ResponseWriter, r *http.Request, fileSize int64) {
 	rangeHeader := r.Header.Get("Range")
 	if rangeHeader == "" {
@@ -1495,100 +1634,6 @@ func getCurrentIPAddress() string {
 		}
 	}
 	return ""
-}
-
-func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-quit
-		log.Infof("Received signal %s. Initiating shutdown...", sig)
-
-		ctxShutdown, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer shutdownCancel()
-
-		if err := server.Shutdown(ctxShutdown); err != nil {
-			log.Errorf("Server shutdown failed: %v", err)
-		} else {
-			log.Info("Server shutdown gracefully.")
-		}
-
-		cancel()
-
-		close(uploadQueue)
-		log.Info("Upload queue closed.")
-		close(scanQueue)
-		log.Info("Scan queue closed.")
-		close(networkEvents)
-		log.Info("Network events channel closed.")
-
-		log.Info("Shutdown process completed. Exiting application.")
-		os.Exit(0)
-	}()
-}
-
-func initRedis() {
-	if !conf.Redis.RedisEnabled {
-		log.Info("Redis is disabled in configuration.")
-		return
-	}
-
-	redisClient = redis.NewClient(&redis.Options{
-		Addr:     conf.Redis.RedisAddr,
-		Password: conf.Redis.RedisPassword,
-		DB:       conf.Redis.RedisDBIndex,
-	})
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := redisClient.Ping(ctx).Result()
-	if err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
-	}
-	log.Info("Connected to Redis successfully")
-
-	mu.Lock()
-	redisConnected = true
-	mu.Unlock()
-}
-
-func MonitorRedisHealth(ctx context.Context, client *redis.Client, checkInterval time.Duration) {
-	ticker := time.NewTicker(checkInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("Stopping Redis health monitor.")
-			return
-		case <-ticker.C:
-			err := client.Ping(ctx).Err()
-			mu.Lock()
-			if err != nil {
-				if redisConnected {
-					log.Errorf("Redis health check failed: %v", err)
-				}
-				redisConnected = false
-			} else {
-				if !redisConnected {
-					log.Info("Redis reconnected successfully")
-				}
-				redisConnected = true
-				log.Debug("Redis health check succeeded.")
-			}
-			mu.Unlock()
-		}
-	}
-}
-
-func parseDuration(durationStr string) time.Duration {
-	duration, err := time.ParseDuration(durationStr)
-	if err != nil {
-		log.WithError(err).Warn("Invalid duration format, using default 30s")
-		return 30 * time.Second
-	}
-	return duration
 }
 
 func runFileCleaner(ctx context.Context, storeDir string, ttl time.Duration) {
