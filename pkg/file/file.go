@@ -1,4 +1,3 @@
-
 package file
 
 import (
@@ -737,6 +736,65 @@ import (
 			http.Error(w, "Failed to handle multipart upload", http.StatusInternalServerError)
 			return
 		}
+	}
+
+	// ...existing request handling logic...
+}
+
+// ...other file-related functions...
+	"net/http"
+package file
+
+func HandleRequest(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost && strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+		// Handle multipart upload
+
+import (
+	"net/http"
+	"strings"
+	"pkg/logging"
+)
+
+		}
+func CreateFile(tempFilename string, r *http.Request, bufferPool *sync.Pool) error {
+	err := os.MkdirAll(filepath.Dir(tempFilename), 0755)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(tempFilename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	bufWriter := bufio.NewWriter(file)
+	defer bufWriter.Flush()
+	bufPtr := bufferPool.Get().(*[]byte)
+	defer bufferPool.Put(bufPtr)
+
+	_, err = io.CopyBuffer(bufWriter, r.Body, *bufPtr)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func IsExtensionAllowed(filename string, allowedExtensions []string) bool {
+	if len(allowedExtensions) == 0 {
+		return true
+	}
+	ext := strings.ToLower(filepath.Ext(filename))
+	for _, allowedExt := range allowedExtensions {
+		if strings.ToLower(allowedExt) == ext {
+			return true
+		}
+	}
+	return false
+}
+
+// ...other file-related functions...
 	}
 
 	// ...existing request handling logic...

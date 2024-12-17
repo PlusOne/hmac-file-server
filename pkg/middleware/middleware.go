@@ -1,35 +1,25 @@
-
-package middleware
-
-import (
-	"net/http"
-	"pkg/file"
-)
-
-func handleRequest(w http.ResponseWriter, r *http.Request) {
-	file.HandleRequest(w, r)
-}
 package middleware
 
 import (
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"pkg/config"
 	"pkg/metrics"
 )
 
-func SetupRouter() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleRequest)
-	if config.Conf.Server.MetricsEnabled {
-		metrics.IncHTTPRequests(r.Method, r.URL.Path)
-		next.ServeHTTP(w, r)
-	})
+func LoggingMiddleware(requestsTotal *prometheus.CounterVec) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestsTotal.WithLabelValues(r.Method, r.URL.Path).Inc()
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
-func recoveryMiddleware(next http.Handler) http.Handler {
+func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -41,26 +31,32 @@ func recoveryMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func corsMiddleware(next http.Handler) http.Handler {
+func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
-// ...handleRequest function moved to file package...
+func SetupRouter(requestsTotal *prometheus.CounterVec) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handleRequest)
+	if config.Conf.Server.MetricsEnabled {
 		mux.Handle("/metrics", promhttp.Handler())
-
-func loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
-	handler := loggingMiddleware(mux)
-	handler = recoveryMiddleware(handler)
-	handler = corsMiddleware(handler)
+	handler := LoggingMiddleware(requestsTotal)(mux)
+	handler = RecoveryMiddleware(handler)
+	handler = CORSMiddleware(handler)
 	return handler
+}
+
+// handleRequest should be moved to the appropriate package or kept here if crucial for routing
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+	// ...existing request handling code...
 }

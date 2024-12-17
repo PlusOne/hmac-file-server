@@ -1,45 +1,46 @@
-
 package workers
 
 import (
 	"context"
-	"pkg/logging"
-	"pkg/metrics"
+	"sync"
+
+	"github.com/renz/hmac-file-server/pkg/config"
+	"github.com/sirupsen/logrus"
 )
 
-func InitializeWorkerSettings(server *config.ServerConfig, workers *config.WorkersConfig, clamav *config.ClamAVConfig) {
+func InitializeWorkerSettings(server *config.ServerConfig, workersCfg *config.WorkersConfig, clamavCfg *config.ClamAVConfig) {
 	if server.AutoAdjustWorkers {
 		numWorkers, queueSize := autoAdjustWorkers()
-		workers.NumWorkers = numWorkers
-		workers.UploadQueueSize = queueSize
-		clamav.NumScanWorkers = max(numWorkers/2, 1)
+		workersCfg.NumWorkers = numWorkers
+		workersCfg.UploadQueueSize = queueSize
+		clamavCfg.NumScanWorkers = max(numWorkers/2, 1)
 
-		logging.Infof("AutoAdjustWorkers enabled: NumWorkers=%d, UploadQueueSize=%d, NumScanWorkers=%d",
-			workers.NumWorkers, workers.UploadQueueSize, clamav.NumScanWorkers)
+		logrus.Infof("AutoAdjustWorkers enabled: NumWorkers=%d, UploadQueueSize=%d, NumScanWorkers=%d",
+			workersCfg.NumWorkers, workersCfg.UploadQueueSize, clamavCfg.NumScanWorkers)
 	} else {
-		logging.Infof("Manual configuration in effect: NumWorkers=%d, UploadQueueSize=%d, NumScanWorkers=%d",
-			workers.NumWorkers, workers.UploadQueueSize, clamav.NumScanWorkers)
+		logrus.Infof("Manual configuration in effect: NumWorkers=%d, UploadQueueSize=%d, NumScanWorkers=%d",
+			workersCfg.NumWorkers, workersCfg.UploadQueueSize, clamavCfg.NumScanWorkers)
 	}
 }
 
 func InitializeUploadWorkerPool(ctx context.Context, w *config.WorkersConfig) {
 	for i := 0; i < w.NumWorkers; i++ {
 		go uploadWorker(ctx, i)
-		logging.Infof("Upload worker %d started.", i)
+		logrus.Infof("Upload worker %d started.", i)
 	}
-	logging.Infof("Initialized %d upload workers", w.NumWorkers)
+	logrus.Infof("Initialized %d upload workers", w.NumWorkers)
 }
 
-func InitializeScanWorkerPool(ctx context.Context, clamClient *Clamd.Client) {
-	for i := 0; i < clamav.NumScanWorkers; i++ {
-		go scanWorker(ctx, i, clamClient)
+func InitializeScanWorkerPool(ctx context.Context, numScanWorkers int) {
+	for i := 0; i < numScanWorkers; i++ {
+		go scanWorker(ctx, i)
 	}
-	logging.Infof("Initialized %d scan workers", clamav.NumScanWorkers)
+	logrus.Infof("Initialized %d scan workers", numScanWorkers)
 }
 
 func uploadWorker(ctx context.Context, workerID int) {
-	logging.Infof("Upload worker %d started.", workerID)
-	defer logging.Infof("Upload worker %d stopped.", workerID)
+	logrus.Infof("Upload worker %d started.", workerID)
+	defer logrus.Infof("Upload worker %d stopped.", workerID)
 	for {
 		select {
 		case <-ctx.Done():
@@ -51,7 +52,7 @@ func uploadWorker(ctx context.Context, workerID int) {
 			// Process upload task
 			err := processUpload(task)
 			if err != nil {
-				logging.Errorf("Upload worker %d error: %v", workerID, err)
+				logrus.Errorf("Upload worker %d error: %v", workerID, err)
 				metrics.IncUploadErrors()
 			} else {
 				metrics.IncUploadsTotal()
@@ -61,8 +62,8 @@ func uploadWorker(ctx context.Context, workerID int) {
 }
 
 func scanWorker(ctx context.Context, workerID int, clamClient *Clamd.Client) {
-	logging.Infof("Scan worker %d started.", workerID)
-	defer logging.Infof("Scan worker %d stopped.", workerID)
+	logrus.Infof("Scan worker %d started.", workerID)
+	defer logrus.Infof("Scan worker %d stopped.", workerID)
 	for {
 		select {
 		case <-ctx.Done():
@@ -74,7 +75,7 @@ func scanWorker(ctx context.Context, workerID int, clamClient *Clamd.Client) {
 			// Process scan task
 			err := scanFile(task.AbsFilename, clamClient)
 			if err != nil {
-				logging.Errorf("Scan worker %d error: %v", workerID, err)
+				logrus.Errorf("Scan worker %d error: %v", workerID, err)
 			}
 		}
 	}

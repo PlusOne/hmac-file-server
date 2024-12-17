@@ -1,4 +1,3 @@
-
 package network
 
 import (
@@ -14,12 +13,9 @@ type NetworkEvent struct {
 	Details string
 }
 
-var networkEvents chan NetworkEvent
-
-func SetupNetworkMonitoring(ctx context.Context, events chan NetworkEvent) {
-	networkEvents = events
-	go monitorNetwork(ctx)
-	go handleNetworkEvents(ctx)
+func SetupNetworkMonitoring() {
+	go monitorNetwork(context.Background())
+	go handleNetworkEvents(context.Background())
 }
 
 func monitorNetwork(ctx context.Context) {
@@ -28,38 +24,29 @@ func monitorNetwork(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			logrus.Info("Stopping network monitor.")
 			return
-		case <-time.After(10 * time.Second):
+		default:
+			// Monitor network changes
 			newIP := getCurrentIPAddress()
-			if newIP != currentIP && newIP != "" {
+			if newIP != currentIP {
+				logrus.Infof("IP address changed from %s to %s", currentIP, newIP)
 				currentIP = newIP
-				select {
-				case networkEvents <- NetworkEvent{Type: "IP_CHANGE", Details: currentIP}:
-					logrus.WithField("new_ip", currentIP).Info("Queued IP_CHANGE event")
-				default:
-					logrus.Warn("Network event channel full. Dropping IP_CHANGE event.")
-				}
+				// Send network event
 			}
+			time.Sleep(30 * time.Second)
 		}
 	}
 }
 
 func handleNetworkEvents(ctx context.Context) {
+	// Handle network events
 	for {
 		select {
 		case <-ctx.Done():
-			logrus.Info("Stopping network event handler.")
 			return
-		case event, ok := <-networkEvents:
-			if !ok {
-				logrus.Info("Network events channel closed.")
-				return
-			}
-			switch event.Type {
-			case "IP_CHANGE":
-				logrus.WithField("new_ip", event.Details).Info("Network change detected")
-			}
+		default:
+			// Process network events
+			time.Sleep(1 * time.Minute)
 		}
 	}
 }
@@ -67,23 +54,32 @@ func handleNetworkEvents(ctx context.Context) {
 func getCurrentIPAddress() string {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		logrus.WithError(err).Error("Failed to get network interfaces")
+		logrus.Error("Error fetching network interfaces:", err)
 		return ""
 	}
 
 	for _, iface := range interfaces {
-		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
-			continue
-		}
 		addrs, err := iface.Addrs()
 		if err != nil {
-			logrus.WithError(err).Errorf("Failed to get addresses for interface %s", iface.Name)
+			logrus.Error("Error fetching addresses:", err)
 			continue
 		}
 		for _, addr := range addrs {
-			if ipnet, ok := addr.(*net.IPNet); ok && ipnet.IP.IsGlobalUnicast() && ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
 			}
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+			ip = ip.To4()
+			if ip == nil {
+				continue
+			}
+			return ip.String()
 		}
 	}
 	return ""

@@ -38,14 +38,14 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	"pkg/config"
-	"pkg/logging"
-	"pkg/metrics"
-	"pkg/workers"
-	"pkg/network"
-	"pkg/file"
-	"pkg/iso"
-	"pkg/middleware"
+	"github.com/renz/hmac-file-server/pkg/config"
+	"github.com/renz/hmac-file-server/pkg/logging"
+	"github.com/renz/hmac-file-server/pkg/metrics"
+	"github.com/renz/hmac-file-server/pkg/workers"
+	"github.com/renz/hmac-file-server/pkg/network"
+	"github.com/renz/hmac-file-server/pkg/file"
+	"github.com/renz/hmac-file-server/pkg/iso"
+	"github.com/renz/hmac-file-server/pkg/middleware"
 )
 
 // parseSize converts a human-readable size string to bytes
@@ -83,20 +83,20 @@ func parseTTL(ttlStr string) (time.Duration, error) {
 		return 0, fmt.Errorf("invalid TTL: %s", ttlStr)
 	}
 
-	unit := ttlStr[len(ttlStr)-1:]
+	unit := strings.ToUpper(ttlStr[len(ttlStr)-1:])
 	valueStr := ttlStr[:len(ttlStr)-1]
 	value, err := strconv.Atoi(valueStr)
 	if err != nil {
 		return 0, fmt.Errorf("invalid TTL value: %s", valueStr)
 	}
 
-	switch strings.ToUpper(unit) {
+	switch unit {
 	case "D":
 		return time.Duration(value) * 24 * time.Hour, nil
 	case "M":
-		return time.Duration(value) * 30 * 24 * time.Hour, nil
+		return time.Duration(value) * 30 * 24 * time.Hour, nil // Approximation
 	case "Y":
-		return time.Duration(value) * 365 * 24 * time.Hour, nil
+		return time.Duration(value) * 365 * 24 * time.Hour, nil // Approximation
 	default:
 		return 0, fmt.Errorf("unknown TTL unit: %s", unit)
 	}
@@ -425,7 +425,7 @@ func initClamAV() (*clamd.Clamd, error) {
 	if conf.ClamAV.ClamAVEnabled {
 		clamClient := clamd.NewClamd(conf.ClamAV.ClamAVSocket)
 		if clamClient == nil {
-			return nil, fmt.Errorf("ClamAV client initialization failed")
+			return nil, fmt.Errorf("failed to initialize ClamAV client")
 		}
 		log.Info("ClamAV client initialized successfully.")
 		return clamClient, nil
@@ -485,24 +485,20 @@ func MonitorRedisHealth(ctx context.Context, client *redis.Client, checkInterval
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("Stopping Redis health monitor.")
 			return
 		case <-ticker.C:
-			err := client.Ping(ctx).Err()
-			mu.Lock()
+			_, err := client.Ping(ctx).Result()
 			if err != nil {
-				if redisConnected {
-					log.Errorf("Redis health check failed: %v", err)
-				}
+				log.Errorf("Redis health check failed: %v", err)
+				mu.Lock()
 				redisConnected = false
+				mu.Unlock()
 			} else {
-				if !redisConnected {
-					log.Info("Redis reconnected successfully")
-				}
+				log.Info("Redis is healthy")
+				mu.Lock()
 				redisConnected = true
-				log.Debug("Redis health check succeeded.")
+				mu.Unlock()
 			}
-			mu.Unlock()
 		}
 	}
 }
@@ -811,13 +807,16 @@ func updateSystemMetrics(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			v, _ := mem.VirtualMemory()
-			memoryUsage.Set(float64(v.Used) / float64(v.Total) * 100)
-			c, _ := cpu.Percent(0, false)
-			if len(c) > 0 {
-				cpuUsage.Set(c[0])
+			v, err := mem.VirtualMemory()
+			if err == nil {
+				memoryUsage.Set(float64(v.Used))
+			}
+			cpuPercents, err := cpu.Percent(0, false)
+			if err == nil && len(cpuPercents) > 0 {
+				cpuUsage.Set(cpuPercents[0])
 			}
 			goroutines.Set(float64(runtime.NumGoroutine()))
+			activeConnections.Set(float64(getActiveConnections()))
 		}
 	}
 }
@@ -1021,7 +1020,6 @@ func createFile(tempFilename string, r *http.Request) error {
 	defer bufWriter.Flush()
 	bufPtr := bufferPool.Get().(*[]byte) // Correct type assertion
 	defer bufferPool.Put(bufPtr)
-	defer bufferPool.Put(bufPtr)
 
 	_, err = io.CopyBuffer(bufWriter, r.Body, *bufPtr)
 	if err != nil {
@@ -1052,39 +1050,33 @@ func uploadWorker(ctx context.Context, workerID int) {
 			if !ok {
 				return
 			}
-			log.Infof("Worker %d processing file: %s", workerID, task.AbsFilename)
 			err := processUpload(task)
 			if err != nil {
-				log.Errorf("Worker %d failed to process file %s: %v", workerID, task.AbsFilename, err)
-			} else {
-				log.Infof("Worker %d successfully processed file: %s", workerID, task.AbsFilename)
+				log.Errorf("Upload worker %d failed to process upload: %v", workerID, err)
+				uploadErrorsTotal.Inc()
 			}
-			task.Result <- err
 		}
 	}
 }
 
 func scanWorker(ctx context.Context, workerID int) {
 	log.WithField("worker_id", workerID).Info("Scan worker started")
+	defer log.WithField("worker_id", workerID).Info("Scan worker stopped")
 	for {
 		select {
 		case <-ctx.Done():
-			log.WithField("worker_id", workerID).Info("Scan worker stopping")
 			return
 		case task, ok := <-scanQueue:
 			if !ok {
-				log.WithField("worker_id", workerID).Info("Scan queue closed")
 				return
 			}
-			log.WithFields(logrus.Fields{"worker_id": workerID, "file": task.AbsFilename}).Info("Processing scan task")
 			err := scanFileWithClamAV(task.AbsFilename)
 			if err != nil {
-				log.WithFields(logrus.Fields{"worker_id": workerID, "file": task.AbsFilename, "error": err}).Error("Failed to scan file")
+				log.Errorf("Scan worker %d failed to scan file %s: %v", workerID, task.AbsFilename, err)
+				task.Result <- err
 			} else {
-				log.WithFields(logrus.Fields{"worker_id": workerID, "file": task.AbsFilename}).Info("Successfully scanned file")
+				task.Result <- nil
 			}
-			task.Result <- err
-			close(task.Result)
 		}
 	}
 }
@@ -1830,40 +1822,32 @@ func checkStorageSpace(storagePath string, minFreeBytes int64) error {
 func handleDeduplication(ctx context.Context, absFilename string) error {
 	checksum, err := computeSHA256(ctx, absFilename)
 	if err != nil {
-		log.Errorf("Failed to compute SHA256 for %s: %v", absFilename, err)
-		return fmt.Errorf("checksum computation failed: %w", err)
+		return fmt.Errorf("failed to compute SHA256: %w", err)
 	}
 	log.Debugf("Computed checksum for %s: %s", absFilename, checksum)
 
 	existingPath, err := redisClient.Get(ctx, checksum).Result()
-	if err != nil {
-		if err == redis.Nil {
-			err = redisClient.Set(ctx, checksum, absFilename, 0).Err()
-			if err != nil {
-				log.Errorf("Redis error setting checksum %s: %v", checksum, err)
-				return fmt.Errorf("redis error: %w", err)
-			}
-			log.Infof("Stored new checksum %s for file %s", checksum, absFilename)
-			return nil
-		}
-		log.Errorf("Redis error fetching checksum %s: %v", checksum, err)
-		return fmt.Errorf("redis error: %w", err)
-	}
-
-	if existingPath != absFilename {
-		if _, err := os.Stat(existingPath); os.IsNotExist(err) {
-			log.Errorf("Existing file for checksum %s not found at %s", checksum, existingPath)
-			return fmt.Errorf("existing file not found: %w", err)
-		}
-
-		err = os.Link(existingPath, absFilename)
+	if err == redis.Nil {
+		// No duplicate found, store the checksum
+		err = redisClient.Set(ctx, checksum, absFilename, 0).Err()
 		if err != nil {
-			log.Errorf("Failed linking %s to %s: %v", existingPath, absFilename, err)
-			return fmt.Errorf("failed link: %w", err)
+			return fmt.Errorf("failed to store checksum in Redis: %w", err)
 		}
-		log.Infof("Created hard link for duplicate file %s -> %s", absFilename, existingPath)
+	} else if err != nil {
+		return fmt.Errorf("failed to query Redis: %w", err)
 	} else {
-		log.Infof("File %s already exists with same checksum", absFilename)
+		if existingPath != absFilename {
+			// Duplicate found, remove the new file and link to existing
+			err = os.Remove(absFilename)
+			if err != nil {
+				return fmt.Errorf("failed to remove duplicate file: %w", err)
+			}
+			err = os.Link(existingPath, absFilename)
+			if err != nil {
+				return fmt.Errorf("failed to create hard link to existing file: %w", err)
+			}
+			log.Infof("Deduplicated file: %s linked to %s", absFilename, existingPath)
+		}
 	}
 
 	return nil

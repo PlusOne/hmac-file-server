@@ -1,15 +1,14 @@
-
 package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/renz/hmac-file-server/pkg/config"
 )
 
 var (
-	// Define all metrics variables here
-	uploadDuration      prometheus.Histogram
-	uploadErrorsTotal   prometheus.Counter
-	uploadsTotal        prometheus.Counter
+	UploadDuration      prometheus.Histogram
+	UploadErrorsTotal   prometheus.Counter
+	UploadsTotal        prometheus.Counter
 	downloadDuration    prometheus.Histogram
 	downloadsTotal      prometheus.Counter
 	downloadErrorsTotal prometheus.Counter
@@ -23,21 +22,17 @@ var (
 )
 
 func InitMetrics(enabled bool) {
-	if !enabled {
-		return
-	}
-
-	uploadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
+	UploadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Namespace: "hmac",
 		Name:      "file_server_upload_duration_seconds",
 		Help:      "Histogram of file upload duration.",
 	})
-	uploadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{
+	UploadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: "hmac",
 		Name:      "file_server_upload_errors_total",
 		Help:      "Total number of file upload errors.",
 	})
-	uploadsTotal = prometheus.NewCounter(prometheus.CounterOpts{
+	UploadsTotal = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: "hmac",
 		Name:      "file_server_uploads_total",
 		Help:      "Total number of successful file uploads.",
@@ -93,21 +88,23 @@ func InitMetrics(enabled bool) {
 		Help:      "Histogram of downloaded file sizes.",
 	})
 
-	prometheus.MustRegister(uploadDuration, uploadErrorsTotal, uploadsTotal)
-	prometheus.MustRegister(downloadDuration, downloadsTotal, downloadErrorsTotal)
-	prometheus.MustRegister(memoryUsage, cpuUsage, activeConnections, requestsTotal, goroutines, uploadSizeBytes, downloadSizeBytes)
+	if enabled {
+		prometheus.MustRegister(UploadDuration, UploadErrorsTotal, UploadsTotal)
+		prometheus.MustRegister(downloadDuration, downloadsTotal, downloadErrorsTotal)
+		prometheus.MustRegister(memoryUsage, cpuUsage, activeConnections, requestsTotal, goroutines, uploadSizeBytes, downloadSizeBytes)
+	}
 }
 
 func ObserveUploadDuration(seconds float64) {
-	uploadDuration.Observe(seconds)
+	UploadDuration.Observe(seconds)
 }
 
 func IncUploadErrorsTotal() {
-	uploadErrorsTotal.Inc()
+	UploadErrorsTotal.Inc()
 }
 
 func IncUploadsTotal() {
-	uploadsTotal.Inc()
+	UploadsTotal.Inc()
 }
 
 func ObserveDownloadDuration(seconds float64) {

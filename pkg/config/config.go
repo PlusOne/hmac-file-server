@@ -1,4 +1,3 @@
-
 package config
 
 import (
@@ -6,7 +5,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	"pkg/logging"
+	"github.com/sirupsen/logrus"
 )
 
 // parseSize converts a human-readable size string to bytes
@@ -225,7 +224,7 @@ func ReadConfig(configFilename string, conf *Config) error {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	if err := validateConfig(conf); err != nil {
+	if err := ValidateConfig(conf); err != nil {
 		return err
 	}
 
@@ -234,7 +233,7 @@ func ReadConfig(configFilename string, conf *Config) error {
 	return nil
 }
 
-func validateConfig(conf *Config) error {
+func ValidateConfig(conf *Config) error {
 	if conf.Server.ListenPort == "" {
 		return fmt.Errorf("ListenPort must be set")
 	}
