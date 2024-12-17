@@ -74,7 +74,7 @@ func SetupGracefulShutdown(server *http.Server, ctx context.Context, cancel cont
 	}()
 }
 
-// Exported ParseDuration parses a duration string and handles the error.
+// ParseDuration parses a duration string and handles the error.
 func ParseDuration(durationStr string) time.Duration {
 	duration, err := time.ParseDuration(durationStr)
 	if err != nil {

@@ -2,11 +2,11 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
-	"os"
 
-	"github.com/spf13/viper" // Third-party imports
+	"github.com/spf13/viper"
 )
 
 type ServerConfig struct {
@@ -98,7 +98,7 @@ func LoadConfig(configFile string) (*Config, error) {
 
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("HMAC")
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // Define replacer for nested keys
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("error reading config: %w", err)
@@ -150,7 +150,7 @@ func setDefaults() {
 	viper.SetDefault("clamav.ClamAVEnabled", true)
 	viper.SetDefault("clamav.ClamAVSocket", "/var/run/clamav/clamd.ctl")
 	viper.SetDefault("clamav.NumScanWorkers", 2)
-	viper.SetDefault("clamav.ScanFileExtensions", []string{".exe", ".dll", ".js", ".php"}) // Added sensible defaults
+	viper.SetDefault("clamav.ScanFileExtensions", []string{".exe", ".dll", ".js", ".php"})
 
 	viper.SetDefault("redis.RedisEnabled", true)
 	viper.SetDefault("redis.RedisAddr", "localhost:6379")
@@ -209,7 +209,6 @@ func validateConfig(conf *Config) error {
 		}
 	}
 
-	// Example: Validate StoragePath exists or is writable
 	if _, err := os.Stat(conf.Server.StoragePath); os.IsNotExist(err) {
 		return fmt.Errorf("StoragePath does not exist: %s", conf.Server.StoragePath)
 	} else if err != nil {

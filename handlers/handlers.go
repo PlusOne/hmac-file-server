@@ -2,19 +2,19 @@ package handlers
 
 import (
 	"net/http"
-	"os" // Added import for os.Stat and http.ServeFile
-	"path/filepath" // Added import for filepath operations
-	"strings" // Added import for strings
+	"os"
+	"path/filepath"
+	"strings"
 
-	"github.com/renz/hmac-file-server/config" // Local project imports
-	"github.com/renz/hmac-file-server/utils"  // Local project imports
-	"github.com/sirupsen/logrus"              // Third-party imports
+	"github.com/renz/hmac-file-server/config"
+	"github.com/renz/hmac-file-server/utils"
+	"github.com/sirupsen/logrus"
 )
 
 func SetupRouter(conf *config.Config) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleRequest(conf))
-	mux.HandleFunc("/download", handleDownload(conf)) // Pass conf to handleDownload
+	mux.HandleFunc("/download", handleDownload(conf))
 	if conf.Server.MetricsEnabled {
 		mux.Handle("/metrics", utils.PrometheusHandler())
 	}
@@ -33,9 +33,7 @@ func handleRequest(conf *config.Config) http.HandlerFunc {
 
 		// ...existing request handling code...
 
-		// Removed duplicate logging
-
-		// ...additional routing logic...
+		 // ...additional routing logic...
 	}
 }
 
@@ -44,8 +42,8 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 }
 
 // handleDownload serves the requested file after validating the path.
-func handleDownload(conf *config.Config) http.HandlerFunc { // Receive conf as parameter
-	return func(w http.ResponseWriter, r *http.Request) { // Changed *Request to *http.Request
+func handleDownload(conf *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		filePath := r.URL.Query().Get("file")
 		if filePath == "" {
 			http.Error(w, "File parameter is missing", http.StatusBadRequest)

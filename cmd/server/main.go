@@ -1,21 +1,19 @@
 package main
 
 import (
-	"context" // Standard library
+	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
-	"fmt" // Added import
 
-	// Third-party imports
-	"github.com/dutchcoders/go-clamd" // Updated ClamAV integration
-	"github.com/go-redis/redis/v8"    // Redis integration
-	"github.com/patrickmn/go-cache"   // In-memory cache
+	"github.com/dutchcoders/go-clamd"
+	"github.com/go-redis/redis/v8"
+	"github.com/patrickmn/go-cache"
 	"github.com/renz/hmac-file-server/config"
 	"github.com/renz/hmac-file-server/handlers"
 	"github.com/renz/hmac-file-server/utils"
 	"github.com/sirupsen/logrus"
-	// Removed unused gopsutil imports
 )
 
 var (
@@ -26,17 +24,14 @@ var (
 )
 
 func main() {
-	// Load configuration
 	conf, err := config.LoadConfig("config.toml")
 	if err != nil {
 		logrus.Fatalf("Error loading configuration: %v", err)
 	}
 	logrus.Info("Configuration loaded successfully.")
 
-	// Setup logging
 	utils.SetupLogging(conf.Server.LogLevel, conf.Server.LogFile)
 
-	// Initialize other components (e.g., ClamAV, Redis) as needed
 	if conf.ClamAV.ClamAVEnabled {
 		clamClient, err = initClamAV(conf.ClamAV.ClamAVSocket)
 		if err != nil {
@@ -53,13 +48,10 @@ func main() {
 		logrus.Info("Redis client initialized successfully.")
 	}
 
-	// Initialize in-memory cache
 	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
 
-	// Initialize HTTP handlers
 	router := handlers.SetupRouter(conf)
 
-	// Create HTTP server
 	server := &http.Server{
 		Addr:         ":" + conf.Server.ListenPort,
 		Handler:      router,
@@ -68,12 +60,10 @@ func main() {
 		IdleTimeout:  utils.ParseDuration(conf.Timeouts.IdleTimeout),
 	}
 
-	// Setup graceful shutdown with context cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	utils.SetupGracefulShutdown(server, ctx, cancel)
 
-	// Start the server
 	logrus.Infof("Starting HMAC File Server on port %s...", conf.Server.ListenPort)
 	if conf.Server.UnixSocket {
 		listener, err := net.Listen("unix", conf.Server.ListenPort)
@@ -91,19 +81,15 @@ func main() {
 	}
 }
 
-// initClamAV initializes the ClamAV client using the new module.
 func initClamAV(socket string) (*clamd.Clamd, error) {
-	client := clamd.NewClamd(socket) // Updated initialization
-	// Verify connection to ClamAV
-	err := client.Ping() // Capture only the error
+	client := clamd.NewClamd(socket)
+	err := client.Ping()
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping ClamAV: %w", err)
 	}
-	// go-clamd's Ping may not return a response, adjust accordingly
 	return client, nil
 }
 
-// initRedis initializes the Redis client.
 func initRedis(conf config.RedisConfig) *redis.Client {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     conf.RedisAddr,
