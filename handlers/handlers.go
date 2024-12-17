@@ -22,7 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var redisClient *redis.Client
+var RedisClient *redis.Client // Ensure RedisClient is exported
 var redisCtx = context.Background()
 
 func SetupRouter(conf *config.Config) http.Handler {
@@ -184,7 +184,7 @@ func handleDownload(conf *config.Config) http.HandlerFunc {
 		}
 
 		// Check if the response is cached in Redis
-		cachedResponse, err := redisClient.Get(redisCtx, filePath).Result()
+		cachedResponse, err := RedisClient.Get(redisCtx, filePath).Result()
 		if err == redis.Nil {
 			// Cache miss, proceed with file serving
 			serveFile(w, r, conf, filePath)
@@ -228,7 +228,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, conf *config.Config, file
 	// Cache the response in Redis
 	response := map[string]string{"filePath": filePath, "status": "served"}
 	responseJSON, _ := json.Marshal(response)
-	err = redisClient.Set(redisCtx, filePath, responseJSON, 10*time.Minute).Err()
+	err = RedisClient.Set(redisCtx, filePath, responseJSON, 10*time.Minute).Err()
 	if err != nil {
 		logrus.Errorf("Failed to cache response in Redis: %v", err)
 	}

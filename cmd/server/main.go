@@ -49,7 +49,7 @@ func main() {
 			logrus.Fatalf("Failed to initialize Redis client.")
 		}
 		logrus.Info("Redis client initialized successfully.")
-		handlers.redisClient = redisClient // Pass Redis client to handlers
+		handlers.RedisClient = redisClient // Pass Redis client to handlers
 	}
 
 	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
