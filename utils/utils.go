@@ -72,7 +72,8 @@ func SetupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
 	}()
 }
 
-func parseDuration(durationStr string) time.Duration {
+// Exported ParseDuration parses a duration string and handles the error.
+func ParseDuration(durationStr string) time.Duration {
 	duration, err := time.ParseDuration(durationStr)
 	if err != nil {
 		logrus.Fatalf("Invalid duration: %s", durationStr)
