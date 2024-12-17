@@ -37,6 +37,15 @@ import (
 	"github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+
+	"pkg/config"
+	"pkg/logging"
+	"pkg/metrics"
+	"pkg/workers"
+	"pkg/network"
+	"pkg/file"
+	"pkg/iso"
+	"pkg/middleware"
 )
 
 // parseSize converts a human-readable size string to bytes
@@ -238,69 +247,32 @@ const maxConcurrentOperations = 10
 var semaphore = make(chan struct{}, maxConcurrentOperations)
 
 func main() {
-	setDefaults()
-	parseFlags()
+	config.SetDefaults()
+	config.ParseFlags()
 
-	err := readConfig("./config.toml", &conf)
+	err := config.ReadConfig("./config.toml", &conf)
 	if err != nil {
-		log.Fatalf("Error reading config: %v", err)
+		logging.Fatalf("Error reading config: %v", err)
 	}
 
-	initializeWorkerSettings(&conf.Server, &conf.Workers, &conf.ClamAV)
+	logging.SetupLogging(conf.Server.LogLevel, conf.Server.LogFile)
+	
+	workers.InitializeWorkerSettings(&conf.Server, &conf.Workers, &conf.ClamAV)
 	if conf.ISO.Enabled {
-		if err := verifyAndCreateISOContainer(); err != nil {
-			log.Fatalf("ISO container verification failed: %v", err)
+		if err := iso.VerifyAndCreateISOContainer(); err != nil {
+			logging.Fatalf("ISO container verification failed: %v", err)
 		}
 	}
 
-	setupCaches()
-	setupStorage()
-	setupLogging()
-	logSystemInfo()
-	initMetrics()
-	setupChannels()
+	metrics.InitMetrics(conf.Server.MetricsEnabled)
+	
+	network.SetupNetworkMonitoring()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// ...existing code...
 
-	startBackgroundWorkers(ctx)
-
-	clamClient, err := initClamAV()
-	if err != nil {
-		log.WithError(err).Warn("ClamAV client initialization failed. Continuing without ClamAV.")
-	}
-
-	if conf.Redis.RedisEnabled {
-		initRedis()
-	}
-
-	initializeUploadWorkerPool(ctx, &conf.Workers)
-	if conf.ClamAV.ClamAVEnabled && clamClient != nil {
-		initializeScanWorkerPool(ctx)
-	}
-
-	if conf.Redis.RedisEnabled && redisClient != nil {
-		redisHealthCheckInterval, err := time.ParseDuration(conf.Redis.RedisHealthCheckInterval)
-		if err != nil {
-			log.Fatalf("Invalid RedisHealthCheckInterval: %v", err)
-		}
-		go MonitorRedisHealth(ctx, redisClient, redisHealthCheckInterval)
-	}
-
-	router := setupRouter()
-	scheduleFileCleaner(ctx)
-	setupTimeouts()
-
-	server := setupHTTPServer(router)
-	setupMetricsServer()
-	setupGracefulShutdown(server, cancel)
-
-	if conf.Server.AutoAdjustWorkers {
-		go monitorWorkerPerformance(ctx, &conf.Server, &conf.Workers, &conf.ClamAV)
-	}
-
-	log.Infof("Starting HMAC file server %s...", versionString)
-	startServer(server)
+	router := middleware.SetupRouter()
+	
+	// ...existing code...
 }
 
 // parseFlags handles command-line flag parsing
