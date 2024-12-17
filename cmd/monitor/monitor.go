@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,25 +18,19 @@ import (
 )
 
 var prometheusURL string
-var configFilePath string // Pfad der gefundenen Konfiguration
-var logFilePath string    // Pfad der Logdatei aus der Konfiguration
 
 func init() {
 	configPaths := []string{
 		"/etc/hmac-file-server/config.toml",
 		"../config.toml",
-		"./config.toml",
 	}
 
 	var config *toml.Tree
 	var err error
 
-	// Lade die config.toml aus den definierten Pfaden
 	for _, path := range configPaths {
 		config, err = toml.LoadFile(path)
 		if err == nil {
-			configFilePath = path
-			log.Printf("Using config file: %s", configFilePath)
 			break
 		}
 	}
@@ -48,41 +39,8 @@ func init() {
 		log.Fatalf("Error loading config file: %v", err)
 	}
 
-	// Metricsport auslesen
-	portValue := config.Get("server.metricsport")
-	if portValue == nil {
-		log.Println("Warning: 'server.metricsport' is missing in the configuration, using default port 9090")
-		portValue = int64(9090)
-	}
-
-	var port int64
-	switch v := portValue.(type) {
-	case int64:
-		port = v
-	case string:
-		parsedPort, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
-			log.Fatalf("Error parsing 'server.metricsport' as int64: %v", err)
-		}
-		port = parsedPort
-	default:
-		log.Fatalf("Error: 'server.metricsport' is not of type int64 or string, got %T", v)
-	}
-
+	port := config.Get("server.metrics_port").(int64)
 	prometheusURL = fmt.Sprintf("http://localhost:%d/metrics", port)
-
-	// Log-Datei auslesen über server.logfile
-	logFileValue := config.Get("server.logfile")
-	if logFileValue == nil {
-		log.Println("Warning: 'server.logfile' is missing, using default '/var/log/hmac-file-server.log'")
-		logFilePath = "/var/log/hmac-file-server.log"
-	} else {
-		lf, ok := logFileValue.(string)
-		if !ok {
-			log.Fatalf("Error: 'server.logfile' is not of type string, got %T", logFileValue)
-		}
-		logFilePath = lf
-	}
 }
 
 // Thresholds for color coding
@@ -435,6 +393,50 @@ func updateHmacTable(hmacTable *tview.Table, hmacInfo *ProcessInfo, metrics map[
 	}
 }
 
+func main() {
+	app := tview.NewApplication()
+
+	// Create pages
+	pages := tview.NewPages()
+
+	// System page
+	sysPage := createSystemPage()
+	pages.AddPage("system", sysPage, true, true)
+
+	// hmac-file-server page
+	hmacPage := createHmacPage()
+	pages.AddPage("hmac", hmacPage, true, false)
+
+	// Add key binding to switch views
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyRune {
+			switch event.Rune() {
+			case 'q', 'Q':
+				app.Stop()
+				return nil
+			case 's', 'S':
+				// Switch to system page
+				pages.SwitchToPage("system")
+				return nil
+			case 'h', 'H':
+				// Switch to hmac-file-server page
+				pages.SwitchToPage("hmac")
+				return nil
+			}
+		}
+		return event
+	})
+
+	// Start the UI update loop in a separate goroutine
+	go updateUI(app, pages, sysPage, hmacPage)
+
+	// Set the root and run the application
+	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
+		log.Fatalf("Error running application: %v", err)
+	}
+}
+
+// Function to create the system page
 func createSystemPage() tview.Primitive {
 	// Create system data table
 	sysTable := tview.NewTable().SetBorders(false)
@@ -451,13 +453,14 @@ func createSystemPage() tview.Primitive {
 	// Create a flex layout to hold the tables
 	sysFlex := tview.NewFlex().
 		SetDirection(tview.FlexRow).
-		AddItem(sysTable, 7, 0, false).
-		AddItem(metricsTable, 0, 1, false).
-		AddItem(processTable, 0, 2, false)
+		AddItem(sysTable, 7, 0, false).     // Fixed height for system data
+		AddItem(metricsTable, 0, 1, false). // Proportional height for metrics
+		AddItem(processTable, 0, 2, false)  // Proportional height for process list
 
 	return sysFlex
 }
 
+// Function to create the hmac-file-server page
 func createHmacPage() tview.Primitive {
 	hmacTable := tview.NewTable().SetBorders(false)
 	hmacTable.SetTitle(" [::b]hmac-file-server Details ").SetBorder(true)
@@ -467,115 +470,4 @@ func createHmacPage() tview.Primitive {
 		AddItem(hmacTable, 0, 1, false)
 
 	return hmacFlex
-}
-
-func createLogsPage(logFilePath string) tview.Primitive {
-    logsTextView := tview.NewTextView().
-        SetDynamicColors(true).
-        SetRegions(true).
-        SetWordWrap(true)
-    logsTextView.SetTitle(" [::b]Logs ").SetBorder(true)
-
-    const numLines = 100 // Number of lines to read from the end of the log file
-
-    // Read logs periodically
-    go func() {
-        for {
-            content, err := readLastNLines(logFilePath, numLines)
-            if err != nil {
-                logsTextView.SetText(fmt.Sprintf("[red]Error reading log file: %v[white]", err))
-            } else {
-                // Process the log content to add colors
-                lines := strings.Split(content, "\n")
-                var coloredLines []string
-                for _, line := range lines {
-                    if strings.Contains(line, "level=info") {
-                        coloredLines = append(coloredLines, "[green]"+line+"[white]")
-                    } else if strings.Contains(line, "level=warn") {
-                        coloredLines = append(coloredLines, "[yellow]"+line+"[white]")
-                    } else if strings.Contains(line, "level=error") {
-                        coloredLines = append(coloredLines, "[red]"+line+"[white]")
-                    } else {
-                        // Default color
-                        coloredLines = append(coloredLines, line)
-                    }
-                }
-                logsTextView.SetText(strings.Join(coloredLines, "\n"))
-            }
-            time.Sleep(2 * time.Second) // Refresh interval for logs
-        }
-    }()
-
-    return logsTextView
-}
-
-func readLastNLines(filePath string, n int) (string, error) {
-    file, err := os.Open(filePath)
-    if err != nil {
-        return "", err
-    }
-    defer file.Close()
-
-    var lines []string
-    scanner := bufio.NewScanner(file)
-    for scanner.Scan() {
-        lines = append(lines, scanner.Text())
-        if len(lines) > n {
-            lines = lines[1:]
-        }
-    }
-
-    if err := scanner.Err(); err != nil {
-        return "", err
-    }
-
-    return strings.Join(lines, "\n"), nil
-}
-
-func main() {
-	app := tview.NewApplication()
-
-	// Create pages
-	pages := tview.NewPages()
-
-	// System page
-	sysPage := createSystemPage()
-	pages.AddPage("system", sysPage, true, true)
-
-	// hmac-file-server page
-	hmacPage := createHmacPage()
-	pages.AddPage("hmac", hmacPage, true, false)
-
-	// Logs page mit dem gelesenen logFilePath
-	logsPage := createLogsPage(logFilePath)
-	pages.AddPage("logs", logsPage, true, false)
-
-	// Add key binding to switch views
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyRune {
-			switch event.Rune() {
-			case 'q', 'Q':
-				app.Stop()
-				return nil
-			case 's', 'S':
-				// Switch to system page
-				pages.SwitchToPage("system")
-			case 'h', 'H':
-				// Switch to hmac-file-server page
-				pages.SwitchToPage("hmac")
-			case 'l', 'L':
-				// Switch to logs page
-				pages.SwitchToPage("logs")
-			}
-		}
-		return event
-	})
-
-	// Start the UI update loop in a separate goroutine
-	go updateUI(app, pages, sysPage, hmacPage)
-
-	// Set the root and run the application
-	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
-		log.Fatalf("Error running application: %v", err)
-	}
 }
