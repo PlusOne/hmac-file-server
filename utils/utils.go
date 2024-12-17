@@ -16,7 +16,7 @@ import (
 
 func SetupLogging(logLevel string, logFile string) {
 	level, err := logrus.ParseLevel(logLevel)
-	if err != nil {
+	if (err != nil) {
 		logrus.Fatalf("Invalid log level: %s", logLevel)
 	}
 	logrus.SetLevel(level)

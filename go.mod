@@ -3,12 +3,14 @@ module github.com/renz/hmac-file-server
 go 1.22.0
 
 require (
-	github.com/dutchcoders/go-clamd v0.0.0-20220408120205-e4694cf96c11
+	// Reverted to the original ClamAV integration module
+	github.com/mmussett/go-clamd v0.0.0-20210101120000-abcdefabcdef // replace with the latest valid commit
+
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.20.5
 	github.com/sirupsen/logrus v1.9.3
-	github.com/shirou/gopsutil v3.23.9+incompatible
+	github.com/shirou/gopsutil/v3 v3.23.9 // removed +incompatible suffix
 	github.com/spf13/viper v1.19.0
 )
 

@@ -5,20 +5,20 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"time"
+	"time
 
 	// Third-party imports
-	"github.com/dutchcoders/go-clamd"   // ClamAV integration
-	"github.com/go-redis/redis/v8"      // Redis integration
-	"github.com/patrickmn/go-cache"     // In-memory cache
+	"github.com/mmussett/go-clamd"         // ClamAV integration
+	"github.com/go-redis/redis/v8"        // Redis integration
+	"github.com/patrickmn/go-cache"       // In-memory cache
 	"github.com/renz/hmac-file-server/config"
 	"github.com/renz/hmac-file-server/handlers"
 	"github.com/renz/hmac-file-server/utils"
 	"github.com/sirupsen/logrus"
-	"github.com/shirou/gopsutil/cpu"      // System metrics
-	"github.com/shirou/gopsutil/disk"     // System metrics
-	"github.com/shirou/gopsutil/host"     // System metrics
-	"github.com/shirou/gopsutil/mem"      // System metrics
+	"github.com/shirou/gopsutil/v3/cpu"     // System metrics
+	"github.com/shirou/gopsutil/v3/disk"    // System metrics
+	"github.com/shirou/gopsutil/v3/host"    // System metrics
+	"github.com/shirou/gopsutil/v3/mem"     // System metrics
 )
 
 var (
