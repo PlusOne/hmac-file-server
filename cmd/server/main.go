@@ -39,9 +39,9 @@ func main() {
 	}
 
 	// Setup graceful shutdown
-	cancel, cancelFunc := context.WithCancel(context.Background())
+	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	utils.SetupGracefulShutdown(server, cancel)
+	utils.SetupGracefulShutdown(server, cancelFunc)
 
 	// Start the server
 	logrus.Infof("Starting HMAC File Server on port %s...", conf.Server.ListenPort)
