@@ -98,7 +98,9 @@ func initRedis(conf config.RedisConfig) *redis.Client {
 	})
 	_, err := rdb.Ping(redisCtx).Result()
 	if err != nil {
-		logrus.Errorf("Redis ping failed: %v", err)
+		logrus.WithFields(logrus.Fields{
+			"error": err,
+		}).Error("Redis ping failed")
 		return nil
 	}
 	return rdb

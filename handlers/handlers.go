@@ -33,7 +33,7 @@ func handleRequest(conf *config.Config) http.HandlerFunc {
 
 		// ...existing request handling code...
 
-		 // ...additional routing logic...
+		// ...additional routing logic...
 	}
 }
 
@@ -66,7 +66,10 @@ func handleDownload(conf *config.Config) http.HandlerFunc {
 			return
 		} else if err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			logrus.Errorf("Error accessing file %s: %v", fullPath, err)
+			logrus.WithFields(logrus.Fields{
+				"file": fullPath,
+				"error": err,
+			}).Error("Error accessing file")
 			return
 		}
 
@@ -91,7 +94,9 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				logrus.Errorf("Panic recovered: %v", rec)
+				logrus.WithFields(logrus.Fields{
+					"error": rec,
+				}).Error("Panic recovered")
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			}
 		}()

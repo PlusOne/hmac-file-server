@@ -32,8 +32,8 @@ func SetupLogging(logLevel string, logFile string) {
 		logrus.SetOutput(os.Stdout)
 	}
 
-	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
+	logrus.SetFormatter(&logrus.JSONFormatter{ // Use JSONFormatter for structured logging
+		TimestampFormat: time.RFC3339,
 	})
 }
 
