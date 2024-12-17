@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// Setup graceful shutdown
-	ctx, cancelFunc := context.WithCancel(context.Background())
+	_, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	utils.SetupGracefulShutdown(server, cancelFunc)
 
