@@ -1,6 +1,6 @@
 module github.com/renz/hmac-file-server
 
-go 1.22 // Changed from 1.23 to 1.20
+go 1.20 // Changed from 1.23 to 1.20
 
 require (
 	github.com/dutchcoders/go-clamd v0.0.0-20170520113014-b970184f4d9e
