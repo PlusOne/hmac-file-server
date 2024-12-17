@@ -94,8 +94,9 @@ func main() {
 func initClamAV(socket string) (*clamd.Clamd, error) {
 	client := clamd.NewClamd(socket) // Updated initialization
 	// Verify connection to ClamAV
-	if err := client.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping ClamAV: %v", err)
+	err := client.Ping() // Capture only the error
+	if err != nil {
+		return nil, fmt.Errorf("failed to ping ClamAV: %w", err)
 	}
 	return client, nil
 }

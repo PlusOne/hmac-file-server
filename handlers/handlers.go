@@ -3,14 +3,15 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/renz/hmac-file-server/config"   // Local project imports
-	"github.com/renz/hmac-file-server/utils"    // Local project imports
-	"github.com/sirupsen/logrus"                // Third-party imports
+	"github.com/renz/hmac-file-server/config" // Local project imports
+	"github.com/renz/hmac-file-server/utils"  // Local project imports
+	"github.com/sirupsen/logrus"              // Third-party imports
 )
 
 func SetupRouter(conf *config.Config) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleRequest(conf))
+	mux.HandleFunc("/download", handleDownload()) // Added download handler
 	if conf.Server.MetricsEnabled {
 		mux.Handle("/metrics", utils.PrometheusHandler())
 	}
@@ -29,11 +30,7 @@ func handleRequest(conf *config.Config) http.HandlerFunc {
 
 		// ...existing request handling code...
 
-		logrus.WithFields(logrus.Fields{
-			"method": r.Method,
-			"url":    r.URL.String(),
-			"remote": utils.GetClientIP(r),
-		}).Info("Incoming request")
+		// Removed duplicate logging
 
 		// ...additional routing logic...
 	}
@@ -43,8 +40,10 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 	// ...implementation...
 }
 
-func handleDownload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
-	// ...implementation...
+func handleDownload() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// ...implementation...
+	}
 }
 
 // LoggingMiddleware logs each incoming HTTP request.

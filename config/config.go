@@ -96,6 +96,7 @@ func LoadConfig(configFile string) (*Config, error) {
 
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("HMAC")
+	viper.SetEnvKeyReplacer(nil) // Optional: Define a replacer if needed
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("error reading config: %w", err)
@@ -110,7 +111,8 @@ func LoadConfig(configFile string) (*Config, error) {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
-	conf.Server.DeduplicationEnabled = viper.GetBool("deduplication.Enabled")
+	// Remove redundant setting as it's already set via mapstructure
+	// conf.Server.DeduplicationEnabled = viper.GetBool("deduplication.Enabled")
 
 	return &conf, nil
 }
@@ -149,6 +151,7 @@ func setDefaults() {
 	viper.SetDefault("clamav.ClamAVEnabled", true)
 	viper.SetDefault("clamav.ClamAVSocket", "/var/run/clamav/clamd.ctl")
 	viper.SetDefault("clamav.NumScanWorkers", 2)
+	viper.SetDefault("clamav.ScanFileExtensions", []string{}) // Add default if necessary
 
 	viper.SetDefault("redis.RedisEnabled", true)
 	viper.SetDefault("redis.RedisAddr", "localhost:6379")
@@ -159,7 +162,7 @@ func setDefaults() {
 	viper.SetDefault("workers.NumWorkers", 4)
 	viper.SetDefault("workers.UploadQueueSize", 50)
 
-	viper.SetDefault("deduplication.Enabled", true)
+	viper.SetDefault("server.DeduplicationEnabled", true) // Corrected key
 
 	viper.SetDefault("iso.Enabled", true)
 	viper.SetDefault("iso.Size", "1GB")

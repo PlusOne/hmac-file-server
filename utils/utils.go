@@ -6,17 +6,18 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal" // Added import
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp" // Third-party imports
-	"github.com/sirupsen/logrus"                             // Third-party imports
+	"github.com/sirupsen/logrus"                              // Third-party imports
 )
 
 func SetupLogging(logLevel string, logFile string) {
 	level, err := logrus.ParseLevel(logLevel)
-	if (err != nil) {
+	if err != nil {
 		logrus.Fatalf("Invalid log level: %s", logLevel)
 	}
 	logrus.SetLevel(level)
