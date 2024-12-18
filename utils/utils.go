@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"net/http" // Fixed: Added missing closing quote
-	"os"
 	"os/signal"     // Added import
 	"path/filepath" // Added import for file path
 	"runtime"       // Added import for runtime info
@@ -27,6 +26,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"os"
 )
 
 // ...existing code...
@@ -301,4 +301,13 @@ if err != nil {
 }
 logrus.Infof("Parsed size: %d bytes", size)
 // Use the parsed size (in bytes) as needed
+}
+
+// FileExists checks if a file exists and is not a directory.
+func FileExists(filePath string) bool {
+    info, err := os.Stat(filePath)
+    if os.IsNotExist(err) {
+        return false
+    }
+    return !info.IsDir()
 }

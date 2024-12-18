@@ -140,24 +140,72 @@ var (
 func SetupRouter(conf *config.Config) *mux.Router {
 	router := mux.NewRouter()
 
-	// Example routes
-	router.HandleFunc("/upload", UploadHandler).Methods("POST")
-	router.HandleFunc("/download/{file}", DownloadHandler).Methods("GET")
+	// Define routes
+	router.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
+		handleFileUpload(w, r, conf)
+	}).Methods("POST")
 
-	// ...existing routes...
+	router.HandleFunc("/download/{filename}", func(w http.ResponseWriter, r *http.Request) {
+		handleFileDownload(w, r, conf)
+	}).Methods("GET")
+
+	router.HandleFunc("/delete/{filename}", func(w http.ResponseWriter, r *http.Request) {
+		handleFileDeletion(w, r, conf)
+	}).Methods("DELETE")
+
+	// Add more routes as needed
+	// ...existing code...
 
 	return router
 }
 
-func UploadHandler(w http.ResponseWriter, r *http.Request) {
-	handleUpload(w, r, &config.Config{})
+// handleFileUpload handles the file upload process
+func handleFileUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
+	// ...existing code...
+
+	// Ensure the file is within the allowed size limit
+	maxFileSize, err := utils.ParseSize(conf.Uploads.ChunkSize)
+	if err != nil {
+		logrus.WithError(err).Error("Invalid chunk size")
+		http.Error(w, "Invalid chunk size", http.StatusBadRequest)
+		return
+	}
+
+	// Ensure the uploaded file does not exceed the maximum file size
+	r.Body = http.MaxBytesReader(w, r.Body, maxFileSize)
+
+	// ...existing code...
 }
 
-func DownloadHandler(w http.ResponseWriter, r *http.Request) {
-	// Implement download logic
-	http.Error(w, "Download not implemented", http.StatusNotImplemented)
+// handleFileDownload handles the file download process
+func handleFileDownload(w http.ResponseWriter, r *http.Request) {
+	// ...existing code...
+
+	// Ensure the file exists and is accessible
+	filePath := mux.Vars(r)["filename"]
+	if !utils.FileExists(filePath) {
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+	// ...existing code...
 }
 
+// handleFileDeletion handles the file deletion process
+func handleFileDeletion(w http.ResponseWriter, r *http.Request, conf *config.Config) {
+	// ...existing code...
+
+	// Ensure the file exists and is accessible
+	filePath := mux.Vars(r)["filename"]
+	if !utils.FileExists(filePath) {
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+	// ...existing code...
+}
+
+// handleRequest handles incoming HTTP requests.
 func handleRequest(conf *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost && utils.IsMultipart(r.Header.Get("Content-Type")) {
@@ -170,9 +218,6 @@ func handleRequest(conf *config.Config) http.HandlerFunc {
 		// ...additional routing logic...
 	}
 }
-
-// handleUpload handles PUT requests for file uploads with HMAC validation.
-// Duplicate handleUpload function removed
 
 // isExtensionAllowed checks if the file extension is allowed.
 func isExtensionAllowed(filePath string) bool {
