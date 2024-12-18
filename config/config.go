@@ -240,6 +240,10 @@ func validateConfig(conf *Config) error {
 			return fmt.Errorf("failed to create StoragePath: %w", err)
 		}
 		logrus.Infof("Created StoragePath: %s", conf.Server.StoragePath)
+		fileInfo, err = os.Stat(conf.Server.StoragePath) // Re-check after creating the directory
+		if err != nil {
+			return fmt.Errorf("error accessing StoragePath: %w", err)
+		}
 	} else if err != nil {
 		return fmt.Errorf("error accessing StoragePath: %w", err)
 	}
