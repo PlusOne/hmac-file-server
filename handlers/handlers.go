@@ -223,7 +223,13 @@ func serveFile(w http.ResponseWriter, r *http.Request, conf *config.Config, file
 		return
 	}
 
-	http.ServeFile(w, r, fullPath)
+	// If chunked downloads are enabled
+	if conf.Downloads.ChunkedDownloadsEnabled {
+		// Implement chunked download logic here
+		// Example: use http.ServeContent with a custom ReadSeeker
+	} else {
+		http.ServeFile(w, r, fullPath)
+	}
 
 	// Cache the response in Redis
 	response := map[string]string{"filePath": filePath, "status": "served"}

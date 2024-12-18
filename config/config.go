@@ -46,6 +46,12 @@ type UploadsConfig struct {
 	AllowedExtensions       []string `mapstructure:"AllowedExtensions"`
 }
 
+type DownloadsConfig struct {
+	ResumableDownloadsEnabled bool   `mapstructure:"ResumableDownloadsEnabled"`
+	ChunkedDownloadsEnabled   bool   `mapstructure:"ChunkedDownloadsEnabled"`
+	ChunkSize                 string `mapstructure:"ChunkSize"`
+}
+
 type ClamAVConfig struct {
 	ClamAVEnabled      bool     `mapstructure:"ClamAVEnabled"`
 	ClamAVSocket       string   `mapstructure:"ClamAVSocket"`
@@ -83,6 +89,7 @@ type Config struct {
 	Security   SecurityConfig   `mapstructure:"security"`
 	Versioning VersioningConfig `mapstructure:"versioning"`
 	Uploads    UploadsConfig    `mapstructure:"uploads"`
+	Downloads  DownloadsConfig  `mapstructure:"downloads"`
 	ClamAV     ClamAVConfig     `mapstructure:"clamav"`
 	Redis      RedisConfig      `mapstructure:"redis"`
 	Workers    WorkersConfig    `mapstructure:"workers"`
@@ -213,6 +220,7 @@ func validateConfig(conf *Config) error {
 		return fmt.Errorf("StoragePath does not exist: %s", conf.Server.StoragePath)
 	} else if err != nil {
 		return fmt.Errorf("error accessing StoragePath: %w", err)
+
 	}
 
 	// ...additional validations if necessary...
