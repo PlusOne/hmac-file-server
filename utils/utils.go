@@ -3,7 +3,7 @@ package utils
 import (
 	"context" // Standard library
 	"net"
-	"net/http
+	"net/http"
 	"os"
 	"os/signal" // Added import
 	"path/filepath" // Added import for file path
@@ -22,7 +22,7 @@ import (
 	"github.com/shirou/gopsutil/v3/disk"                       // Updated import
 	"github.com/shirou/gopsutil/v3/host"                       // Updated import
 	"github.com/shirou/gopsutil/v3/mem"                        // Updated import
-	"github.com/renz/hmac-file-server/internal/config"        // Corrected import path for config
+	"hmac-file-server/config"        // Corrected import path for config
 )
 
 var mu sync.Mutex // Added mutex for synchronization
