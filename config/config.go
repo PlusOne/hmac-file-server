@@ -6,9 +6,8 @@ import (
 	"strings"
 	"path/filepath"
 
-	"github.com/shirou/gopsutil/v3/disk"      // Updated import
 	"github.com/spf13/viper"
-	"github.com/renz/hmac-file-server/utils"  // Added import for utils
+	"github.com/renz/hmac-file-server/utils"  // Corrected import path for utils
 )
 
 type ServerConfig struct {
@@ -251,6 +250,18 @@ func validateConfig(conf *Config) error {
 	file.Close()
 	if err := os.Remove(tempFilePath); err != nil {
 		return fmt.Errorf("no delete permission for StoragePath: %s", conf.Server.StoragePath)
+	}
+
+	// Validate Uploads ChunkSize
+	if _, err := utils.ParseSize(conf.Uploads.ChunkSize); err != nil {
+		return fmt.Errorf("invalid Uploads.ChunkSize '%s': %w", conf.Uploads.ChunkSize, err)
+	}
+
+	// Validate Downloads ChunkSize
+	if conf.Downloads.ChunkedDownloadsEnabled {
+		if _, err := utils.ParseSize(conf.Downloads.ChunkSize); err != nil {
+			return fmt.Errorf("invalid Downloads.ChunkSize '%s': %w", conf.Downloads.ChunkSize, err)
+		}
 	}
 
 	// DeduplicationEnabled is a boolean; no additional validation needed

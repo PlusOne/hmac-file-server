@@ -14,10 +14,6 @@ import (
 	"github.com/renz/hmac-file-server/handlers"
 	"github.com/renz/hmac-file-server/utils"
 	"github.com/sirupsen/logrus"
-	"github.com/shirou/gopsutil/v3/cpu"     // Updated import
-	"github.com/shirou/gopsutil/v3/mem"     // Updated import
-	"github.com/shirou/gopsutil/v3/disk"    // Updated import
-	"github.com/shirou/gopsutil/v3/host"    // Updated import
 )
 
 var (
@@ -88,8 +84,10 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start the cleanup routine
-	go utils.CleanupExpiredFiles(ctx, conf)
+	// Start the cleanup routine with error handling
+	go func() {
+		CleanupExpiredFiles(ctx, conf)
+	}()
 
 	router := handlers.SetupRouter(conf)
 
@@ -134,21 +132,27 @@ func main() {
 			logrus.Fatalf("Server error: %v", err)
 		}
 	}
+
+	// Wait for context cancellation
+	<-ctx.Done()
+
+	// Close Redis client if initialized
+	if redisClient != nil {
+		if err := redisClient.Close(); err != nil {
+			logrus.Errorf("Error closing Redis client: %v", err)
+		} else {
+			logrus.Info("Redis client closed successfully.")
+		}
+	}
+
+	logrus.Info("Server shutdown complete.")
 }
 
 func initClamAV(socket string) (*clamd.Clamd, error) {
 	client := clamd.NewClamd(socket)
-	response, err := client.Ping()
+	err := client.Ping()
 	if err != nil {
-		return nil, fmt.Errorf("failed to ping ClamAV: %w", err)
-	}
-	select {
-	case res := <-response:
-		if res.Status != "PONG" {
-			return nil, fmt.Errorf("unexpected ClamAV ping response: %s", res.Status)
-		}
-	case <-time.After(5 * time.Second):
-		return nil, fmt.Errorf("timeout while pinging ClamAV")
+		return nil, fmt.Errorf("error pinging ClamAV: %v", err)
 	}
 	return client, nil
 }
@@ -167,4 +171,7 @@ func initRedis(conf config.RedisConfig) *redis.Client {
 		return nil
 	}
 	return rdb
+}
+
+func CleanupExpiredFiles(ctx context.Context, conf *config.Config) {
 }

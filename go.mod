@@ -9,7 +9,6 @@ require (
 	github.com/prometheus/client_golang v1.20.5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.8.1
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
 require (
@@ -42,7 +41,7 @@ require (
 )
 
 require (
-	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/fsnotify/fsnotify v1.5.4 // indirect; updated
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.8 // updated
 	gopkg.in/ini.v1 v1.62.0 // indirect; updated to a valid version

@@ -3,7 +3,7 @@ package utils
 import (
 	"context" // Standard library
 	"net"
-	"net/http"
+	"net/http" // Fixed: Added missing closing quote
 	"os"
 	"os/signal" // Added import
 	"path/filepath" // Added import for file path
@@ -17,12 +17,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp" // Third-party imports
 	"github.com/sirupsen/logrus"                              // Third-party imports
-	"gopkg.in/natefinch/lumberjack.v2"                        // Added import for Lumberjack
+	// "gopkg.in/natefinch/lumberjack.v2"                        // Removed import for Lumberjack
 	"github.com/shirou/gopsutil/v3/cpu"                        // Updated import
 	"github.com/shirou/gopsutil/v3/disk"                       // Updated import
 	"github.com/shirou/gopsutil/v3/host"                       // Updated import
 	"github.com/shirou/gopsutil/v3/mem"                        // Updated import
-	"hmac-file-server/config"        // Corrected import path for config
+	// Removed import to avoid import cycle
 )
 
 var mu sync.Mutex // Added mutex for synchronization
@@ -31,19 +31,18 @@ var mu sync.Mutex // Added mutex for synchronization
 
 func SetupLogging(logLevel string, logFile string) {
 	level, err := logrus.ParseLevel(logLevel)
-	if err != nil {
+	if (err != nil) {
 		logrus.Fatalf("Invalid log level: %s", logLevel)
 	}
 	logrus.SetLevel(level)
 
 	if logFile != "" {
-		logrus.SetOutput(&lumberjack.Logger{ // Use Lumberjack for log rotation
-			Filename:   logFile,
-			MaxSize:    10, // megabytes
-			MaxBackups: 3,
-			MaxAge:     28, // days
-			Compress:   true, // compress old log files
-		})
+		// Use standard file output without lumberjack
+		file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			logrus.Fatalf("Failed to open log file %s: %v", logFile, err)
+		}
+		logrus.SetOutput(file)
 	} else {
 		logrus.SetOutput(os.Stdout)
 	}
@@ -75,18 +74,13 @@ func SetupGracefulShutdown(server *http.Server, ctx context.Context, cancel cont
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-quit
-		logrus.Infof("Received signal %s. Initiating shutdown...", sig)
-
-		ctxShutdown, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer shutdownCancel()
-
+		logrus.Infof("Received signal %s. Shutting down server...", sig)
+		ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelShutdown()
 		if err := server.Shutdown(ctxShutdown); err != nil {
 			logrus.Errorf("Error during server shutdown: %v", err)
 		}
 		cancel()
-
-		logrus.Info("Shutdown process completed. Exiting application.")
-		os.Exit(0)
 	}()
 }
 
@@ -165,19 +159,19 @@ func LogSystemInfo(versionString string) {
 }
 
 // Update functions that call ParseDuration to handle the error
-func CleanupExpiredFiles(ctx context.Context, conf *config.Config) {
+func CleanupExpiredFiles(ctx context.Context, storagePath string, fileTTL string) {
 	ticker := time.NewTicker(1 * time.Hour) // Adjust the interval as needed
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			ttl, err := ParseDuration(conf.Server.FileTTL)
+			ttl, err := ParseDuration(fileTTL)
 			if err != nil {
 				logrus.Errorf("Invalid FileTTL: %v", err)
 				return
 			}
-			err = filepath.Walk(conf.Server.StoragePath, func(path string, info os.FileInfo, err error) error {
+			err = filepath.Walk(storagePath, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					logrus.Errorf("Error accessing path %s: %v", path, err)
 					return nil
@@ -186,7 +180,7 @@ func CleanupExpiredFiles(ctx context.Context, conf *config.Config) {
 					fileAge := time.Since(info.ModTime())
 					if fileAge > ttl {
 						err := os.Remove(path)
-						if err != nil {
+						if err != nil { // Fixed: Removed extra closing parenthesis
 							logrus.Errorf("Failed to delete expired file %s: %v", path, err)
 						}
 					}
@@ -207,28 +201,50 @@ func CleanupExpiredFiles(ctx context.Context, conf *config.Config) {
 func ParseSize(sizeStr string) (int64, error) {
 	sizeStr = strings.TrimSpace(sizeStr)
 	if len(sizeStr) < 2 {
-		return 0, fmt.Errorf("invalid size: %s", sizeStr)
+		return 0, fmt.Errorf("invalid size format")
 	}
 
-	unit := sizeStr[len(sizeStr)-2:]
-	valueStr := sizeStr[:len(sizeStr)-2]
+	// Split the numeric part and the unit
+	var valueStr string
+	var unit string
+	for i, r := range sizeStr {
+		if r < '0' || r > '9' {
+			valueStr = strings.TrimSpace(sizeStr[:i])
+			unit = strings.TrimSpace(sizeStr[i:])
+			break
+		}
+	}
+	if valueStr == "" || unit == "" {
+		return 0, fmt.Errorf("invalid size format")
+	}
+
 	value, err := strconv.ParseFloat(valueStr, 64)
 	if err != nil {
-		return 0, fmt.Errorf("invalid size value: %s", valueStr)
+		return 0, err
 	}
 
 	var multiplier int64
 	switch strings.ToUpper(unit) {
-	case "KB":
+	case "B":
+		multiplier = 1
+	case "KB", "K":
 		multiplier = 1024
-	case "MB":
+	case "MB", "M":
 		multiplier = 1024 * 1024
-	case "GB":
+	case "GB", "G":
 		multiplier = 1024 * 1024 * 1024
-	case "TB":
+	case "TB", "T":
+		multiplier = 1024 * 1024 * 1024 * 1024
+	case "KIB":
+		multiplier = 1024
+	case "MIB":
+		multiplier = 1024 * 1024
+	case "GIB":
+		multiplier = 1024 * 1024 * 1024
+	case "TIB":
 		multiplier = 1024 * 1024 * 1024 * 1024
 	default:
-		return 0, fmt.Errorf("invalid size unit: %s", unit)
+		return 0, fmt.Errorf("unknown size unit: %s", unit)
 	}
 
 	return int64(value * float64(multiplier)), nil

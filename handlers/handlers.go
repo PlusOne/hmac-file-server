@@ -25,10 +25,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/dutchcoders/go-clamd"
 	"github.com/patrickmn/go-cache"
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/host"
 )
 
 var (
@@ -429,6 +425,8 @@ func scanFileWithClamAV(filePath string) (*clamd.ScanResult, error) {
 
 // checkFileExists checks if a file with the given hash exists.
 func checkFileExists(hash string, conf *config.Config) (bool, string) {
+	mu.Lock()
+	defer mu.Unlock()
 	if conf.Redis.RedisEnabled && RedisClient != nil {
 		// Check in Redis
 		existingFilePath, err := RedisClient.Get(redisCtx, hash).Result()
@@ -450,6 +448,8 @@ func checkFileExists(hash string, conf *config.Config) (bool, string) {
 
 // storeFileHash stores the file hash and path.
 func storeFileHash(hash string, filePath string, conf *config.Config) {
+	mu.Lock()
+	defer mu.Unlock()
 	if conf.Redis.RedisEnabled && RedisClient != nil {
 		// Store in Redis
 		err := RedisClient.Set(redisCtx, hash, filePath, 0).Err()
