@@ -13,7 +13,6 @@ import (
 	"time"
 	"fmt" // Added import for error formatting
 	"strconv" // Added import for size parsing
-	"sync" // Added import for synchronization
 
 	"github.com/prometheus/client_golang/prometheus/promhttp" // Third-party imports
 	"github.com/sirupsen/logrus"                              // Third-party imports
@@ -24,8 +23,6 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"                        // Updated import
 	// Removed import to avoid import cycle
 )
-
-var mu sync.Mutex // Added mutex for synchronization
 
 // ...existing code...
 
@@ -58,8 +55,13 @@ func PrometheusHandler() http.Handler {
 
 func GetClientIP(r *http.Request) string {
 	clientIP := r.Header.Get("X-Real-IP")
-	if (clientIP == "") {
-		clientIP, _, _ = net.SplitHostPort(r.RemoteAddr)
+	if clientIP == "" {
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			// Fallback to RemoteAddr if parsing fails
+			return r.RemoteAddr
+		}
+		clientIP = host
 	}
 	return clientIP
 }
@@ -131,31 +133,51 @@ func LogSystemInfo(versionString string) {
 	logrus.Infof("Number of CPUs: %d", runtime.NumCPU())
 	logrus.Infof("Go Version: %s", runtime.Version())
 
-	v, _ := mem.VirtualMemory()
-	logrus.Infof("Total Memory: %v MB", v.Total/1024/1024)
-	logrus.Infof("Free Memory: %v MB", v.Free/1024/1024)
-	logrus.Infof("Used Memory: %v MB", v.Used/1024/1024)
-
-	cpuInfo, _ := cpu.Info()
-	for _, info := range cpuInfo {
-		logrus.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		logrus.Errorf("Failed to get virtual memory info: %v", err)
+	} else {
+		logrus.Infof("Total Memory: %v MB", v.Total/1024/1024)
+		logrus.Infof("Free Memory: %v MB", v.Free/1024/1024)
+		logrus.Infof("Used Memory: %v MB", v.Used/1024/1024)
 	}
 
-	partitions, _ := disk.Partitions(false)
-	for _, partition := range partitions {
-		usage, _ := disk.Usage(partition.Mountpoint)
-		logrus.Infof("Disk Mountpoint: %s, Total: %v GB, Free: %v GB, Used: %v GB",
-			partition.Mountpoint, usage.Total/1024/1024/1024, usage.Free/1024/1024/1024, usage.Used/1024/1024/1024)
+	cpuInfo, err := cpu.Info()
+	if err != nil {
+		logrus.Errorf("Failed to get CPU info: %v", err)
+	} else {
+		for _, info := range cpuInfo {
+			logrus.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
+		}
 	}
 
-	hInfo, _ := host.Info()
-	logrus.Infof("Hostname: %s", hInfo.Hostname)
-	logrus.Infof("Uptime: %v seconds", hInfo.Uptime)
-	logrus.Infof("Boot Time: %v", time.Unix(int64(hInfo.BootTime), 0))
-	logrus.Infof("Platform: %s", hInfo.Platform)
-	logrus.Infof("Platform Family: %s", hInfo.PlatformFamily)
-	logrus.Infof("Platform Version: %s", hInfo.PlatformVersion)
-	logrus.Infof("Kernel Version: %s", hInfo.KernelVersion)
+	partitions, err := disk.Partitions(false)
+	if err != nil {
+		logrus.Errorf("Failed to get disk partitions: %v", err)
+	} else {
+		for _, partition := range partitions {
+			usage, err := disk.Usage(partition.Mountpoint)
+			if err != nil {
+				logrus.Errorf("Failed to get disk usage for %s: %v", partition.Mountpoint, err)
+				continue
+			}
+			logrus.Infof("Disk Mountpoint: %s, Total: %v GB, Free: %v GB, Used: %v GB",
+				partition.Mountpoint, usage.Total/1024/1024/1024, usage.Free/1024/1024/1024, usage.Used/1024/1024/1024)
+		}
+	}
+
+	hInfo, err := host.Info()
+	if err != nil {
+		logrus.Errorf("Failed to get host info: %v", err)
+	} else {
+		logrus.Infof("Hostname: %s", hInfo.Hostname)
+		logrus.Infof("Uptime: %v seconds", hInfo.Uptime)
+		logrus.Infof("Boot Time: %v", time.Unix(int64(hInfo.BootTime), 0))
+		logrus.Infof("Platform: %s", hInfo.Platform)
+		logrus.Infof("Platform Family: %s", hInfo.PlatformFamily)
+		logrus.Infof("Platform Version: %s", hInfo.PlatformVersion)
+		logrus.Infof("Kernel Version: %s", hInfo.KernelVersion)
+	}
 }
 
 // Update functions that call ParseDuration to handle the error
@@ -202,22 +224,10 @@ func ParseSize(sizeStr string) (int64, error) {
 	sizeStr = strings.TrimSpace(sizeStr)
 	if len(sizeStr) < 2 {
 		return 0, fmt.Errorf("invalid size format")
-	}
+	} // Added missing closing brace
 
-	// Split the numeric part and the unit
-	var valueStr string
-	var unit string
-	for i, r := range sizeStr {
-		if r < '0' || r > '9' {
-			valueStr = strings.TrimSpace(sizeStr[:i])
-			unit = strings.TrimSpace(sizeStr[i:])
-			break
-		}
-	}
-	if valueStr == "" || unit == "" {
-		return 0, fmt.Errorf("invalid size format")
-	}
-
+	unit := sizeStr[len(sizeStr)-2:]
+	valueStr := sizeStr[:len(sizeStr)-2]
 	value, err := strconv.ParseFloat(valueStr, 64)
 	if err != nil {
 		return 0, err
@@ -225,23 +235,13 @@ func ParseSize(sizeStr string) (int64, error) {
 
 	var multiplier int64
 	switch strings.ToUpper(unit) {
-	case "B":
-		multiplier = 1
-	case "KB", "K":
+	case "KB":
 		multiplier = 1024
-	case "MB", "M":
+	case "MB":
 		multiplier = 1024 * 1024
-	case "GB", "G":
+	case "GB":
 		multiplier = 1024 * 1024 * 1024
-	case "TB", "T":
-		multiplier = 1024 * 1024 * 1024 * 1024
-	case "KIB":
-		multiplier = 1024
-	case "MIB":
-		multiplier = 1024 * 1024
-	case "GIB":
-		multiplier = 1024 * 1024 * 1024
-	case "TIB":
+	case "TB":
 		multiplier = 1024 * 1024 * 1024 * 1024
 	default:
 		return 0, fmt.Errorf("unknown size unit: %s", unit)
