@@ -36,6 +36,18 @@ func main() {
 	// Initialize HMAC worker pool without using global variables
 	logrus.Infof("HMAC worker pool initialized with %d workers.", conf.Workers.NumWorkers)
 
+	// Initialize HMAC worker pool
+	HMACWorkerPool := make(chan struct{}, conf.Workers.NumWorkers) // Added initialization
+	for i := 0; i < conf.Workers.NumWorkers; i++ {
+		HMACWorkerPool <- struct{}{}
+	}
+
+	// Initialize ClamAV worker pool
+	ClamAVWorkerPool := make(chan struct{}, AutoAdjustClamAVWorkers()) // Added initialization
+	for i := 0; i < AutoAdjustClamAVWorkers(); i++ {
+		ClamAVWorkerPool <- struct{}{}
+	}
+
 	// Initialize ClamAV and Redis clients as needed
 	var redisClient *redis.Client
 

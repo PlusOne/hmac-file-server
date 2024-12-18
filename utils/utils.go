@@ -102,9 +102,9 @@ func ParseDuration(durationStr string) (time.Duration, error) {
 
 // ParseDurationOrDefault parses a duration string and returns the duration or a default value if parsing fails.
 func ParseDurationOrDefault(durationStr string, defaultDuration time.Duration) time.Duration {
-	duration, err := time.ParseDuration(durationStr)
+	duration, err := ParseDuration(durationStr)
 	if err != nil {
-		log.Printf("Invalid duration '%s', using default: %v", durationStr, defaultDuration)
+		logrus.Warnf("Invalid duration '%s', using default: %v", durationStr, defaultDuration)
 		return defaultDuration
 	}
 	return duration

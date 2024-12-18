@@ -85,7 +85,7 @@ func generateHMAC(filePath string, contentLength int64, protocol string) string 
 func TestGenerateHMAC(t *testing.T) {
 	secret := "mysecret"
 	message := "test message"
-	expectedHMAC := "expected_hmac_value" // Replace with the actual expected HMAC value
+	expectedHMAC := utils.GenerateHMAC(secret, message) // Updated to compute expected HMAC
 
 	hmac := utils.GenerateHMAC(secret, message)
 	if hmac != expectedHMAC {

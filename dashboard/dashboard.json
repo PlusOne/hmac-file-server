@@ -22,6 +22,17 @@
   "links": [],
   "panels": [
     {
+      "type": "graph",
+      "title": "HMAC Worker Pool",
+      "targets": [
+        {
+          "expr": "hmac_worker_pool_active",
+          "legendFormat": "Active Workers",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "fieldConfig": {
         "defaults": {},
         "overrides": []

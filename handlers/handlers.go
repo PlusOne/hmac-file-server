@@ -117,15 +117,25 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 }
 
 func handleDeduplication(storagePath, sha256Hash string, conf *config.Config) bool {
-	panic("unimplemented")
+	// Check if the file already exists
+	exists, existingPath := checkFileExists(sha256Hash, conf)
+	if exists {
+		// File already exists, remove the temp file
+		os.Remove(storagePath)
+		// Optionally, link to existing file
+		os.Link(existingPath, storagePath)
+		logrus.Infof("Deduplication: linked to existing file %s", existingPath)
+		return true
+	}
+	return false
 }
 
-func acquireWorker(HMACWorkerPool chan struct{}) {
-	HMACWorkerPool <- struct{}{}
+func acquireWorker(workerPool chan struct{}) {
+	workerPool <- struct{}{}
 }
 
-func releaseWorker(HMACWorkerPool chan struct{}) {
-	<-HMACWorkerPool
+func releaseWorker(workerPool chan struct{}) {
+	<-workerPool
 }
 
 var (

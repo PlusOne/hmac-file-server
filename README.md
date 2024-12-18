@@ -1,6 +1,36 @@
 # HMAC File Server
 
-// ...existing content...
+A secure file server implementing HMAC authentication.
+
+## Features
+
+- HMAC-based authentication
+- Chunked uploads and downloads
+- ClamAV scanning
+- Redis integration for caching
+- Prometheus metrics
+
+## Installation
+
+```bash
+go build -o hmac-file-server ./cmd/server
+```
+
+## Configuration
+
+See [config.toml](./config/config.toml) for configuration options.
+
+## Usage
+
+```bash
+./hmac-file-server -config=config.toml
+```
+
+## Testing
+
+```bash
+go test ./...
+```
 
 ## ClamAV Virus Scanning
 
