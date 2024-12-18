@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
+	"mime"
 
 	// "encoding/json"
 	"fmt"
@@ -38,81 +41,118 @@ var (
 // HTTP Handlers
 
 func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
-    acquireWorker(HMACWorkerPool)
-    defer releaseWorker(HMACWorkerPool)
+	acquireWorker(HMACWorkerPool)
+	defer releaseWorker(HMACWorkerPool)
 
-    queryParams := r.URL.Query()
-    absFilename := queryParams.Get("file")
-    if absFilename == "" {
-        http.Error(w, "File parameter is missing", http.StatusBadRequest)
-        return
-    }
+	queryParams := r.URL.Query()
+	absFilename := queryParams.Get("file")
+	if absFilename == "" {
+		http.Error(w, "File parameter is missing", http.StatusBadRequest)
+		return
+	}
 
-    storagePath := getStoragePath(absFilename, conf)
-    logrus.Infof("Using storage path: %s", storagePath)
+	storagePath := getStoragePath(absFilename, conf)
+	logrus.Infof("Using storage path: %s", storagePath)
 
-    if !validateHMAC() {
-        http.Error(w, "Invalid HMAC", http.StatusForbidden)
-        return
-    }
+	// HMAC validation
+	var protocolVersion string
+	if queryParams.Get("v2") != "" {
+		protocolVersion = "v2"
+	} else if queryParams.Get("token") != "" {
+		protocolVersion = "token"
+	} else if queryParams.Get("v") != "" {
+		protocolVersion = "v"
+	} else {
+		logrus.Warn("No HMAC attached to URL.")
+		http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
+		return
+	}
 
-    if !isExtensionAllowed(storagePath) {
-        http.Error(w, "Invalid file extension", http.StatusBadRequest)
-        return
-    }
+	mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
 
-    minFreeBytes, err := parseSize(conf.Server.MinFreeBytes)
-    if err != nil {
-        logrus.Fatalf("Invalid MinFreeBytes: %v", err)
-    }
-    if err := checkStorageSpace(conf.Server.StoragePath, minFreeBytes); err != nil {
-        http.Error(w, "Not enough free space", http.StatusInsufficientStorage)
-        return
-    }
+	if protocolVersion == "v" {
+		mac.Write([]byte(storagePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
+	} else {
+		contentType := mime.TypeByExtension(filepath.Ext(storagePath))
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		mac.Write([]byte(storagePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType))
+	}
 
-    sha256Hash, tempFilePath, err := saveUploadedFile(r, conf)
-    if err != nil {
-        http.Error(w, "Internal server error", http.StatusInternalServerError)
-        return
-    }
-    logrus.Infof("File uploaded and saved to temp path: %s", tempFilePath)
+	calculatedMAC := mac.Sum(nil)
 
-    if conf.Server.DeduplicationEnabled {
-        if handleDeduplication(storagePath, sha256Hash, conf) {
-            http.Error(w, "File already exists", http.StatusConflict)
-            return
-        }
-    }
+	providedMACHex := queryParams.Get(protocolVersion)
+	providedMAC, err := hex.DecodeString(providedMACHex)
+	if err != nil {
+		logrus.Warn("Invalid MAC encoding")
+		http.Error(w, "Invalid MAC encoding", http.StatusForbidden)
+		return
+	}
 
-    if err := os.Rename(tempFilePath, storagePath); err != nil {
-        http.Error(w, "Internal server error", http.StatusInternalServerError)
-        return
-    }
+	if !hmac.Equal(calculatedMAC, providedMAC) {
+		logrus.Warn("Invalid HMAC")
+		http.Error(w, "Invalid HMAC", http.StatusForbidden)
+		return
+	}
 
-    storeFileHash(sha256Hash, storagePath, conf)
+	if !isExtensionAllowed(storagePath) {
+		http.Error(w, "Invalid file extension", http.StatusBadRequest)
+		return
+	}
 
-    if conf.ClamAV.ClamAVEnabled {
-        ext := filepath.Ext(storagePath)
-        if shouldScanExtension(ext, conf.ClamAV.ScanFileExtensions) {
-            if !scanFile(storagePath) {
-                http.Error(w, "Uploaded file is infected", http.StatusBadRequest)
-                os.Remove(storagePath)
-                return
-            }
-            logrus.Infof("ClamAV scan passed for file: %s", storagePath)
-        }
-    }
+	minFreeBytes, err := parseSize(conf.Server.MinFreeBytes)
+	if err != nil {
+		logrus.Fatalf("Invalid MinFreeBytes: %v", err)
+	}
+	if err := checkStorageSpace(conf.Server.StoragePath, minFreeBytes); err != nil {
+		http.Error(w, "Not enough free space", http.StatusInsufficientStorage)
+		return
+	}
 
-    if conf.ISO.Enabled {
-        go func() {
-            if err := createISO(storagePath, conf.ISO.Charset); err != nil {
-                logrus.Errorf("Failed to create ISO: %v", err)
-            }
-        }()
-    }
+	sha256Hash, tempFilePath, err := saveUploadedFile(r, conf)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	logrus.Infof("File uploaded and saved to temp path: %s", tempFilePath)
 
-    w.WriteHeader(http.StatusOK)
-    w.Write([]byte("File uploaded successfully"))
+	if conf.Server.DeduplicationEnabled {
+		if handleDeduplication(storagePath, sha256Hash, conf) {
+			http.Error(w, "File already exists", http.StatusConflict)
+			return
+		}
+	}
+
+	if err := os.Rename(tempFilePath, storagePath); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	storeFileHash(sha256Hash, storagePath, conf)
+
+	if conf.ClamAV.ClamAVEnabled {
+		ext := filepath.Ext(storagePath)
+		if shouldScanExtension(ext, conf.ClamAV.ScanFileExtensions) {
+			if !scanFile(storagePath) {
+				http.Error(w, "Uploaded file is infected", http.StatusBadRequest)
+				os.Remove(storagePath)
+				return
+			}
+			logrus.Infof("ClamAV scan passed for file: %s", storagePath)
+		}
+	}
+
+	if conf.ISO.Enabled {
+		go func() {
+			if err := createISO(storagePath, conf.ISO.Charset); err != nil {
+				logrus.Errorf("Failed to create ISO: %v", err)
+			}
+		}()
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("File uploaded successfully"))
 }
 
 func handleDeduplication(storagePath, sha256Hash string, conf *config.Config) bool {
@@ -218,10 +258,6 @@ func scanFileWithClamAV(filePath string) (*clamd.ScanResult, error) {
     }
 }
 
-func validateHMAC() bool {
-    // Placeholder implementation of HMAC validation
-    return true
-}
 
 func saveUploadedFile(r *http.Request, conf *config.Config) (string, string, error) {
     file, _, err := r.FormFile("file")
