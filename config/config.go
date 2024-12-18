@@ -3,11 +3,12 @@ package config
 import (
 	"fmt"
 	"os"
-	"strings"
 	"path/filepath"
+	"strings"
 
+	"github.com/renz/hmac-file-server/utils" // Corrected import path for utils
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"github.com/renz/hmac-file-server/utils"  // Corrected import path for utils
 )
 
 type ServerConfig struct {
@@ -133,7 +134,7 @@ func setDefaults() {
 	viper.SetDefault("server.LogFile", "")
 	viper.SetDefault("server.MetricsEnabled", true)
 	viper.SetDefault("server.MetricsPort", "9090")
-	viper.SetDefault("server.FileTTL", "8760h")
+	viper.SetDefault("server.FileTTL", "365d") // Updated to use 'd' for days
 	viper.SetDefault("server.MinFreeBytes", "100MB")
 	viper.SetDefault("server.DeduplicationEnabled", true)
 	viper.SetDefault("server.AutoAdjustWorkers", true)
@@ -235,7 +236,10 @@ func validateConfig(conf *Config) error {
 
 	fileInfo, err := os.Stat(conf.Server.StoragePath)
 	if os.IsNotExist(err) {
-		return fmt.Errorf("StoragePath does not exist: %s", conf.Server.StoragePath)
+		if err := os.MkdirAll(conf.Server.StoragePath, 0755); err != nil {
+			return fmt.Errorf("failed to create StoragePath: %w", err)
+		}
+		logrus.Infof("Created StoragePath: %s", conf.Server.StoragePath)
 	} else if err != nil {
 		return fmt.Errorf("error accessing StoragePath: %w", err)
 	}

@@ -2,11 +2,13 @@ package utils
 
 import (
 	"context" // Standard library
+	"errors"  // Added import for error handling
 	"fmt"     // Added import for error formatting
 	"net"
 	"net/http" // Fixed: Added missing closing quote
 	"os/signal"     // Added import
 	"path/filepath" // Added import for file path
+	"regexp"        // Added import for regex
 	"runtime"       // Added import for runtime info
 	"strconv"       // Added import for size parsing
 	"strings"
@@ -90,12 +92,63 @@ func SetupGracefulShutdown(server *http.Server, ctx context.Context, cancel cont
 	}()
 }
 
-// Modify ParseDuration to return an error
-func ParseDuration(durationStr string) (time.Duration, error) {
-	duration, err := time.ParseDuration(durationStr)
-	if (err != nil) {
-		return 0, fmt.Errorf("invalid duration '%s': %w", durationStr, err)
+// ParseDuration extends time.ParseDuration to support 'd' (days) and 'y' (years).
+func ParseDuration(s string) (time.Duration, error) {
+	// Regular expression to match durations with optional 'd' and 'y' units
+	re := regexp.MustCompile(`(?i)^((?P<years>\d+)y)?((?P<days>\d+)d)?((?P<hours>\d+)h)?((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?$`)
+	match := re.FindStringSubmatch(s)
+	if match == nil {
+		return 0, errors.New("invalid duration format")
 	}
+
+	duration := time.Duration(0)
+	paramsMap := make(map[string]string)
+	for i, name := range re.SubexpNames() {
+		if i != 0 && name != "" && match[i] != "" {
+			paramsMap[name] = match[i]
+		}
+	}
+
+	if yearsStr, ok := paramsMap["years"]; ok {
+		years, err := strconv.Atoi(yearsStr)
+		if err != nil {
+			return 0, err
+		}
+		duration += time.Duration(years) * 365 * 24 * time.Hour
+	}
+
+	if daysStr, ok := paramsMap["days"]; ok {
+		days, err := strconv.Atoi(daysStr)
+		if err != nil {
+			return 0, err
+		}
+		duration += time.Duration(days) * 24 * time.Hour
+	}
+
+	if hoursStr, ok := paramsMap["hours"]; ok {
+		hours, err := strconv.Atoi(hoursStr)
+		if err != nil {
+			return 0, err
+		}
+		duration += time.Duration(hours) * time.Hour
+	}
+
+	if minutesStr, ok := paramsMap["minutes"]; ok {
+		minutes, err := strconv.Atoi(minutesStr)
+		if err != nil {
+			return 0, err
+		}
+		duration += time.Duration(minutes) * time.Minute
+	}
+
+	if secondsStr, ok := paramsMap["seconds"]; ok {
+		seconds, err := strconv.Atoi(secondsStr)
+		if err != nil {
+			return 0, err
+		}
+		duration += time.Duration(seconds) * time.Second
+	}
+
 	return duration, nil
 }
 

@@ -20,6 +20,18 @@ go build -o hmac-file-server ./cmd/server
 
 See [config.toml](./config/config.toml) for configuration options.
 
+### FileTTL
+
+The `FileTTL` parameter defines the time-to-live for files on the server. It supports the following units:
+
+- `y` for years (e.g., `1y` for one year)
+- `d` for days (e.g., `365d` for 365 days)
+- `h` for hours
+- `m` for minutes
+- `s` for seconds
+
+**Example:**
+
 ## Usage
 
 ```bash
