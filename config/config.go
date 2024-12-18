@@ -14,6 +14,7 @@ type ServerConfig struct {
 	ListenPort           string `mapstructure:"ListenPort"`
 	UnixSocket           bool   `mapstructure:"UnixSocket"`
 	StoragePath          string `mapstructure:"StoragePath"`
+	TempPath             string `json:"tempPath"`
 	LogLevel             string `mapstructure:"LogLevel"`
 	LogFile              string `mapstructure:"LogFile"`
 	MetricsEnabled       bool   `mapstructure:"MetricsEnabled"`
@@ -125,27 +126,34 @@ func LoadConfig(configFile string) (*Config, error) {
 }
 
 func setDefaults() {
-	viper.SetDefault("server.ListenPort", "8080")
-	viper.SetDefault("server.UnixSocket", false)
-	viper.SetDefault("server.StoragePath", "./uploads")
-	viper.SetDefault("server.LogLevel", "info")
-	viper.SetDefault("server.LogFile", "")
-	viper.SetDefault("server.MetricsEnabled", true)
-	viper.SetDefault("server.MetricsPort", "9090")
-	viper.SetDefault("server.FileTTL", "8760h")
-	viper.SetDefault("server.MinFreeBytes", "100MB")
-	viper.SetDefault("server.DeduplicationEnabled", true)
-	viper.SetDefault("server.AutoAdjustWorkers", true)
-	viper.SetDefault("server.NetworkEvents", false)
+	// Organized default settings for clarity
+	viper.SetDefault("server", map[string]interface{}{
+		"ListenPort":           "8080",
+		"UnixSocket":           false,
+		"StoragePath":          "./uploads",
+		"LogLevel":             "info",
+		"LogFile":              "",
+		"MetricsEnabled":       true,
+		"MetricsPort":          "9090",
+		"FileTTL":              "8760h",
+		"MinFreeBytes":         "100MB",
+		"DeduplicationEnabled": true,
+		"AutoAdjustWorkers":    true,
+		"NetworkEvents":        false,
+	})
 
-	viper.SetDefault("timeouts.ReadTimeout", "4800s")
-	viper.SetDefault("timeouts.WriteTimeout", "4800s")
-	viper.SetDefault("timeouts.IdleTimeout", "65s")
+	viper.SetDefault("timeouts", map[string]interface{}{
+		"ReadTimeout":  "4800s",
+		"WriteTimeout": "4800s",
+		"IdleTimeout":  "65s",
+	})
 
 	viper.SetDefault("security.Secret", "changeme")
 
-	viper.SetDefault("versioning.EnableVersioning", false)
-	viper.SetDefault("versioning.MaxVersions", 1)
+	viper.SetDefault("versioning", map[string]interface{}{
+		"EnableVersioning": false,
+		"MaxVersions":      1,
+	})
 
 	viper.SetDefault("uploads.ResumableUploadsEnabled", false)
 	viper.SetDefault("uploads.ChunkedUploadsEnabled", true)
@@ -252,15 +260,17 @@ func validateConfig(conf *Config) error {
 		return fmt.Errorf("no delete permission for StoragePath: %s", conf.Server.StoragePath)
 	}
 
-	// Validate Uploads ChunkSize
-	if _, err := utils.ParseSize(conf.Uploads.ChunkSize); err != nil {
-		return fmt.Errorf("invalid Uploads.ChunkSize '%s': %w", conf.Uploads.ChunkSize, err)
+	// Consolidated validation for Uploads.ChunkSize
+	if conf.Uploads.ChunkedUploadsEnabled {
+		if _, err := utils.ParseSize(conf.Uploads.ChunkSize); err != nil {
+			return fmt.Errorf("invalid uploads.ChunkSize '%s': %w", conf.Uploads.ChunkSize, err)
+		}
 	}
 
-	// Validate Downloads ChunkSize
+	// Consolidated validation for Downloads.ChunkSize
 	if conf.Downloads.ChunkedDownloadsEnabled {
 		if _, err := utils.ParseSize(conf.Downloads.ChunkSize); err != nil {
-			return fmt.Errorf("invalid Downloads.ChunkSize '%s': %w", conf.Downloads.ChunkSize, err)
+			return fmt.Errorf("invalid downloads.ChunkSize '%s': %w", conf.Downloads.ChunkSize, err)
 		}
 	}
 

@@ -2,26 +2,31 @@ package utils
 
 import (
 	"context" // Standard library
+	"fmt"     // Added import for error formatting
+	"log"
 	"net"
 	"net/http" // Fixed: Added missing closing quote
 	"os"
-	"os/signal" // Added import
+	"os/signal"     // Added import
 	"path/filepath" // Added import for file path
-	"runtime" // Added import for runtime info
+	"runtime"       // Added import for runtime info
+	"strconv"       // Added import for size parsing
 	"strings"
 	"syscall"
 	"time"
-	"fmt" // Added import for error formatting
-	"strconv" // Added import for size parsing
 
 	"github.com/prometheus/client_golang/prometheus/promhttp" // Third-party imports
 	"github.com/sirupsen/logrus"                              // Third-party imports
+
 	// "gopkg.in/natefinch/lumberjack.v2"                        // Removed import for Lumberjack
-	"github.com/shirou/gopsutil/v3/cpu"                        // Updated import
-	"github.com/shirou/gopsutil/v3/disk"                       // Updated import
-	"github.com/shirou/gopsutil/v3/host"                       // Updated import
-	"github.com/shirou/gopsutil/v3/mem"                        // Updated import
+	"github.com/shirou/gopsutil/v3/cpu"  // Updated import
+	"github.com/shirou/gopsutil/v3/disk" // Updated import
+	"github.com/shirou/gopsutil/v3/host" // Updated import
+	"github.com/shirou/gopsutil/v3/mem"  // Updated import
 	// Removed import to avoid import cycle
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 )
 
 // ...existing code...
@@ -89,10 +94,20 @@ func SetupGracefulShutdown(server *http.Server, ctx context.Context, cancel cont
 // Modify ParseDuration to return an error
 func ParseDuration(durationStr string) (time.Duration, error) {
 	duration, err := time.ParseDuration(durationStr)
-	if err != nil {
+	if (err != nil) {
 		return 0, fmt.Errorf("invalid duration '%s': %w", durationStr, err)
 	}
 	return duration, nil
+}
+
+// ParseDurationOrDefault parses a duration string and returns the duration or a default value if parsing fails.
+func ParseDurationOrDefault(durationStr string, defaultDuration time.Duration) time.Duration {
+	duration, err := time.ParseDuration(durationStr)
+	if err != nil {
+		log.Printf("Invalid duration '%s', using default: %v", durationStr, defaultDuration)
+		return defaultDuration
+	}
+	return duration
 }
 
 // AutoAdjustWorkers dynamically adjusts the number of HMAC workers based on system resources.
@@ -221,31 +236,69 @@ func CleanupExpiredFiles(ctx context.Context, storagePath string, fileTTL string
 
 // ParseSize parses a size string (e.g., "2TB", "100MB") and returns the size in bytes.
 func ParseSize(sizeStr string) (int64, error) {
-	sizeStr = strings.TrimSpace(sizeStr)
-	if len(sizeStr) < 2 {
-		return 0, fmt.Errorf("invalid size format")
-	} // Added missing closing brace
+    sizeStr = strings.TrimSpace(sizeStr)
+    if len(sizeStr) < 2 {
+        return 0, fmt.Errorf("invalid size: %s", sizeStr)
+    }
 
-	unit := sizeStr[len(sizeStr)-2:]
-	valueStr := sizeStr[:len(sizeStr)-2]
-	value, err := strconv.ParseFloat(valueStr, 64)
-	if err != nil {
-		return 0, err
-	}
+    unit := sizeStr[len(sizeStr)-2:]
+    valueStr := sizeStr[:len(sizeStr)-2]
+    value, err := strconv.ParseFloat(valueStr, 64)
+    if err != nil {
+        return 0, fmt.Errorf("invalid size value: %s", valueStr)
+    }
 
-	var multiplier int64
-	switch strings.ToUpper(unit) {
-	case "KB":
-		multiplier = 1024
-	case "MB":
-		multiplier = 1024 * 1024
-	case "GB":
-		multiplier = 1024 * 1024 * 1024
-	case "TB":
-		multiplier = 1024 * 1024 * 1024 * 1024
-	default:
-		return 0, fmt.Errorf("unknown size unit: %s", unit)
-	}
+    var multiplier int64
+    switch strings.ToUpper(unit) {
+    case "KB":
+        multiplier = 1024
+    case "MB":
+        multiplier = 1024 * 1024
+    case "GB":
+        multiplier = 1024 * 1024 * 1024
+    case "TB":
+        multiplier = 1024 * 1024 * 1024 * 1024
+    default:
+        return 0, fmt.Errorf("invalid size unit: %s", unit)
+    }
 
-	return int64(value * float64(multiplier)), nil
+    return int64(value * float64(multiplier)), nil
+}
+
+type HMACWorkerPool struct {
+    // Define necessary fields
+}
+
+func NewHMACWorkerPool() *HMACWorkerPool {
+    return &HMACWorkerPool{
+        // Initialize fields
+    }
+}
+
+// GenerateHMAC generates HMAC for a given secret and message.
+func GenerateHMAC(secret, message string) string {
+    mac := hmac.New(sha256.New, []byte(secret))
+    mac.Write([]byte(message))
+    return hex.EncodeToString(mac.Sum(nil))
+}
+
+// If utility functions are needed, implement them here.
+
+// Example:
+// func ParseDurationOrDefault(durStr string, defaultVal time.Duration) time.Duration {
+//     // ...implementation...
+// }
+
+// If no utility functions are required, consider deleting this file.
+
+// Example usage in handlers.go
+func ExampleUsage() {
+sizeStr := "100MB" // Example size string
+	size, err := ParseSize(sizeStr)
+if err != nil {
+    logrus.Errorf("Failed to parse size: %v", err)
+    return
+}
+logrus.Infof("Parsed size: %d bytes", size)
+// Use the parsed size (in bytes) as needed
 }

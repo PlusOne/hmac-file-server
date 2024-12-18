@@ -427,6 +427,17 @@
           "legendFormat": "__auto",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "uid": "bduehd5vqv1moa"
+          },
+          "editorMode": "code",
+          "expr": "hmac_up_down_duration_seconds",
+          "format": "time_series",
+          "legendFormat": "UpDownDuration",
+          "range": true,
+          "refId": "B"
         }
       ],
       "title": "HMAC Up/Down Duration",
@@ -489,6 +500,17 @@
           "legendFormat": "{{hmac-file-server}}",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "uid": "bduehd5vqv1moa"
+          },
+          "editorMode": "code",
+          "expr": "hmac_go_threads_total",
+          "format": "time_series",
+          "legendFormat": "GOThreads",
+          "range": true,
+          "refId": "C"
         }
       ],
       "title": "HMAC GO Threads",

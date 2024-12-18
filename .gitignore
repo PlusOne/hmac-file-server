@@ -10,3 +10,8 @@ hmac-file-server
 cmd/hmac-file-server.log
 config.toml
 oldcode.txt
+.idea/vcs.xml
+.idea/modules.xml
+.idea/hmac-file-server.iml
+.idea/.gitignore
+qodana.yaml
