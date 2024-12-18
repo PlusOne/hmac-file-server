@@ -17,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"sync" // Added import for synchronization
 
 	"github.com/go-redis/redis/v8"
 	"github.com/renz/hmac-file-server/config"
@@ -30,16 +31,15 @@ import (
 	"github.com/shirou/gopsutil/v3/host"   // Updated import
 )
 
-var RedisClient *redis.Client   // Redis client
-var InMemoryCache *cache.Cache  // In-memory cache for fallback
-var redisCtx = context.Background()
-
-// Add ClamAV client variable
-var ClamAVClient *clamd.Clamd
-
-// Add worker pools for HMAC and ClamAV processing
-var HMACWorkerPool chan struct{}
-var ClamAVWorkerPool chan struct{}
+var (
+	RedisClient    *redis.Client   // Redis client
+	InMemoryCache  *cache.Cache    // In-memory cache for fallback
+	redisCtx       = context.Background()
+	ClamAVClient   *clamd.Clamd    // ClamAV client variable
+	HMACWorkerPool chan struct{}   // Worker pool for HMAC processing
+	ClamAVWorkerPool chan struct{} // Worker pool for ClamAV processing
+	mu sync.Mutex // Added mutex for synchronization
+)
 
 func SetupRouter(conf *config.Config) http.Handler {
 	mux := http.NewServeMux()
