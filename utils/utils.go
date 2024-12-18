@@ -13,6 +13,7 @@ import (
 	"time"
 	"fmt" // Added import for error formatting
 	"strconv" // Added import for size parsing
+	"sync" // Added import for synchronization
 
 	"github.com/prometheus/client_golang/prometheus/promhttp" // Third-party imports
 	"github.com/sirupsen/logrus"                              // Third-party imports
@@ -23,6 +24,8 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"                        // Updated import
 	"github.com/renz/hmac-file-server/internal/config"        // Corrected import path for config
 )
+
+var mu sync.Mutex // Added mutex for synchronization
 
 // ...existing code...
 
