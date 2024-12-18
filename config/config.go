@@ -127,18 +127,18 @@ func setDefaults() {
 	viper.SetDefault("server.FileTTL", "8760h")
 	viper.SetDefault("server.MinFreeBytes", "100MB")
 	viper.SetDefault("server.AutoAdjustWorkers", true)
-	viper.SetDefault("server.NetworkEvents", true)
+	viper.SetDefault("server.NetworkEvents", false)
 
 	viper.SetDefault("timeouts.ReadTimeout", "4800s")
 	viper.SetDefault("timeouts.WriteTimeout", "4800s")
-	viper.SetDefault("timeouts.IdleTimeout", "4800s")
+	viper.SetDefault("timeouts.IdleTimeout", "65s")
 
 	viper.SetDefault("security.Secret", "changeme")
 
 	viper.SetDefault("versioning.EnableVersioning", false)
 	viper.SetDefault("versioning.MaxVersions", 1)
 
-	viper.SetDefault("uploads.ResumableUploadsEnabled", true)
+	viper.SetDefault("uploads.ResumableUploadsEnabled", false)
 	viper.SetDefault("uploads.ChunkedUploadsEnabled", true)
 	viper.SetDefault("uploads.ChunkSize", "8192")
 	viper.SetDefault("uploads.AllowedExtensions", []string{
