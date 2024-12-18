@@ -133,6 +133,7 @@ func setDefaults() {
 	viper.SetDefault("server.MetricsPort", "9090")
 	viper.SetDefault("server.FileTTL", "8760h")
 	viper.SetDefault("server.MinFreeBytes", "100MB")
+	viper.SetDefault("server.DeduplicationEnabled", true)
 	viper.SetDefault("server.AutoAdjustWorkers", true)
 	viper.SetDefault("server.NetworkEvents", false)
 
@@ -222,6 +223,8 @@ func validateConfig(conf *Config) error {
 		return fmt.Errorf("error accessing StoragePath: %w", err)
 
 	}
+
+	// DeduplicationEnabled is a boolean; no additional validation needed
 
 	// ...additional validations if necessary...
 

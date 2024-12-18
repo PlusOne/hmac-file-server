@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"io"
 	"mime"
 	"net/http"
 	"os"
@@ -14,7 +16,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"fmt"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/renz/hmac-file-server/config"
@@ -125,7 +126,49 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 		return
 	}
 
-	// ...existing file upload handling code...
+	// Compute SHA-256 hash of the uploaded file
+	hasher := sha256.New()
+	tee := io.TeeReader(r.Body, hasher)
+
+	file, err := os.Create(fileStorePath)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+	_, err = io.Copy(file, tee)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	sha256Hash := hex.EncodeToString(hasher.Sum(nil))
+
+	// Check if deduplication is enabled
+	if conf.Server.DeduplicationEnabled {
+		// Check if the hash exists in Redis
+		exists, err := RedisClient.Exists(redisCtx, sha256Hash).Result()
+		if err != nil {
+			logrus.Errorf("Redis error: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		if exists > 0 {
+			// File already exists, handle accordingly
+			logrus.Infof("Duplicate file detected: %s", sha256Hash)
+			http.Error(w, "File already exists", http.StatusConflict)
+			return
+		}
+
+		// Store the hash and file path in Redis
+		err = RedisClient.Set(redisCtx, sha256Hash, fileStorePath, 0).Err()
+		if err != nil {
+			logrus.Errorf("Failed to store hash in Redis: %v", err)
+			// Proceed without failing
+		}
+	}
+
+	// ...existing code to finalize the upload...
 }
 
 // isExtensionAllowed checks if the file extension is allowed.
