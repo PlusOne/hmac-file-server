@@ -3,7 +3,6 @@ package utils
 import (
 	"context" // Standard library
 	"fmt"     // Added import for error formatting
-	"log"
 	"net"
 	"net/http" // Fixed: Added missing closing quote
 	"os/signal"     // Added import

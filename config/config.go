@@ -13,16 +13,17 @@ import (
 type ServerConfig struct {
 	ListenPort           string `mapstructure:"ListenPort"`
 	UnixSocket           bool   `mapstructure:"UnixSocket"`
-	StoragePath          string `mapstructure:"StoragePath"`
+	StoragePath          string `mapstructure:"StoragePath" json:"storage_path"`
 	LogLevel             string `mapstructure:"LogLevel"`
 	LogFile              string `mapstructure:"LogFile"`
 	MetricsEnabled       bool   `mapstructure:"MetricsEnabled"`
 	MetricsPort          string `mapstructure:"MetricsPort"`
 	FileTTL              string `mapstructure:"FileTTL"`
-	MinFreeBytes         string `mapstructure:"MinFreeBytes"`
-	DeduplicationEnabled bool   `mapstructure:"DeduplicationEnabled"`
+	MinFreeBytes         string `mapstructure:"MinFreeBytes" json:"min_free_bytes"`
+	DeduplicationEnabled bool   `mapstructure:"DeduplicationEnabled" json:"deduplication_enabled"`
 	AutoAdjustWorkers    bool   `mapstructure:"AutoAdjustWorkers"`
 	NetworkEvents        bool   `mapstructure:"NetworkEvents"`
+	TempPath             string `json:"temp_path"`
 }
 
 type TimeoutConfig struct {

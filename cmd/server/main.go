@@ -24,6 +24,7 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("Error loading configuration: %v", err)
 	}
+	
 	logrus.Info("Configuration loaded successfully.")
 
 	utils.SetupLogging(conf.Server.LogLevel, conf.Server.LogFile)
@@ -43,8 +44,9 @@ func main() {
 	}
 
 	// Initialize ClamAV worker pool
-	ClamAVWorkerPool := make(chan struct{}, AutoAdjustClamAVWorkers()) // Added initialization
-	for i := 0; i < AutoAdjustClamAVWorkers(); i++ {
+	clamAVWorkers := AutoAdjustClamAVWorkers()
+	ClamAVWorkerPool := make(chan struct{}, clamAVWorkers) // Added initialization
+	for i := 0; i < clamAVWorkers; i++ {
 		ClamAVWorkerPool <- struct{}{}
 	}
 
@@ -117,6 +119,12 @@ func main() {
 	}
 
 	logrus.Info("Server shutdown complete.")
+}
+
+func AutoAdjustClamAVWorkers() int {
+	// Implement logic to determine the number of ClamAV workers
+	// For now, return a default value
+	return 5
 }
 
 func initClamAV(socket string) (*clamd.Clamd, error) {
