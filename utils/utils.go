@@ -173,7 +173,7 @@ func CleanupExpiredFiles(ctx context.Context, conf *config.Config) {
 				logrus.Errorf("Invalid FileTTL: %v", err)
 				return
 			}
-			err := filepath.Walk(conf.Server.StoragePath, func(path string, info os.FileInfo, err error) error {
+			err = filepath.Walk(conf.Server.StoragePath, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					logrus.Errorf("Error accessing path %s: %v", path, err)
 					return nil
