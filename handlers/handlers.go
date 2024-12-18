@@ -17,7 +17,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"sync" // Added import for synchronization
+	"sync"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/renz/hmac-file-server/config"
@@ -25,10 +25,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/dutchcoders/go-clamd"
 	"github.com/patrickmn/go-cache"
-	"github.com/shirou/gopsutil/v3/cpu"    // Updated import
-	"github.com/shirou/gopsutil/v3/mem"    // Updated import
-	"github.com/shirou/gopsutil/v3/disk"   // Updated import
-	"github.com/shirou/gopsutil/v3/host"   // Updated import
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/host"
 )
 
 var (
