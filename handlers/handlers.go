@@ -419,7 +419,7 @@ func scanFileWithClamAV(filePath string) (*clamd.ScanResult, error) {
 		if !ok {
 			return nil, fmt.Errorf("ClamAV scan channel closed unexpectedly")
 		}
-		return &scanResult, nil
+		return scanResult, nil
 	case <-time.After(60 * time.Second):
 		return nil, fmt.Errorf("ClamAV scan timed out for file: %s", filePath)
 	}
