@@ -6,19 +6,24 @@ import (
 	"net/http"
 	"os"
 	"os/signal" // Added import
+	"path/filepath" // Added import for file path
 	"runtime" // Added import for runtime info
 	"strings"
 	"syscall"
 	"time"
+	"fmt" // Added import for error formatting
 
 	"github.com/prometheus/client_golang/prometheus/promhttp" // Third-party imports
 	"github.com/sirupsen/logrus"                              // Third-party imports
 	"gopkg.in/natefinch/lumberjack.v2"                        // Added import for Lumberjack
-	"github.com/shirou/gopsutil/cpu"                          // Added import for CPU info
-	"github.com/shirou/gopsutil/disk"                         // Added import for disk info
-	"github.com/shirou/gopsutil/host"                         // Added import for host info
-	"github.com/shirou/gopsutil/mem"                          // Added import for memory info
+	"github.com/shirou/gopsutil/v3/cpu"                        // Updated import
+	"github.com/shirou/gopsutil/v3/disk"                       // Updated import
+	"github.com/shirou/gopsutil/v3/host"                       // Updated import
+	"github.com/shirou/gopsutil/v3/mem"                        // Updated import
+	"github.com/renz/hmac-file-server/config"                 // Added import for config
 )
+
+// ...existing code...
 
 func SetupLogging(logLevel string, logFile string) {
 	level, err := logrus.ParseLevel(logLevel)
@@ -50,7 +55,7 @@ func PrometheusHandler() http.Handler {
 
 func GetClientIP(r *http.Request) string {
 	clientIP := r.Header.Get("X-Real-IP")
-	if clientIP == "" {
+	if (clientIP == "") {
 		clientIP, _, _ = net.SplitHostPort(r.RemoteAddr)
 	}
 	return clientIP
@@ -81,36 +86,36 @@ func SetupGracefulShutdown(server *http.Server, ctx context.Context, cancel cont
 	}()
 }
 
-// ParseDuration parses a duration string and handles the error.
-func ParseDuration(durationStr string) time.Duration {
+// Modify ParseDuration to return an error
+func ParseDuration(durationStr string) (time.Duration, error) {
 	duration, err := time.ParseDuration(durationStr)
 	if err != nil {
-		logrus.Fatalf("Invalid duration: %s", durationStr)
+		return 0, fmt.Errorf("invalid duration '%s': %w", durationStr, err)
 	}
-	return duration
+	return duration, nil
 }
 
-// autoAdjustWorkers dynamically adjusts the number of workers based on system resources.
-func AutoAdjustWorkers() (int, int) {
-	v, _ := mem.VirtualMemory()
-	cpuCores, _ := cpu.Counts(true)
-
+// AutoAdjustWorkers dynamically adjusts the number of HMAC workers based on system resources.
+func AutoAdjustWorkers() int {
+	cpuCores := runtime.NumCPU()
 	numWorkers := cpuCores * 2
-	if v.Available < 2*1024*1024*1024 {
-		numWorkers = max(numWorkers/2, 1)
-	}
-	queueSize := numWorkers * 10
-
-	logrus.Infof("Auto-adjusting workers: NumWorkers=%d, UploadQueueSize=%d", numWorkers, queueSize)
-	return numWorkers, queueSize
+	logrus.Infof("Auto-adjusted HMAC workers: %d", numWorkers)
+	return numWorkers
 }
 
-// max returns the larger of x or y.
-func max(x, y int) int {
-	if x > y {
-		return x
+// AutoAdjustClamAVWorkers dynamically adjusts the number of ClamAV workers based on system resources with a minimum limit.
+func AutoAdjustClamAVWorkers() int {
+	cpuCores := runtime.NumCPU()
+	numWorkers := cpuCores / 2
+	if numWorkers < 1 {
+		numWorkers = 1
 	}
-	return y
+	maxWorkers := 16
+	if numWorkers > maxWorkers {
+		numWorkers = maxWorkers
+	}
+	logrus.Infof("Auto-adjusted ClamAV workers: %d", numWorkers)
+	return numWorkers
 }
 
 // logSystemInfo logs detailed system information.
@@ -153,4 +158,43 @@ func LogSystemInfo(versionString string) {
 	logrus.Infof("Platform Family: %s", hInfo.PlatformFamily)
 	logrus.Infof("Platform Version: %s", hInfo.PlatformVersion)
 	logrus.Infof("Kernel Version: %s", hInfo.KernelVersion)
+}
+
+// Update functions that call ParseDuration to handle the error
+func CleanupExpiredFiles(ctx context.Context, conf *config.Config) {
+	ticker := time.NewTicker(1 * time.Hour) // Adjust the interval as needed
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			ttl, err := ParseDuration(conf.Server.FileTTL)
+			if err != nil {
+				logrus.Errorf("Invalid FileTTL: %v", err)
+				return
+			}
+			err := filepath.Walk(conf.Server.StoragePath, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					logrus.Errorf("Error accessing path %s: %v", path, err)
+					return nil
+				}
+				if (!info.IsDir()) {
+					fileAge := time.Since(info.ModTime())
+					if fileAge > ttl {
+						err := os.Remove(path)
+						if err != nil {
+							logrus.Errorf("Failed to delete expired file %s: %v", path, err)
+						}
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				logrus.Errorf("Error during cleanup: %v", err)
+			}
+		case <-ctx.Done():
+			logrus.Info("CleanupExpiredFiles routine stopped.")
+			return
+		}
+	}
 }

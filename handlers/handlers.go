@@ -11,6 +11,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -21,10 +22,24 @@ import (
 	"github.com/renz/hmac-file-server/config"
 	"github.com/renz/hmac-file-server/utils"
 	"github.com/sirupsen/logrus"
+	"github.com/dutchcoders/go-clamd"
+	"github.com/patrickmn/go-cache"
+	"github.com/shirou/gopsutil/v3/cpu"    // Updated import
+	"github.com/shirou/gopsutil/v3/mem"    // Updated import
+	"github.com/shirou/gopsutil/v3/disk"   // Updated import
+	"github.com/shirou/gopsutil/v3/host"   // Updated import
 )
 
-var RedisClient *redis.Client // Ensure RedisClient is exported
+var RedisClient *redis.Client   // Redis client
+var InMemoryCache *cache.Cache  // In-memory cache for fallback
 var redisCtx = context.Background()
+
+// Add ClamAV client variable
+var ClamAVClient *clamd.Clamd
+
+// Add worker pools for HMAC and ClamAV processing
+var HMACWorkerPool chan struct{}
+var ClamAVWorkerPool chan struct{}
 
 func SetupRouter(conf *config.Config) http.Handler {
 	mux := http.NewServeMux()
@@ -54,16 +69,25 @@ func handleRequest(conf *config.Config) http.HandlerFunc {
 
 // handleUpload handles PUT requests for file uploads with HMAC validation.
 func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
+	// Acquire a worker from the HMAC pool
+	HMACWorkerPool <- struct{}{}
+	defer func() { <-HMACWorkerPool }()
+
 	absFilename := r.URL.Query().Get("file")
 	if absFilename == "" {
 		http.Error(w, "File parameter is missing", http.StatusBadRequest)
 		return
 	}
 
-	fileStorePath := filepath.Join(conf.Server.StoragePath, absFilename)
+	var fileStorePath string
+	if conf.ISO.Enabled {
+		fileStorePath = filepath.Join(conf.ISO.MountPoint, absFilename)
+	} else {
+		fileStorePath = filepath.Join(conf.Server.StoragePath, absFilename)
+	}
 	a := r.URL.Query()
 
-	logrus.Infof("Using storage path: %s", conf.Server.StoragePath)
+	logrus.Infof("Using storage path: %s", fileStorePath)
 
 	// HMAC validation
 	var protocolVersion string
@@ -130,13 +154,15 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 	hasher := sha256.New()
 	tee := io.TeeReader(r.Body, hasher)
 
-	file, err := os.Create(fileStorePath)
+	// Save the uploaded file to a temporary location
+	tempFilePath := fileStorePath + ".tmp"
+	tempFile, err := os.Create(tempFilePath)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	defer file.Close()
-	_, err = io.Copy(file, tee)
+	defer tempFile.Close()
+	_, err = io.Copy(tempFile, tee)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -146,26 +172,70 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 
 	// Check if deduplication is enabled
 	if conf.Server.DeduplicationEnabled {
-		// Check if the hash exists in Redis
-		exists, err := RedisClient.Exists(redisCtx, sha256Hash).Result()
-		if err != nil {
-			logrus.Errorf("Redis error: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
+		exists, existingFilePath := checkFileExists(sha256Hash, conf)
+		if exists {
+			// File already exists, create a hard link
+			err := os.Link(existingFilePath, fileStorePath)
+			if err != nil {
+				logrus.Errorf("Failed to create hard link: %v", err)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+			logrus.Infof("Created hard link for duplicate file: %s", fileStorePath)
+			// Remove the temporary file
+			os.Remove(tempFilePath)
+		} else {
+			// Move temp file to final location
+			err := os.Rename(tempFilePath, fileStorePath)
+			if err != nil {
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+			// Store the hash and file path
+			storeFileHash(sha256Hash, fileStorePath, conf)
 		}
-		if exists > 0 {
-			// File already exists, handle accordingly
-			logrus.Infof("Duplicate file detected: %s", sha256Hash)
-			http.Error(w, "File already exists", http.StatusConflict)
-			return
-		}
+	}
 
-		// Store the hash and file path in Redis
-		err = RedisClient.Set(redisCtx, sha256Hash, fileStorePath, 0).Err()
-		if err != nil {
-			logrus.Errorf("Failed to store hash in Redis: %v", err)
-			// Proceed without failing
+	// ClamAV scanning
+	if conf.ClamAV.ClamAVEnabled {
+		ext := filepath.Ext(fileStorePath)
+		// Check if the file extension should be scanned
+		if shouldScanExtension(ext, conf.ClamAV.ScanFileExtensions) {
+			logrus.Infof("Scanning file for viruses: %s", fileStorePath)
+
+			// Acquire a worker from the ClamAV pool
+			ClamAVWorkerPool <- struct{}{}
+			defer func() { <-ClamAVWorkerPool }()
+
+			scanResult, err := scanFileWithClamAV(fileStorePath)
+			if err != nil {
+				logrus.Errorf("Error scanning file with ClamAV: %v", err)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+			if scanResult.Status == "FOUND" {
+				logrus.Warnf("Uploaded file is infected: %s", scanResult.Description)
+				http.Error(w, "Uploaded file is infected", http.StatusBadRequest)
+				// Remove the infected file
+				os.Remove(fileStorePath)
+				return
+			}
+			logrus.Infof("File passed ClamAV scan: %s", fileStorePath)
+		} else {
+			logrus.Infof("Skipping ClamAV scan for extension: %s", ext)
 		}
+	}
+
+	// Finalize the upload
+	if conf.ISO.Enabled {
+		go func(path string) {
+			err := createISO(path, conf.ISO.Charset)
+			if err != nil {
+				logrus.Errorf("Failed to create ISO for %s: %v", path, err)
+			} else {
+				logrus.Infof("ISO created successfully for %s", path)
+			}
+		}(fileStorePath)
 	}
 
 	// ...existing code to finalize the upload...
@@ -226,20 +296,23 @@ func handleDownload(conf *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Check if the response is cached in Redis
-		cachedResponse, err := RedisClient.Get(redisCtx, filePath).Result()
-		if err == redis.Nil {
+		exists, cachedResponse := checkFileExists(filePath, conf)
+		if exists {
+			// Cache hit, serve the cached response
+			serveCachedResponse(w, cachedResponse)
+		} else {
 			// Cache miss, proceed with file serving
 			serveFile(w, r, conf, filePath)
-		} else if err != nil {
-			logrus.Errorf("Redis error: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-		} else {
-			// Cache hit, return the cached response
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(cachedResponse))
 		}
 	}
+}
+
+// serveCachedResponse serves the cached response.
+func serveCachedResponse(w http.ResponseWriter, cachedResponse string) {
+	// Implement your logic to serve the cached response
+	// For example, you might decode the JSON and write appropriate headers
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(cachedResponse))
 }
 
 func serveFile(w http.ResponseWriter, r *http.Request, conf *config.Config, filePath string) {
@@ -277,10 +350,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, conf *config.Config, file
 	// Cache the response in Redis
 	response := map[string]string{"filePath": filePath, "status": "served"}
 	responseJSON, _ := json.Marshal(response)
-	err = RedisClient.Set(redisCtx, filePath, responseJSON, 10*time.Minute).Err()
-	if err != nil {
-		logrus.Errorf("Failed to cache response in Redis: %v", err)
-	}
+	storeFileHash(filePath, string(responseJSON), conf)
 }
 
 // LoggingMiddleware logs each incoming HTTP request.
@@ -325,6 +395,81 @@ func CORSMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+// shouldScanExtension checks if the file extension should be scanned.
+func shouldScanExtension(ext string, scanExtensions []string) bool {
+	for _, scanExt := range scanExtensions {
+		if strings.EqualFold(ext, scanExt) {
+			return true
+		}
+	}
+	return false
+}
+
+// Add a timeout to scanFileWithClamAV
+func scanFileWithClamAV(filePath string) (*clamd.ScanResult, error) {
+	scanChannel, err := ClamAVClient.ScanFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	select {
+	case scanResult, ok := <-scanChannel:
+		if !ok {
+			return nil, fmt.Errorf("ClamAV scan channel closed unexpectedly")
+		}
+		return &scanResult, nil
+	case <-time.After(60 * time.Second):
+		return nil, fmt.Errorf("ClamAV scan timed out for file: %s", filePath)
+	}
+}
+
+// calculateFileHash computes the SHA-256 hash of the file.
+
+// checkFileExists checks if a file with the given hash exists.
+func checkFileExists(hash string, conf *config.Config) (bool, string) {
+	if conf.Redis.RedisEnabled && RedisClient != nil {
+		// Check in Redis
+		existingFilePath, err := RedisClient.Get(redisCtx, hash).Result()
+		if err == redis.Nil {
+			return false, ""
+		} else if err != nil {
+			logrus.Errorf("Redis error: %v", err)
+			return false, ""
+		}
+		return true, existingFilePath
+	} else {
+		// Check in in-memory cache
+		if data, found := InMemoryCache.Get(hash); found {
+			return true, data.(string)
+		}
+		return false, ""
+	}
+}
+
+// storeFileHash stores the file hash and path.
+func storeFileHash(hash string, filePath string, conf *config.Config) {
+	if conf.Redis.RedisEnabled && RedisClient != nil {
+		// Store in Redis
+		err := RedisClient.Set(redisCtx, hash, filePath, 0).Err()
+		if err != nil {
+			logrus.Errorf("Failed to store hash in Redis: %v", err)
+		}
+	} else {
+		// Store in in-memory cache
+		InMemoryCache.Set(hash, filePath, cache.DefaultExpiration)
+	}
+}
+
+// createISO creates an ISO file with the specified charset.
+func createISO(filePath, charset string) error {
+	cmd := exec.Command("mkisofs", "-o", filePath, "-input-charset", charset, filepath.Dir(filePath))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("mkisofs error: %v, output: %s", err, string(output))
+	}
+	return nil
 }
 
 // ...other handler functions...

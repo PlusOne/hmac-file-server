@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
+	"path/filepath"
 
+	"github.com/shirou/gopsutil/v3/disk"      // Updated import
 	"github.com/spf13/viper"
+	"github.com/renz/hmac-file-server/utils"  // Added import for utils
 )
 
 type ServerConfig struct {
@@ -155,10 +157,10 @@ func setDefaults() {
 		".3gp", ".3g2", ".mp3", ".ogg",
 	})
 
-	viper.SetDefault("clamav.ClamAVEnabled", true)
+	viper.SetDefault("clamav.ClamAVEnabled", false)
 	viper.SetDefault("clamav.ClamAVSocket", "/var/run/clamav/clamd.ctl")
-	viper.SetDefault("clamav.NumScanWorkers", 2)
-	viper.SetDefault("clamav.ScanFileExtensions", []string{".exe", ".dll", ".js", ".php"})
+	viper.SetDefault("clamav.NumScanWorkers", 4)
+	viper.SetDefault("clamav.ScanFileExtensions", []string{".exe", ".dll", ".js", ".php", ".scr", ".bat"})
 
 	viper.SetDefault("redis.RedisEnabled", true)
 	viper.SetDefault("redis.RedisAddr", "localhost:6379")
@@ -169,8 +171,8 @@ func setDefaults() {
 	viper.SetDefault("workers.NumWorkers", 4)
 	viper.SetDefault("workers.UploadQueueSize", 50)
 
-	viper.SetDefault("iso.Enabled", true)
-	viper.SetDefault("iso.Size", "1GB")
+	viper.SetDefault("iso.Enabled", false)
+	viper.SetDefault("iso.Size", "2TB")
 	viper.SetDefault("iso.MountPoint", "/mnt/iso")
 	viper.SetDefault("iso.Charset", "utf-8")
 }
@@ -189,14 +191,21 @@ func validateConfig(conf *Config) error {
 		return fmt.Errorf("FileTTL must be set")
 	}
 
-	if _, err := time.ParseDuration(conf.Timeouts.ReadTimeout); err != nil {
+	// Replace direct usage of time.ParseDuration with utils.ParseDuration
+	if _, err := utils.ParseDuration(conf.Timeouts.ReadTimeout); err != nil {
 		return fmt.Errorf("invalid ReadTimeout: %w", err)
 	}
-	if _, err := time.ParseDuration(conf.Timeouts.WriteTimeout); err != nil {
+
+	if _, err := utils.ParseDuration(conf.Timeouts.WriteTimeout); err != nil {
 		return fmt.Errorf("invalid WriteTimeout: %w", err)
 	}
-	if _, err := time.ParseDuration(conf.Timeouts.IdleTimeout); err != nil {
+
+	if _, err := utils.ParseDuration(conf.Timeouts.IdleTimeout); err != nil {
 		return fmt.Errorf("invalid IdleTimeout: %w", err)
+	}
+
+	if _, err := utils.ParseDuration(conf.Server.FileTTL); err != nil {
+		return fmt.Errorf("invalid FileTTL: %w", err)
 	}
 
 	if conf.Redis.RedisEnabled {
@@ -209,6 +218,9 @@ func validateConfig(conf *Config) error {
 		if conf.ISO.Size == "" {
 			return fmt.Errorf("ISO size must be set")
 		}
+		if _, err := utils.ParseSize(conf.ISO.Size); err != nil {
+			return fmt.Errorf("invalid ISO size '%s': %w", conf.ISO.Size, err)
+		}
 		if conf.ISO.MountPoint == "" {
 			return fmt.Errorf("ISO mount point must be set")
 		}
@@ -217,11 +229,28 @@ func validateConfig(conf *Config) error {
 		}
 	}
 
-	if _, err := os.Stat(conf.Server.StoragePath); os.IsNotExist(err) {
+	if conf.ClamAV.ClamAVEnabled && conf.ClamAV.ClamAVSocket == "" {
+		return fmt.Errorf("ClamAV is enabled but ClamAVSocket is not set")
+	}
+
+	fileInfo, err := os.Stat(conf.Server.StoragePath)
+	if os.IsNotExist(err) {
 		return fmt.Errorf("StoragePath does not exist: %s", conf.Server.StoragePath)
 	} else if err != nil {
 		return fmt.Errorf("error accessing StoragePath: %w", err)
+	}
+	if !fileInfo.IsDir() {
+		return fmt.Errorf("StoragePath is not a directory: %s", conf.Server.StoragePath)
+	}
 
+	tempFilePath := filepath.Join(conf.Server.StoragePath, ".perm_test")
+	file, err := os.Create(tempFilePath)
+	if err != nil {
+		return fmt.Errorf("no write permission for StoragePath: %s", conf.Server.StoragePath)
+	}
+	file.Close()
+	if err := os.Remove(tempFilePath); err != nil {
+		return fmt.Errorf("no delete permission for StoragePath: %s", conf.Server.StoragePath)
 	}
 
 	// DeduplicationEnabled is a boolean; no additional validation needed
