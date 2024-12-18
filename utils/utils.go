@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 	"fmt" // Added import for error formatting
+	"strconv" // Added import for size parsing
 
 	"github.com/prometheus/client_golang/prometheus/promhttp" // Third-party imports
 	"github.com/sirupsen/logrus"                              // Third-party imports
@@ -20,7 +21,7 @@ import (
 	"github.com/shirou/gopsutil/v3/disk"                       // Updated import
 	"github.com/shirou/gopsutil/v3/host"                       // Updated import
 	"github.com/shirou/gopsutil/v3/mem"                        // Updated import
-	"github.com/renz/hmac-file-server/config"                 // Added import for config
+	"github.com/renz/hmac-file-server/internal/config"        // Corrected import path for config
 )
 
 // ...existing code...
@@ -197,4 +198,35 @@ func CleanupExpiredFiles(ctx context.Context, conf *config.Config) {
 			return
 		}
 	}
+}
+
+// ParseSize parses a size string (e.g., "2TB", "100MB") and returns the size in bytes.
+func ParseSize(sizeStr string) (int64, error) {
+	sizeStr = strings.TrimSpace(sizeStr)
+	if len(sizeStr) < 2 {
+		return 0, fmt.Errorf("invalid size: %s", sizeStr)
+	}
+
+	unit := sizeStr[len(sizeStr)-2:]
+	valueStr := sizeStr[:len(sizeStr)-2]
+	value, err := strconv.ParseFloat(valueStr, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid size value: %s", valueStr)
+	}
+
+	var multiplier int64
+	switch strings.ToUpper(unit) {
+	case "KB":
+		multiplier = 1024
+	case "MB":
+		multiplier = 1024 * 1024
+	case "GB":
+		multiplier = 1024 * 1024 * 1024
+	case "TB":
+		multiplier = 1024 * 1024 * 1024 * 1024
+	default:
+		return 0, fmt.Errorf("invalid size unit: %s", unit)
+	}
+
+	return int64(value * float64(multiplier)), nil
 }
