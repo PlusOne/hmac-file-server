@@ -246,6 +246,12 @@ Checks if the storage path has at least the specified minimum free bytes availab
 ### `parseSize(sizeStr string) (int64, error)`
 Parses a size string (e.g., "100MB", "2GB") and returns the size in bytes. Returns an error if the size string is invalid.
 
+### `createISOAsync(storagePath string, charset string)`
+Creates an ISO file asynchronously from the specified storage path using the given character set.
+
+### `shouldScanExtension(extension string, scanFileExtensions []string) bool`
+Determines if a file with the given extension should be scanned for viruses based on the configured list of file extensions.
+
 ## Configuration Options
 
 The HMAC File Server can be configured using the `config.toml` file or environment variables. Below are the available configuration options along with their descriptions:
