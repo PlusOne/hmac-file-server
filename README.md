@@ -18,7 +18,7 @@ go build -o hmac-file-server ./cmd/server
 
 ## Configuration
 
-See [config.toml](./config/config.toml) for configuration options.
+See [config.toml](./cmd/server/config.toml) for configuration options.
 
 ### FileTTL
 
