@@ -122,6 +122,23 @@ func main() {
 		defer cleanupPID()
 	}
 
+	http.HandleFunc("/upload", handlers.UploadHandler)
+
+	// Retrieve the current process ID
+	pid := os.Getpid()
+
+	// Specify the PID file name
+	pidFilename := "app.pid"
+
+	// Write the PID to the file
+	err = writePidToFile(pidFilename, pid)
+	if err != nil {
+		fmt.Printf("Error writing PID to file: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("PID %d written to %s\n", pid, pidFilename)
+
 	// Start the server
 	logrus.Infof("Starting HMAC File Server on port %s...", conf.Server.ListenPort)
 	if conf.Server.UnixSocket {

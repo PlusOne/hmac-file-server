@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
 	"mime"
 
 	// "encoding/json"
@@ -21,14 +23,21 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
-	"github.com/renz/hmac-file-server/config"   // Corrected import path
-	"github.com/renz/hmac-file-server/utils"    // Corrected import path
+	"github.com/renz/hmac-file-server/config" // Corrected import path
+	"github.com/renz/hmac-file-server/utils"  // Corrected import path
 	"github.com/sirupsen/logrus"
 )
 
 var (
     mu sync.Mutex
 )
+
+// bufferPool is a pool of byte buffers to reduce memory allocations
+var bufferPool = sync.Pool{
+    New: func() interface{} {
+        return new(bytes.Buffer)
+    },
+}
 
 // Update the Config struct to include necessary dependencies
 type HandlerDependencies struct {
@@ -199,7 +208,7 @@ func isExtensionAllowed(filePath string) bool {
 
 func saveUploadedFile(r *http.Request, conf *config.Config) (string, string, error) {
     file, _, err := r.FormFile("file")
-    if err != nil {
+    if (err != nil) {
         return "", "", err
     }
     defer file.Close()
@@ -268,6 +277,21 @@ func getStoragePath(filename string, conf *config.Config) string {
     return filepath.Join(conf.Server.StoragePath, filename)
 }
 
+func createFile(tempFilename string, r *http.Request) error {
+    file, err := os.Create(tempFilename)
+    if err != nil {
+        return err
+    }
+    defer file.Close()
+
+    // Example: Copying the request body to the file
+    _, err = io.Copy(file, r.Body)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
 
 func SetupRouter(conf *config.Config, deps *HandlerDependencies) *mux.Router {
     router := mux.NewRouter()
@@ -318,4 +342,36 @@ func CORSMiddleware(next http.Handler) http.Handler {
 
         next.ServeHTTP(w, r)
     })
+}
+
+func YourHandler(w http.ResponseWriter, r *http.Request) {
+    // Get a buffer from the pool
+    buf := bufferPool.Get().(*bytes.Buffer)
+    buf.Reset() // Clear the buffer before use
+
+    // Use the buffer for your operations
+    // Example: writing some data
+    buf.WriteString("Hello, World!")
+
+    // Write buffer contents to the ResponseWriter
+    w.Write(buf.Bytes())
+
+    // Put the buffer back into the pool
+    bufferPool.Put(buf)
+}
+
+func UploadHandler(w http.ResponseWriter, r *http.Request) {
+    tempFilename := "temp_upload_file.txt"
+
+    // Call createFile to handle the file creation
+    err := createFile(tempFilename, r)
+    if err != nil {
+        http.Error(w, "Failed to create file", http.StatusInternalServerError)
+        log.Printf("Error creating file: %v", err)
+        return
+    }
+
+    // Respond to the client
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte("File uploaded successfully"))
 }
