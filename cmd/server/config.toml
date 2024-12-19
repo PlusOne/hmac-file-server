@@ -1,9 +1,9 @@
 [server]
 listenport = "9090"
 unixsocket = true
-storagepath = "/var/hmac/uploads"
+storagepath = "./uploads"
 loglevel = "debug"
-logfile = "/var/log/hmac-file-server.log"
+logfile = "./hmac-file-server.log"
 metricsenabled = false
 metricsport = "9091"
 filettl = "180d"
@@ -13,7 +13,7 @@ autoadjustworkers = false
 networkevents = true
 temppath = "/tmp/hmac"
 loggingjson = true
-pidfilepath = "/var/run/hmac_server.pid"
+pidfilepath = "./hmac_file_server.pid"
 cleanuponexit = false
 
 [iso]
