@@ -21,12 +21,12 @@ jobs:
 
       - name: Build Server
         run: |
-          cd cmd/
+          cd cmd/server
           go build -o hmac-file-server ./main.go
 
       - name: Start Server
         run: |
-          cd cmd/
+          cd cmd/server
           ./hmac-file-server &
           echo $! > server.pid
         shell: bash
