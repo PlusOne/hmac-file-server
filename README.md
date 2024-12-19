@@ -240,6 +240,12 @@ Sets up the HTTP router with all necessary routes and handlers, injecting requir
 ### `GracefulShutdown(server *http.Server, ctx context.Context, cancel context.CancelFunc)`
 Handles graceful shutdown of the server, ensuring all ongoing requests are completed before stopping.
 
+### `checkStorageSpace(storagePath string, minFreeBytes int64) error`
+Checks if the storage path has at least the specified minimum free bytes available. Returns an error if there is not enough free space.
+
+### `parseSize(sizeStr string) (int64, error)`
+Parses a size string (e.g., "100MB", "2GB") and returns the size in bytes. Returns an error if the size string is invalid.
+
 ## Configuration Options
 
 The HMAC File Server can be configured using the `config.toml` file or environment variables. Below are the available configuration options along with their descriptions:
