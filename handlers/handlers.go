@@ -24,8 +24,8 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
-	"github.com/renz/hmac-file-server/config"
-	"github.com/renz/hmac-file-server/utils"
+	"github.com/PlusOne/hmac-file-server/config"
+	"github.com/PlusOne/hmac-file-server/utils"
 	"github.com/sirupsen/logrus"
 )
 

@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/renz/hmac-file-server/utils"
+	"github.com/PlusOne/hmac-file-server/utils"
 )
 
 const (

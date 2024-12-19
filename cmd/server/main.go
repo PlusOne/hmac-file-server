@@ -9,9 +9,9 @@ import (
 
 	"github.com/dutchcoders/go-clamd"
 	"github.com/go-redis/redis/v8"
-	"github.com/renz/hmac-file-server/config"
-	"github.com/renz/hmac-file-server/handlers"
-	"github.com/renz/hmac-file-server/utils"
+	"github.com/PlusOne/hmac-file-server/config"
+	"github.com/PlusOne/hmac-file-server/handlers"
+	"github.com/PlusOne/hmac-file-server/utils"
 	"github.com/sirupsen/logrus"
 )
 
