@@ -465,3 +465,6 @@ time="2024-12-19T14:35:03+01:00" level=info msg="Auto-adjusted ClamAV workers: 4
 time="2024-12-19T14:35:03+01:00" level=info msg="Redis is not enabled. Using fallback mechanisms."
 time="2024-12-19T14:35:03+01:00" level=info msg="HMAC Server started with PID: 69667"
 time="2024-12-19T14:35:03+01:00" level=info msg="Starting HMAC File Server on port 8080..."
+time="2024-12-19T14:40:59+01:00" level=info msg="Received signal terminated. Shutting down server..."
+time="2024-12-19T14:40:59+01:00" level=info msg="CleanupExpiredFiles routine stopped."
+time="2024-12-19T14:40:59+01:00" level=info msg="Server shutdown complete."

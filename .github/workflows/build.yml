@@ -43,5 +43,16 @@ jobs:
 
       - name: Stop Server
         run: |
-          kill $(cat hmac_server.pid)
+          if [ -f hmac_server.pid ]; then
+               PID=$(cat hmac_server.pid)
+               if ps -p $PID > /dev/null; then
+                   kill $PID
+                   echo "Process $PID terminated successfully."
+              else
+                   echo "Process $PID not found or already stopped."
+               fi
+           else
+              echo "PID file not found. Unable to stop server."
+          fi
         shell: bash
+        
