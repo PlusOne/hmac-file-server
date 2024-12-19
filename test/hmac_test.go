@@ -17,7 +17,7 @@ import (
 const (
 	serverURL    = "http://[::1]:8080"				// Replace with your actual server URL
 	secret       = "a-orc-and-a-humans-is-drinking-ale"             // Replace with your HMAC secret key
-	uploadPath   = "test/hmac_icon.png"                 			// Test file to upload
+	uploadPath   = "hmac_icon.png"                 			// Test file to upload
 	protocolType = "v2"						// Use v2, v, or token as needed
 )
 
