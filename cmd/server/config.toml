@@ -13,6 +13,8 @@ autoadjustworkers = true
 networkevents = false
 temppath = ""
 loggingjson = false
+pidfilepath = "./hmac_server.pid"
+cleanuponexit = true
 
 [iso]
 enabled = false

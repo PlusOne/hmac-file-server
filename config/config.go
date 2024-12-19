@@ -26,6 +26,8 @@ type ServerConfig struct {
 	NetworkEvents        bool   `mapstructure:"NetworkEvents"`
 	TempPath             string `json:"temp_path"`
 	LoggingJSON          bool   `mapstructure:"LoggingJSON"`
+	PidFilePath          string `mapstructure:"PidFilePath"`
+	CleanupOnExit        bool   `mapstructure:"CleanupOnExit"`
 }
 
 type TimeoutConfig struct {
@@ -142,6 +144,8 @@ func setDefaults() {
 	viper.SetDefault("server.AutoAdjustWorkers", true)
 	viper.SetDefault("server.NetworkEvents", false)
 	viper.SetDefault("server.LoggingJSON", false)
+	viper.SetDefault("server.PidFilePath", "./hmac_server.pid")
+	viper.SetDefault("server.CleanupOnExit", true)
 
 	viper.SetDefault("timeouts.ReadTimeout", "4800s")
 	viper.SetDefault("timeouts.WriteTimeout", "4800s")

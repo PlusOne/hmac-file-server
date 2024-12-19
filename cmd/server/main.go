@@ -113,19 +113,16 @@ func main() {
 
 	utils.SetupGracefulShutdown(server, ctx, cancel)
 
-	// Retrieve the current process ID (PID)
-	pid := os.Getpid()
-
-	// Log the PID
-	logrus.Infof("HMAC Server started with PID: %d", pid)
-
-	// Write the PID to a file
-	err = writePidToFile("hmac_server.pid", pid)
+	// PID handling
+	cleanupPID, err := utils.ManagePID(conf.Server.PidFilePath)
 	if err != nil {
-		logrus.Errorf("Error writing PID to file: %v", err)
-		// Optionally handle the error (e.g., exit the application)
+		logrus.Fatalf("PID management failed: %v", err)
+	}
+	if conf.Server.CleanupOnExit && cleanupPID != nil {
+		defer cleanupPID()
 	}
 
+	// Start the server
 	logrus.Infof("Starting HMAC File Server on port %s...", conf.Server.ListenPort)
 	if conf.Server.UnixSocket {
 		listener, err := net.Listen("unix", conf.Server.ListenPort)
@@ -160,7 +157,7 @@ func main() {
 // Add the writePidToFile function
 func writePidToFile(filename string, pid int) error {
 	file, err := os.Create(filename)
-	if err != nil {
+	if (err != nil) {
 		return err
 	}
 	defer file.Close()

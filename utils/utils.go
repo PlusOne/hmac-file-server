@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"io/ioutil" // Added import for PID handling
 
 	"github.com/prometheus/client_golang/prometheus/promhttp" // Third-party imports
 	"github.com/sirupsen/logrus"                              // Third-party imports
@@ -383,4 +384,84 @@ func CheckStorageSpace(storagePath string, minFreeBytes int64) error {
     }
 
     return nil
+}
+
+// ManagePID handles PID file operations including creation, validation, and cleanup.
+func ManagePID(pidFilePath string) (func(), error) {
+	// Validate existing PID file
+	if FileExists(pidFilePath) {
+		existingPID, err := ioutil.ReadFile(pidFilePath)
+		if err != nil {
+			logrus.Errorf("Failed to read existing PID file: %v", err)
+			return nil, err
+		}
+		pid, err := strconv.Atoi(string(existingPID))
+		if err == nil && pid > 0 {
+			// Check if process is running
+			if processRunning(pid) {
+				errMsg := fmt.Sprintf("Process already running with PID %d", pid)
+				logrus.Error(errMsg)
+				return nil, errors.New(errMsg)
+			}
+		}
+		// Stale PID file detected
+		logrus.Warn("Stale PID file detected, cleaning up.")
+		if err := os.Remove(pidFilePath); err != nil {
+			logrus.Errorf("Failed to remove stale PID file: %v", err)
+			return nil, err
+		}
+	}
+
+	// Create and lock the PID file
+	file, err := os.OpenFile(pidFilePath, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		logrus.Errorf("Failed to create PID file: %v", err)
+		return nil, err
+	}
+	// Attempt to lock the file
+	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		logrus.Errorf("Another instance is already running.")
+		return nil, errors.New("unable to lock PID file")
+	}
+
+	pid := os.Getpid()
+	if _, err := file.WriteString(strconv.Itoa(pid)); err != nil {
+		logrus.Errorf("Failed to write PID to file: %v", err)
+		file.Close()
+		return nil, err
+	}
+	logrus.Infof("PID %d written to %s", pid, pidFilePath)
+
+	cleanupFunc := func() {
+		// Unlock and remove PID file on exit
+		syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+		file.Close()
+		if err := os.Remove(pidFilePath); err != nil {
+			logrus.Errorf("Failed to remove PID file on exit: %v", err)
+		} else {
+			logrus.Infof("PID file %s removed", pidFilePath)
+		}
+	}
+
+	// Handle unexpected terminations
+	go func() {
+		signalChan := make(chan os.Signal, 1)
+		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+		sig := <-signalChan
+		logrus.Infof("Received signal %s, performing cleanup.", sig)
+		cleanupFunc()
+		os.Exit(0)
+	}()
+
+	return cleanupFunc, nil
+}
+
+// processRunning checks if a process with the given PID is running.
+func processRunning(pid int) bool {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return false
+	}
+	err = process.Signal(syscall.Signal(0))
+	return err == nil
 }
