@@ -43,5 +43,5 @@ jobs:
 
       - name: Stop Server
         run: |
-          kill $(cat cmd/server.pid)
+          kill $(cat hmac_server.pid)
         shell: bash
