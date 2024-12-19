@@ -25,6 +25,7 @@ type ServerConfig struct {
 	AutoAdjustWorkers    bool   `mapstructure:"AutoAdjustWorkers"`
 	NetworkEvents        bool   `mapstructure:"NetworkEvents"`
 	TempPath             string `json:"temp_path"`
+	LoggingJSON          bool   `mapstructure:"LoggingJSON"`
 }
 
 type TimeoutConfig struct {
@@ -140,6 +141,7 @@ func setDefaults() {
 	viper.SetDefault("server.DeduplicationEnabled", true)
 	viper.SetDefault("server.AutoAdjustWorkers", true)
 	viper.SetDefault("server.NetworkEvents", false)
+	viper.SetDefault("server.LoggingJSON", false)
 
 	viper.SetDefault("timeouts.ReadTimeout", "4800s")
 	viper.SetDefault("timeouts.WriteTimeout", "4800s")

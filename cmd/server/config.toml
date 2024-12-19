@@ -12,6 +12,7 @@ deduplicationenabled = true
 autoadjustworkers = true
 networkevents = false
 temppath = ""
+loggingjson = false
 
 [iso]
 enabled = false

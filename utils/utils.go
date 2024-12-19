@@ -32,7 +32,7 @@ import (
 
 // ...existing code...
 
-func SetupLogging(logLevel string, logFile string) {
+func SetupLogging(logLevel string, logFile string, loggingJSON bool) {
 	level, err := logrus.ParseLevel(logLevel)
 	if (err != nil) {
 		logrus.Fatalf("Invalid log level: %s", logLevel)
@@ -50,9 +50,13 @@ func SetupLogging(logLevel string, logFile string) {
 		logrus.SetOutput(os.Stdout)
 	}
 
-	logrus.SetFormatter(&logrus.JSONFormatter{ // Use JSONFormatter for structured logging
-		TimestampFormat: time.RFC3339,
-	})
+	if loggingJSON {
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+	} else {
+		logrus.SetFormatter(&logrus.TextFormatter{
+			FullTimestamp: true,
+		})
+	}
 }
 
 func PrometheusHandler() http.Handler {

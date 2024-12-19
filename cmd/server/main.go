@@ -30,7 +30,7 @@ func main() {
 	
 	logrus.Info("Configuration loaded successfully.")
 
-	utils.SetupLogging(conf.Server.LogLevel, conf.Server.LogFile)
+	utils.SetupLogging(conf.Server.LogLevel, conf.Server.LogFile, conf.Server.LoggingJSON)
 
 	utils.LogSystemInfo(versionString) // Log system information
 
