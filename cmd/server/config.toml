@@ -1,6 +1,6 @@
 [server]
 listenport = "8080"
-unixsocket = true
+unixsocket = false
 storagepath = "./uploads"
 loglevel = "debug"
 logfile = "./hmac-file-server.log"
