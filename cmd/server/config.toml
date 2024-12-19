@@ -6,9 +6,12 @@ loglevel = "info"
 logfile = "./hmac-file-server.log"
 metricsenabled = true
 metricsport = "9090"
-DeduplicationEnabled = true
 filettl = "365d"
 minfreebytes = "100GB"
+deduplicationenabled = true
+autoadjustworkers = true
+networkevents = false
+temppath = ""
 
 [iso]
 enabled = false
@@ -34,11 +37,16 @@ chunkeduploadsenabled = true
 chunksize = "32MB"
 allowedextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"]
 
+[downloads]
+resumabledownloadsenabled = false
+chunkeddownloadsenabled = false
+chunksize = ""
+
 [clamav]
 clamavenabled = false
 clamavsocket = "/var/run/clamav/clamd.ctl"
 numscanworkers = 4
-ScanFileExtensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"] 
+scanfileextensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"]
 
 [redis]
 redisenabled = false
