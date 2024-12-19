@@ -10,11 +10,11 @@ filettl = "180d"
 minfreebytes = "50GB"
 deduplicationenabled = true
 autoadjustworkers = true
-networkevents = true
+networkevents = false
 temppath = "/tmp/hmac"
 loggingjson = false
 pidfilepath = "./hmac_file_server.pid"
-cleanuponexit = false
+cleanuponexit = true
 
 [iso]
 enabled = false
