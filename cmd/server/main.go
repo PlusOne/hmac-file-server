@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+	"os"
+	"strconv"
 
 	"github.com/dutchcoders/go-clamd"
 	"github.com/go-redis/redis/v8"
@@ -111,6 +113,19 @@ func main() {
 
 	utils.SetupGracefulShutdown(server, ctx, cancel)
 
+	// Retrieve the current process ID (PID)
+	pid := os.Getpid()
+
+	// Log the PID
+	logrus.Infof("HMAC Server started with PID: %d", pid)
+
+	// Write the PID to a file
+	err = writePidToFile("hmac_server.pid", pid)
+	if err != nil {
+		logrus.Errorf("Error writing PID to file: %v", err)
+		// Optionally handle the error (e.g., exit the application)
+	}
+
 	logrus.Infof("Starting HMAC File Server on port %s...", conf.Server.ListenPort)
 	if conf.Server.UnixSocket {
 		listener, err := net.Listen("unix", conf.Server.ListenPort)
@@ -140,6 +155,22 @@ func main() {
 	}
 
 	logrus.Info("Server shutdown complete.")
+}
+
+// Add the writePidToFile function
+func writePidToFile(filename string, pid int) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(strconv.Itoa(pid))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func initClamAV(socket string) (*clamd.Clamd, error) {
