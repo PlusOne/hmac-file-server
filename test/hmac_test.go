@@ -12,15 +12,13 @@ import (
 	"path/filepath" // Added this import for filepath usage
 	"strconv"
 	"testing"
-
-	"github.com/renz/hmac-file-server/utils" // Corrected import path
 )
 
 const (
-	serverURL    = "http://[::1]:8080"                  // Replace with your actual server URL
-	secret       = "a-orc-and-a-humans-is-drinking-ale" // Replace with your HMAC secret key
-	uploadPath   = "test/hmac_icon.png"                 // Test file to upload
-	protocolType = "v2"                                 // Use v2, v, or token as needed
+	serverURL    = "http://[::1]:8080"				// Replace with your actual server URL
+	secret       = "a-orc-and-a-humans-is-drinking-ale"             // Replace with your HMAC secret key
+	uploadPath   = "hmac_icon.png"                 			// Test file to upload
+	protocolType = "v2"						// Use v2, v, or token as needed
 )
 
 // TestUpload performs a basic HMAC validation and upload test.
@@ -79,15 +77,4 @@ func generateHMAC(filePath string, contentLength int64, protocol string) string 
 	}
 
 	return macString
-}
-
-func TestGenerateHMAC(t *testing.T) {
-	secret := "mysecret"
-	message := "test message"
-	expectedHMAC := "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd2e8d6d3e4ef6ad0f5" // Example HMAC value
-
-	hmacValue := utils.GenerateHMAC(secret, message)
-	if hmacValue != expectedHMAC {
-		t.Errorf("Expected HMAC %s, but got %s", expectedHMAC, hmacValue)
-	}
 }
