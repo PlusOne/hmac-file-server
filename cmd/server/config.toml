@@ -1,20 +1,20 @@
 [server]
-listenport = "8080"
-unixsocket = false
-storagepath = "./upload"
-loglevel = "info"
-logfile = "./hmac-file-server.log"
-metricsenabled = true
-metricsport = "9090"
-filettl = "365d"
-minfreebytes = "100GB"
-deduplicationenabled = true
-autoadjustworkers = true
-networkevents = false
-temppath = ""
-loggingjson = false
-pidfilepath = "./hmac_server.pid"
-cleanuponexit = true
+listenport = "9090"
+unixsocket = true
+storagepath = "/var/hmac/uploads"
+loglevel = "debug"
+logfile = "/var/log/hmac-file-server.log"
+metricsenabled = false
+metricsport = "9091"
+filettl = "180d"
+minfreebytes = "50GB"
+deduplicationenabled = false
+autoadjustworkers = false
+networkevents = true
+temppath = "/tmp/hmac"
+loggingjson = true
+pidfilepath = "/var/run/hmac_server.pid"
+cleanuponexit = false
 
 [iso]
 enabled = false
@@ -23,9 +23,9 @@ mountpoint = "/mnt/nfs_vol01/hmac-file-server/iso/"
 charset = "utf-8"
 
 [timeouts]
-readtimeout = "3600s"
-writetimeout = "3600s"
-idletimeout = "3600s"
+readtimeout = "1800s"
+writetimeout = "1800s"
+idletimeout = "1800s"
 
 [security]
 secret = "a-orc-and-a-humans-is-drinking-ale"
@@ -35,15 +35,15 @@ enableversioning = false
 maxversions = 1
 
 [uploads]
-resumableuploadsenabled = true
-chunkeduploadsenabled = true
-chunksize = "32MB"
-allowedextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"]
+resumableuploadsenabled = false
+chunkeduploadsenabled = false
+chunksize = "64MB"
+allowedextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg", ".zip", ".rar"]
 
 [downloads]
-resumabledownloadsenabled = false
-chunkeddownloadsenabled = false
-chunksize = ""
+resumabledownloadsenabled = true
+chunkeddownloadsenabled = true
+chunksize = "64MB"
 
 [clamav]
 clamavenabled = false
@@ -52,11 +52,11 @@ numscanworkers = 4
 scanfileextensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"]
 
 [redis]
-redisenabled = false
-redisdbindex = 0
-redisaddr = "localhost:6379"
-redispassword = ""
-redishealthcheckinterval = "120s"
+redisenabled = true
+redisdbindex = 1
+redisaddr = "redis-server:6379"
+redispassword = "securepassword"
+redishealthcheckinterval = "60s"
 
 [workers]
 numworkers = 4
