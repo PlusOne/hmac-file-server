@@ -363,3 +363,20 @@ func FileExists(filePath string) bool {
     }
     return !info.IsDir()
 }
+
+// CheckStorageSpace checks if the storage path has at least minFreeBytes available.
+func CheckStorageSpace(storagePath string, minFreeBytes int64) error {
+    var stat syscall.Statfs_t
+
+    if err := syscall.Statfs(storagePath, &stat); err != nil {
+        return fmt.Errorf("failed to get filesystem stats: %w", err)
+    }
+
+    // Available blocks * size per block = available space in bytes
+    availableBytes := int64(stat.Bavail) * int64(stat.Bsize)
+    if availableBytes < minFreeBytes {
+        return fmt.Errorf("not enough free space: available %d bytes, required %d bytes", availableBytes, minFreeBytes)
+    }
+
+    return nil
+}

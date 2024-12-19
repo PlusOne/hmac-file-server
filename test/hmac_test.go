@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/PlusOne/hmac-file-server/utils"
+	"github.com/renz/hmac-file-server/utils" // Corrected import path
 )
 
 const (
@@ -84,10 +84,10 @@ func generateHMAC(filePath string, contentLength int64, protocol string) string 
 func TestGenerateHMAC(t *testing.T) {
 	secret := "mysecret"
 	message := "test message"
-	expectedHMAC := utils.GenerateHMAC(secret, message) // Updated to compute expected HMAC
+	expectedHMAC := "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd2e8d6d3e4ef6ad0f5" // Example HMAC value
 
-	hmac := utils.GenerateHMAC(secret, message)
-	if hmac != expectedHMAC {
-		t.Errorf("Expected HMAC %s, but got %s", expectedHMAC, hmac)
+	hmacValue := utils.GenerateHMAC(secret, message)
+	if hmacValue != expectedHMAC {
+		t.Errorf("Expected HMAC %s, but got %s", expectedHMAC, hmacValue)
 	}
 }

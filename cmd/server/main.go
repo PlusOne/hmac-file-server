@@ -9,10 +9,11 @@ import (
 
 	"github.com/dutchcoders/go-clamd"
 	"github.com/go-redis/redis/v8"
-	"github.com/PlusOne/hmac-file-server/config"
-	"github.com/PlusOne/hmac-file-server/handlers"
-	"github.com/PlusOne/hmac-file-server/utils"
+	"github.com/renz/hmac-file-server/config"   // Corrected import path
+	"github.com/renz/hmac-file-server/handlers" // Corrected import path
+	"github.com/renz/hmac-file-server/utils"    // Corrected import path
 	"github.com/sirupsen/logrus"
+	"github.com/patrickmn/go-cache" // Added import for in-memory cache
 )
 
 var (
@@ -44,7 +45,7 @@ func main() {
 	}
 
 	// Initialize ClamAV worker pool
-	clamAVWorkers := AutoAdjustClamAVWorkers()
+	clamAVWorkers := utils.AutoAdjustClamAVWorkers()
 	ClamAVWorkerPool := make(chan struct{}, clamAVWorkers) // Added initialization
 	for i := 0; i < clamAVWorkers; i++ {
 		ClamAVWorkerPool <- struct{}{}
@@ -71,13 +72,33 @@ func main() {
 	}
 
 	// Initialize caches
+	var inMemoryCache *cache.Cache
+	if !conf.Redis.RedisEnabled {
+		inMemoryCache = cache.New(cache.DefaultExpiration, cache.DefaultExpiration)
+	}
 
-	// ctx is already defined earlier
+	// Setup Handler Dependencies
+	var ClamAVClient *clamd.Clamd
+	if conf.ClamAV.ClamAVEnabled {
+		client, err := initClamAV(conf.ClamAV.ClamAVSocket)
+		if err != nil {
+			logrus.Fatalf("Failed to initialize ClamAV: %v", err)
+		}
+		ClamAVClient = client
+	}
+
+	handlerDeps := &handlers.HandlerDependencies{
+		RedisClient:      redisClient,
+		InMemoryCache:    inMemoryCache,
+		ClamAVClient:     ClamAVClient, // Ensure ClamAVClient is initialized
+		HMACWorkerPool:   HMACWorkerPool,
+		ClamAVWorkerPool: ClamAVWorkerPool,
+	}
 
 	// Start the cleanup routine with error handling
-	go CleanupExpiredFiles(ctx, conf)
+	go utils.CleanupExpiredFiles(ctx, conf.Server.StoragePath, conf.Server.FileTTL)
 
-	router := handlers.SetupRouter(conf)
+	router := handlers.SetupRouter(conf, handlerDeps)
 
 	// Configure server timeouts
 	server := &http.Server{
@@ -121,12 +142,6 @@ func main() {
 	logrus.Info("Server shutdown complete.")
 }
 
-func AutoAdjustClamAVWorkers() int {
-	// Implement logic to determine the number of ClamAV workers
-	// For now, return a default value
-	return 5
-}
-
 func initClamAV(socket string) (*clamd.Clamd, error) {
 	client := clamd.NewClamd(socket)
 	err := client.Ping()
@@ -150,8 +165,4 @@ func initRedis(ctx context.Context, conf config.RedisConfig) *redis.Client {
 		return nil
 	}
 	return rdb
-}
-
-func CleanupExpiredFiles(ctx context.Context, conf *config.Config) {
-	utils.CleanupExpiredFiles(ctx, conf.Server.StoragePath, conf.Server.FileTTL)
 }

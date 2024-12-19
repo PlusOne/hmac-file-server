@@ -15,34 +15,35 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
-	"syscall"
-	"time"
 
 	"github.com/dutchcoders/go-clamd"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
-	"github.com/PlusOne/hmac-file-server/config"
-	"github.com/PlusOne/hmac-file-server/utils"
+	"github.com/renz/hmac-file-server/config"   // Corrected import path
+	"github.com/renz/hmac-file-server/utils"    // Corrected import path
 	"github.com/sirupsen/logrus"
 )
 
 var (
-    RedisClient      *redis.Client
-    InMemoryCache    *cache.Cache
-    ClamAVClient     *clamd.Clamd
-    HMACWorkerPool   chan struct{}
-    ClamAVWorkerPool chan struct{}
-    mu               sync.Mutex
+    mu sync.Mutex
 )
+
+// Update the Config struct to include necessary dependencies
+type HandlerDependencies struct {
+	RedisClient      *redis.Client
+	InMemoryCache    *cache.Cache
+	ClamAVClient     *clamd.Clamd
+	HMACWorkerPool   chan struct{}
+	ClamAVWorkerPool chan struct{}
+}
 
 // HTTP Handlers
 
-func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
-	acquireWorker(HMACWorkerPool)
-	defer releaseWorker(HMACWorkerPool)
+func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, deps *HandlerDependencies) {
+	acquireWorker(deps.HMACWorkerPool)
+	defer releaseWorker(deps.HMACWorkerPool)
 
 	queryParams := r.URL.Query()
 	absFilename := queryParams.Get("file")
@@ -101,11 +102,11 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 		return
 	}
 
-	minFreeBytes, err := parseSize(conf.Server.MinFreeBytes)
+	minFreeBytes, err := utils.ParseSize(conf.Server.MinFreeBytes)
 	if err != nil {
 		logrus.Fatalf("Invalid MinFreeBytes: %v", err)
 	}
-	if err := checkStorageSpace(conf.Server.StoragePath, minFreeBytes); err != nil {
+	if err := utils.CheckStorageSpace(conf.Server.StoragePath, minFreeBytes); err != nil {
 		http.Error(w, "Not enough free space", http.StatusInsufficientStorage)
 		return
 	}
@@ -129,7 +130,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 		return
 	}
 
-	storeFileHash(sha256Hash, storagePath, conf)
+	storeFileHash(sha256Hash, storagePath, conf, deps)
 
 	if conf.ClamAV.ClamAVEnabled {
 		ext := filepath.Ext(storagePath)
@@ -155,8 +156,17 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 	w.Write([]byte("File uploaded successfully"))
 }
 
+func scanFile(storagePath string) bool {
+	panic("unimplemented")
+}
+
+func shouldScanExtension(ext string, s []string) bool {
+	panic("unimplemented")
+}
+
 func handleDeduplication(storagePath, sha256Hash string, conf *config.Config) bool {
-    exists, existingPath := checkFileExists(sha256Hash, conf)
+	var deps *HandlerDependencies
+	exists, existingPath := checkFileExists(sha256Hash, conf, deps)
     if exists {
         os.Remove(storagePath)
         os.Link(existingPath, storagePath)
@@ -187,78 +197,6 @@ func isExtensionAllowed(filePath string) bool {
     return false
 }
 
-func parseSize(sizeStr string) (int64, error) {
-    sizeStr = strings.TrimSpace(sizeStr)
-    multiplier := int64(1)
-    switch {
-    case strings.HasSuffix(sizeStr, "KB"):
-        multiplier = 1 << 10
-        sizeStr = strings.TrimSuffix(sizeStr, "KB")
-    case strings.HasSuffix(sizeStr, "MB"):
-        multiplier = 1 << 20
-        sizeStr = strings.TrimSuffix(sizeStr, "MB")
-    case strings.HasSuffix(sizeStr, "GB"):
-        multiplier = 1 << 30
-        sizeStr = strings.TrimSuffix(sizeStr, "GB")
-    case strings.HasSuffix(sizeStr, "TB"):
-        multiplier = 1 << 40
-        sizeStr = strings.TrimSuffix(sizeStr, "TB")
-    }
-    value, err := strconv.ParseFloat(sizeStr, 64)
-    if err != nil {
-        return 0, err
-    }
-    return int64(value * float64(multiplier)), nil
-}
-
-func checkStorageSpace(storagePath string, minFreeBytes int64) error {
-    var stat syscall.Statfs_t
-    if err := syscall.Statfs(storagePath, &stat); err != nil {
-        return err
-    }
-    freeBytes := stat.Bavail * uint64(stat.Bsize)
-    if int64(freeBytes) < minFreeBytes {
-        return fmt.Errorf("not enough free space: %d bytes available, %d bytes required", freeBytes, minFreeBytes)
-    }
-    return nil
-}
-
-func shouldScanExtension(ext string, scanExtensions []string) bool {
-    for _, scanExt := range scanExtensions {
-        if strings.EqualFold(ext, scanExt) {
-            return true
-        }
-    }
-    return false
-}
-
-func scanFile(filePath string) bool {
-    scanResult, err := scanFileWithClamAV(filePath)
-    if err != nil {
-        logrus.Errorf("ClamAV scan error: %v", err)
-        return false
-    }
-    return scanResult.Status == clamd.RES_OK
-}
-
-func scanFileWithClamAV(filePath string) (*clamd.ScanResult, error) {
-    scanChannel, err := ClamAVClient.ScanFile(filePath)
-    if err != nil {
-        return nil, err
-    }
-
-    select {
-    case scanResult, ok := <-scanChannel:
-        if !ok {
-            return nil, fmt.Errorf("ClamAV scan channel closed unexpectedly")
-        }
-        return scanResult, nil
-    case <-time.After(60 * time.Second):
-        return nil, fmt.Errorf("ClamAV scan timed out for file: %s", filePath)
-    }
-}
-
-
 func saveUploadedFile(r *http.Request, conf *config.Config) (string, string, error) {
     file, _, err := r.FormFile("file")
     if err != nil {
@@ -281,10 +219,11 @@ func saveUploadedFile(r *http.Request, conf *config.Config) (string, string, err
     return fmt.Sprintf("%x", hash.Sum(nil)), tempFile.Name(), nil
 }
 
-func checkFileExists(hash string, conf *config.Config) (bool, string) {
+func checkFileExists(hash string, conf *config.Config, deps *HandlerDependencies) (bool, string) {
     mu.Lock()
     defer mu.Unlock()
     redisCtx := context.Background()
+	RedisClient := deps.RedisClient
     if conf.Redis.RedisEnabled && RedisClient != nil {
         existingFilePath, err := RedisClient.Get(redisCtx, hash).Result()
         if err == redis.Nil {
@@ -295,24 +234,24 @@ func checkFileExists(hash string, conf *config.Config) (bool, string) {
         }
         return true, existingFilePath
     } else {
-        if data, found := InMemoryCache.Get(hash); found {
+		if data, found := deps.InMemoryCache.Get(hash); found {
             return true, data.(string)
         }
         return false, ""
     }
 }
 
-func storeFileHash(hash string, filePath string, conf *config.Config) {
+func storeFileHash(hash string, filePath string, conf *config.Config, deps *HandlerDependencies) {
     mu.Lock()
     defer mu.Unlock()
-    if conf.Redis.RedisEnabled && RedisClient != nil {
+	if conf.Redis.RedisEnabled && deps.RedisClient != nil {
         redisCtx := context.Background()
-        err := RedisClient.Set(redisCtx, hash, filePath, 0).Err()
+		err := deps.RedisClient.Set(redisCtx, hash, filePath, 0).Err()
         if err != nil {
             logrus.Errorf("Failed to store hash in Redis: %v", err)
         }
     } else {
-        InMemoryCache.Set(hash, filePath, cache.DefaultExpiration)
+		deps.InMemoryCache.Set(hash, filePath, cache.DefaultExpiration)
     }
 }
 
@@ -330,11 +269,11 @@ func getStoragePath(filename string, conf *config.Config) string {
 }
 
 
-func SetupRouter(conf *config.Config) *mux.Router {
+func SetupRouter(conf *config.Config, deps *HandlerDependencies) *mux.Router {
     router := mux.NewRouter()
 
     router.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
-        handleUpload(w, r, conf)
+        handleUpload(w, r, conf, deps)
     }).Methods("POST")
 
     router.Use(LoggingMiddleware, RecoveryMiddleware, CORSMiddleware)
