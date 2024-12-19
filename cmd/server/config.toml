@@ -52,7 +52,7 @@ numscanworkers = 4
 scanfileextensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"]
 
 [redis]
-redisenabled = true
+redisenabled = false
 redisdbindex = 1
 redisaddr = "redis-server:6379"
 redispassword = "securepassword"
