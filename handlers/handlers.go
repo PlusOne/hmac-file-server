@@ -64,7 +64,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, d
 	storagePath := getStoragePath(absFilename, conf)
 	logrus.Infof("Using storage path: %s", storagePath)
 
-	// HMAC validation
+	// Determine protocol version
 	var protocolVersion string
 	if queryParams.Get("v2") != "" {
 		protocolVersion = "v2"
@@ -78,31 +78,24 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, d
 		return
 	}
 
-	mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
-
-	if protocolVersion == "v" {
-		mac.Write([]byte(storagePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
-	} else {
-		contentType := mime.TypeByExtension(filepath.Ext(storagePath))
-		if contentType == "" {
-			contentType = "application/octet-stream"
-		}
-		mac.Write([]byte(storagePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType))
-	}
-
-	calculatedMAC := mac.Sum(nil)
-
+	// Extract provided HMAC
 	providedMACHex := queryParams.Get(protocolVersion)
-	providedMAC, err := hex.DecodeString(providedMACHex)
-	if err != nil {
-		logrus.Warn("Invalid MAC encoding")
-		http.Error(w, "Invalid MAC encoding", http.StatusForbidden)
+	if providedMACHex == "" {
+		logrus.Warnf("Missing HMAC parameter for protocol version: %s", protocolVersion)
+		http.Error(w, "Missing HMAC parameter.", http.StatusForbidden)
 		return
 	}
 
-	if !hmac.Equal(calculatedMAC, providedMAC) {
-		logrus.Warn("Invalid HMAC")
-		http.Error(w, "Invalid HMAC", http.StatusForbidden)
+	// Determine content type
+	contentType := mime.TypeByExtension(filepath.Ext(storagePath))
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	// Validate HMAC
+	isValid := validateHMAC(protocolVersion, storagePath, r.ContentLength, contentType, providedMACHex, conf.Security.Secret)
+	if !isValid {
+		http.Error(w, "Invalid HMAC signature.", http.StatusForbidden)
 		return
 	}
 
@@ -163,6 +156,39 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, d
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("File uploaded successfully"))
+}
+
+// validateHMAC validates the HMAC signature based on the protocol version.
+func validateHMAC(protocolVersion, fileStorePath string, contentLength int64, contentType, providedMACHex string, secret string) bool {
+	mac := hmac.New(sha256.New, []byte(secret))
+
+	// Calculate HMAC according to protocol
+	if protocolVersion == "v" {
+		mac.Write([]byte(fileStorePath + "\x20" + strconv.FormatInt(contentLength, 10)))
+	} else if protocolVersion == "v2" || protocolVersion == "token" {
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		mac.Write([]byte(fileStorePath + "\x00" + strconv.FormatInt(contentLength, 10) + "\x00" + contentType))
+	} else {
+		logrus.Warnf("Unsupported protocol version: %s", protocolVersion)
+		return false
+	}
+
+	calculatedMAC := mac.Sum(nil)
+
+	providedMAC, err := hex.DecodeString(providedMACHex)
+	if err != nil {
+		logrus.Warnf("Error decoding provided MAC: %v", err)
+		return false
+	}
+
+	if !hmac.Equal(calculatedMAC, providedMAC) {
+		logrus.Warn("Invalid HMAC signature.")
+		return false
+	}
+
+	return true
 }
 
 func scanFile(storagePath string) bool {
