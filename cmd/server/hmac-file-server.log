@@ -113,3 +113,7 @@
 {"level":"info","msg":"Redis is not enabled. Using fallback mechanisms.","time":"2024-12-19T15:22:25+01:00"}
 {"level":"info","msg":"PID 79693 written to ./hmac_file_server.pid","time":"2024-12-19T15:22:25+01:00"}
 {"level":"info","msg":"Starting HMAC File Server on port 9090...","time":"2024-12-19T15:22:25+01:00"}
+{"level":"info","msg":"Received signal interrupt. Shutting down server...","time":"2024-12-19T15:27:07+01:00"}
+{"level":"info","msg":"Received signal interrupt, performing cleanup.","time":"2024-12-19T15:27:07+01:00"}
+{"level":"info","msg":"CleanupExpiredFiles routine stopped.","time":"2024-12-19T15:27:07+01:00"}
+{"level":"info","msg":"Server shutdown complete.","time":"2024-12-19T15:27:07+01:00"}

@@ -12,7 +12,7 @@ deduplicationenabled = true
 autoadjustworkers = true
 networkevents = true
 temppath = "/tmp/hmac"
-loggingjson = true
+loggingjson = false
 pidfilepath = "./hmac_file_server.pid"
 cleanuponexit = false
 

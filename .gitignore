@@ -15,3 +15,5 @@ oldcode.txt
 .idea/hmac-file-server.iml
 .idea/.gitignore
 qodana.yaml
+cmd/server/hmac-file-server.log
+cmd/server/.config.toml.swp
