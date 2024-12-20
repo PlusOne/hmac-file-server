@@ -349,14 +349,15 @@ func SetupRouter(conf *config.Config, deps *HandlerDependencies) *mux.Router {
 }
 
 func LoggingMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        logrus.WithFields(logrus.Fields{
-            "method": r.Method,
-            "url":    r.URL.String(),
-            "remote": utils.GetClientIP(r),
-        }).Info("Incoming request")
-        next.ServeHTTP(w, r)
-    })
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logrus.WithFields(logrus.Fields{
+			"method":  r.Method,
+			"url":     r.URL.String(),
+			"remote":  utils.GetClientIP(r),
+			"headers": r.Header,
+		}).Info("Incoming request")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func RecoveryMiddleware(next http.Handler) http.Handler {
@@ -376,6 +377,7 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 // CORSMiddleware adds CORS headers to each response
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logrus.Debugf("Handling CORS for request: %s %s", r.Method, r.URL.Path)
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
