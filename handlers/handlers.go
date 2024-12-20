@@ -51,12 +51,14 @@ type HandlerDependencies struct {
 // HTTP Handlers
 
 func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, deps *HandlerDependencies) {
+	logrus.Info("Handling file upload request")
 	acquireWorker(deps.HMACWorkerPool)
 	defer releaseWorker(deps.HMACWorkerPool)
 
 	queryParams := r.URL.Query()
 	absFilename := queryParams.Get("file")
 	if absFilename == "" {
+		logrus.Warn("File parameter is missing in upload request")
 		http.Error(w, "File parameter is missing", http.StatusBadRequest)
 		return
 	}
@@ -73,8 +75,8 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, d
 	} else if queryParams.Get("v") != "" {
 		protocolVersion = "v"
 	} else {
-		logrus.Warn("No HMAC attached to URL.")
-		http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
+		logrus.Warn("No HMAC attached to upload URL")
+		http.Error(w, "No HMAC attached to upload URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
 		return
 	}
 
@@ -91,18 +93,23 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, d
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
+	logrus.Debugf("Determined content type: %s", contentType)
 
 	// Validate HMAC
 	isValid := validateHMAC(protocolVersion, storagePath, r.ContentLength, contentType, providedMACHex, conf.Security.Secret)
 	if !isValid {
+		logrus.Warn("HMAC validation failed for upload request")
 		http.Error(w, "Invalid HMAC signature.", http.StatusForbidden)
 		return
 	}
+	logrus.Info("HMAC validation succeeded for upload request")
 
-	if !isExtensionAllowed(storagePath) {
+	if (!isExtensionAllowed(storagePath)) {
+		logrus.Warnf("Invalid file extension for file: %s", storagePath)
 		http.Error(w, "Invalid file extension", http.StatusBadRequest)
 		return
 	}
+	logrus.Infof("File extension is allowed for file: %s", storagePath)
 
 	minFreeBytes, err := utils.ParseSize(conf.Server.MinFreeBytes)
 	if err != nil {
@@ -156,6 +163,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, d
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("File uploaded successfully"))
+	logrus.Info("File upload handled successfully")
 }
 
 // validateHMAC validates the HMAC signature based on the protocol version.
@@ -293,7 +301,7 @@ func storeFileHash(hash string, filePath string, conf *config.Config, deps *Hand
 func createISO(filePath, charset string) error {
     cmd := exec.Command("mkisofs", "-o", filePath, "-input-charset", charset, filepath.Dir(filePath))
     output, err := cmd.CombinedOutput()
-    if err != nil {
+    if (err != nil) {
         return fmt.Errorf("mkisofs error: %v, output: %s", err, string(output))
     }
     return nil

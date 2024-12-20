@@ -106,6 +106,17 @@ type Config struct {
 
 // Update LoadConfig to handle day-based durations if utils.ParseDuration is extended
 func LoadConfig(configFile string) (*Config, error) {
+	logrus.Info("Loading configuration from file")
+	conf, err := loadConfigInternal(configFile)
+	if err != nil {
+		logrus.Errorf("Failed to load configuration: %v", err)
+		return nil, err
+	}
+	logrus.Info("Configuration loaded successfully")
+	return &conf, nil
+}
+
+func loadConfigInternal(configFile string) (Config, error) {
 	viper.SetConfigFile(configFile)
 	viper.SetConfigType("toml")
 
@@ -116,22 +127,22 @@ func LoadConfig(configFile string) (*Config, error) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("error reading config: %w", err)
+		return Config{}, fmt.Errorf("error reading config: %w", err)
 	}
 
 	var conf Config
 	if err := viper.Unmarshal(&conf); err != nil {
-		return nil, fmt.Errorf("error unmarshaling config: %w", err)
+		return Config{}, fmt.Errorf("error unmarshaling config: %w", err)
 	}
 
 	if err := validateConfig(&conf); err != nil {
-		return nil, fmt.Errorf("invalid config: %w", err)
+		return Config{}, fmt.Errorf("invalid config: %w", err)
 	}
 
 	// Log StoragePath for debug
 	logrus.Infof("StoragePath set to: %s", conf.Server.StoragePath)
 
-	return &conf, nil
+	return conf, nil
 }
 
 func setDefaults() {
@@ -198,6 +209,7 @@ func setDefaults() {
 }
 
 func validateConfig(conf *Config) error {
+	logrus.Info("Validating configuration")
 	if conf.Server.ListenPort == "" {
 		return fmt.Errorf("ListenPort must be set")
 	}
@@ -301,6 +313,7 @@ func validateConfig(conf *Config) error {
 
 	// ...additional validations if necessary...
 
+	logrus.Info("Configuration validation passed")
 	return nil
 }
 

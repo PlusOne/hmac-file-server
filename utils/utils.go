@@ -30,6 +30,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
 	"os"
 )
 
@@ -301,6 +302,18 @@ func CleanupExpiredFiles(ctx context.Context, storagePath string, fileTTL string
 
 // ParseSize parses a size string (e.g., "2TB", "100MB") and returns the size in bytes.
 func ParseSize(sizeStr string) (int64, error) {
+	// Add logging
+	log.Printf("Parsing size: %s", sizeStr)
+	size, err := parseSizeInternal(sizeStr)
+	if err != nil {
+		log.Printf("Error parsing size '%s': %v", sizeStr, err)
+		return 0, err
+	}
+	log.Printf("Parsed size: %d bytes", size)
+	return size, nil
+}
+
+func parseSizeInternal(sizeStr string) (int64, error) {
     sizeStr = strings.TrimSpace(sizeStr)
     if len(sizeStr) < 2 {
         return 0, fmt.Errorf("invalid size: %s", sizeStr)
@@ -328,6 +341,35 @@ func ParseSize(sizeStr string) (int64, error) {
     }
 
     return int64(value * float64(multiplier)), nil
+}
+
+// CheckStorageSpace checks if the storage path has at least minFreeBytes available.
+func CheckStorageSpace(path string, minFreeBytes int64) error {
+	// Add logging
+	log.Printf("Checking storage space for path: %s with minimum free bytes: %d", path, minFreeBytes)
+	err := checkSpaceInternal(path, minFreeBytes)
+	if err != nil {
+		log.Printf("Insufficient storage space at %s: %v", path, err)
+		return err
+	}
+	log.Printf("Sufficient storage space available at %s", path)
+	return nil
+}
+
+func checkSpaceInternal(storagePath string, minFreeBytes int64) error {
+    var stat syscall.Statfs_t
+
+    if err := syscall.Statfs(storagePath, &stat); err != nil {
+        return fmt.Errorf("failed to get filesystem stats: %w", err)
+    }
+
+    // Available blocks * size per block = available space in bytes
+    availableBytes := int64(stat.Bavail) * int64(stat.Bsize)
+    if availableBytes < minFreeBytes {
+        return fmt.Errorf("not enough free space: available %d bytes, required %d bytes", availableBytes, minFreeBytes)
+    }
+
+    return nil
 }
 
 type HMACWorkerPool struct {
@@ -375,23 +417,6 @@ func FileExists(filePath string) bool {
         return false
     }
     return !info.IsDir()
-}
-
-// CheckStorageSpace checks if the storage path has at least minFreeBytes available.
-func CheckStorageSpace(storagePath string, minFreeBytes int64) error {
-    var stat syscall.Statfs_t
-
-    if err := syscall.Statfs(storagePath, &stat); err != nil {
-        return fmt.Errorf("failed to get filesystem stats: %w", err)
-    }
-
-    // Available blocks * size per block = available space in bytes
-    availableBytes := int64(stat.Bavail) * int64(stat.Bsize)
-    if availableBytes < minFreeBytes {
-        return fmt.Errorf("not enough free space: available %d bytes, required %d bytes", availableBytes, minFreeBytes)
-    }
-
-    return nil
 }
 
 // ManagePID handles PID file operations including creation, validation, and cleanup.

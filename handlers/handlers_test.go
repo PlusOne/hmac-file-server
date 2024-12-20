@@ -10,6 +10,8 @@ import (
 )
 
 func TestUploadFileHandler(t *testing.T) {
+	t.Log("Starting TestUploadFileHandler")
+
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -33,10 +35,15 @@ func TestUploadFileHandler(t *testing.T) {
 	})
 	handler.ServeHTTP(rr, req)
 
+	t.Logf("Response Status Code: %d", rr.Code)
+	t.Logf("Response Body: %s", rr.Body.String())
+
 	if status := rr.Code; status != http.StatusCreated {
 		t.Errorf("Handler returned wrong status code: got %v want %v", status, http.StatusCreated)
 	}
 	if rr.Body.String() != "File uploaded successfully" {
 		t.Errorf("Handler returned unexpected body: got %v", rr.Body.String())
 	}
+
+	t.Log("Completed TestUploadFileHandler")
 }

@@ -9,7 +9,9 @@ import (
 	"os"
 	// "strconv" // Removed unused import
 	"path/filepath"
-	"log"
+	
+	// "strings" // Removed unused import
+	// "net/url" // Removed unused import
 
 	"github.com/dutchcoders/go-clamd"
 	"github.com/go-redis/redis/v8"
@@ -53,7 +55,7 @@ func main() {
 	}
 
 	if configFile == "" {
-		log.Fatalf("Error loading configuration: no config.toml found in /etc/hmac-file-server or parent directory of the executable")
+		logrus.Fatalf("Error loading configuration: no config.toml found in /etc/hmac-file-server or parent directory of the executable")
 	}
 
 	logrus.Debugf("Loading configuration from: %s", configFile)
@@ -102,7 +104,7 @@ func main() {
 
 	if conf.ClamAV.ClamAVEnabled {
 		if _, err := initClamAV(conf.ClamAV.ClamAVSocket); err != nil {
-			logrus.Fatalf("Failed to initialize ClamAV: %v", err)
+			logrus.WithError(err).Fatalf("Failed to initialize ClamAV")
 		}
 		logrus.Info("ClamAV initialized successfully.")
 	}
