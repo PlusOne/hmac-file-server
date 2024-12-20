@@ -448,4 +448,25 @@ The HMAC File Server can be configured using the `config.toml` file or environme
   Character set used for the ISO.  
   *Default:* `utf-8`
 
-// ...existing content...
+## Usage
+
+1. Build the server:
+   ```
+   go build -o hmac-server ./cmd/server
+   ```
+
+2. Create or update config.toml:
+   ```
+   cp example-config.toml config.toml
+   ```
+   Adjust the settings as needed (e.g. secret, storage path).
+
+3. Start the server:
+   ```
+   ./hmac-server
+   ```
+
+4. Test upload:
+   ```
+   curl -F "file=@yourfile.txt" http://localhost:8080/upload?file=yourfile.txt&v=YOUR_MAC
+   ```
