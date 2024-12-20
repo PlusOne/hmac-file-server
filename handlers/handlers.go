@@ -51,11 +51,13 @@ type HandlerDependencies struct {
 // HTTP Handlers
 
 func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, deps *HandlerDependencies) {
+	logrus.Debugf("handleUpload called with method=%s, path=%s, contentLength=%d", r.Method, r.URL.Path, r.ContentLength)
 	logrus.Info("Handling file upload request")
 	acquireWorker(deps.HMACWorkerPool)
 	defer releaseWorker(deps.HMACWorkerPool)
 
 	queryParams := r.URL.Query()
+	logrus.Debugf("Query params: %v", queryParams)
 	absFilename := queryParams.Get("file")
 	if absFilename == "" {
 		logrus.Warn("File parameter is missing in upload request")
@@ -328,9 +330,11 @@ func createFile(tempFilename string, r *http.Request) error {
 }
 
 func SetupRouter(conf *config.Config, deps *HandlerDependencies) *mux.Router {
+	logrus.Debug("Initializing router and registering routes")
     router := mux.NewRouter()
 
     router.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
+		logrus.Debugf("Route matched: /upload with method %s", r.Method)
         handleUpload(w, r, conf, deps)
     }).Methods("POST")
 
@@ -340,6 +344,7 @@ func SetupRouter(conf *config.Config, deps *HandlerDependencies) *mux.Router {
 
     router.Use(LoggingMiddleware, RecoveryMiddleware, CORSMiddleware)
 
+	logrus.Debug("Router setup completed")
     return router
 }
 
