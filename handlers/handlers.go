@@ -187,6 +187,9 @@ func validateHMAC(protocolVersion, fileStorePath string, contentLength int64, co
 
 	calculatedMAC := mac.Sum(nil)
 
+	logrus.Debugf("Provided MAC (hex): %s", providedMACHex)
+	logrus.Debugf("Calculated MAC (hex): %s", hex.EncodeToString(calculatedMAC))
+
 	providedMAC, err := hex.DecodeString(providedMACHex)
 	if err != nil {
 		logrus.Warnf("Error decoding provided MAC: %v", err)
