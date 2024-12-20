@@ -16,6 +16,7 @@ import (
 	"github.com/renz/hmac-file-server/utils"    // Corrected import path
 	"github.com/sirupsen/logrus"
 	"github.com/patrickmn/go-cache" // Added import for in-memory cache
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -141,6 +142,14 @@ func main() {
 	}
 
 	fmt.Printf("PID %d written to %s\n", pid, pidFilename)
+
+	go func() {
+		logrus.Infof("Metrics server listening on :8081")
+		http.Handle("/metrics", promhttp.Handler())
+		if err := http.ListenAndServe(":8081", nil); err != nil {
+			logrus.Errorf("Metrics server error: %v", err)
+		}
+	}()
 
 	// Start the server
 	logrus.Infof("Starting HMAC File Server on port %s...", conf.Server.ListenPort)
