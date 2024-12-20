@@ -56,6 +56,7 @@ type DownloadsConfig struct {
 	ResumableDownloadsEnabled bool   `mapstructure:"ResumableDownloadsEnabled"`
 	ChunkedDownloadsEnabled   bool   `mapstructure:"ChunkedDownloadsEnabled"`
 	ChunkSize                 string `mapstructure:"ChunkSize"`
+	AllowedExtensions         []string `mapstructure:"AllowedExtensions"`
 }
 
 type ClamAVConfig struct {
@@ -163,6 +164,12 @@ func setDefaults() {
 	viper.SetDefault("uploads.ChunkedUploadsEnabled", true)
 	viper.SetDefault("uploads.ChunkSize", "8192")
 	viper.SetDefault("uploads.AllowedExtensions", []string{
+		".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
+		".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v",
+		".3gp", ".3g2", ".mp3", ".ogg",
+	})
+
+	viper.SetDefault("downloads.AllowedExtensions", []string{
 		".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
 		".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v",
 		".3gp", ".3g2", ".mp3", ".ogg",
