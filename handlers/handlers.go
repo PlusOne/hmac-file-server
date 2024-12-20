@@ -326,6 +326,8 @@ func SetupRouter(conf *config.Config, deps *HandlerDependencies) *mux.Router {
         handleUpload(w, r, conf, deps)
     }).Methods("POST")
 
+    router.HandleFunc("/uploads/{filename}", UploadFileHandler).Methods("PUT")
+
     router.Use(LoggingMiddleware, RecoveryMiddleware, CORSMiddleware)
 
     return router
@@ -400,4 +402,54 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
     // Respond to the client
     w.WriteHeader(http.StatusOK)
     w.Write([]byte("File uploaded successfully"))
+}
+
+func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	err := r.ParseMultipartForm(10 << 20) // 10MB
+	if err != nil {
+		logrus.Errorf("Error parsing form: %v", err)
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		logrus.Errorf("File not provided: %v", err)
+		http.Error(w, "File not provided", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	filename := mux.Vars(r)["filename"]
+	storagePath := filepath.Join("/path/to/uploads", filename) // Example path
+
+	out, err := os.Create(storagePath)
+	if err != nil {
+		logrus.Errorf("Error saving file: %v", err)
+		http.Error(w, "File save error", http.StatusInternalServerError)
+		return
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, file)
+	if err != nil {
+		logrus.Errorf("Error writing file: %v", err)
+		http.Error(w, "File write error", http.StatusInternalServerError)
+		return
+	}
+
+	logrus.Infof("File '%s' uploaded successfully as '%s'", handler.Filename, filename)
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("File uploaded successfully"))
 }

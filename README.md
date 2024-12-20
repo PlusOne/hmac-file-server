@@ -485,3 +485,7 @@ time="2024-12-20T09:27:11+01:00" level=info msg="CPU Model: Intel(R) Core(TM) i7
    ```
    curl -F "file=@yourfile.txt" http://localhost:8080/upload?file=yourfile.txt&v=YOUR_MAC
    ```
+
+## PUT /uploads/{filename}
+- Requires an Authorization header (e.g., "Authorization: Bearer <token>").
+- Expects a multipart/form-data upload with a "file" field.
