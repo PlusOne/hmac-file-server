@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 	"os"
-	"strconv"
+	// "strconv" // Removed unused import
 	"path/filepath"
 	"log"
 
@@ -169,23 +169,6 @@ func main() {
 		defer cleanupPID()
 	}
 
-	http.HandleFunc("/upload", handlers.UploadHandler)
-
-	// Retrieve the current process ID
-	pid := os.Getpid()
-
-	// Specify the PID file name
-	pidFilename := "app.pid"
-
-	// Write the PID to the file
-	err = writePidToFile(pidFilename, pid)
-	if err != nil {
-		fmt.Printf("Error writing PID to file: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("PID %d written to %s\n", pid, pidFilename)
-
 	logrus.Debug("Starting HTTP server...")
 
 	go func() {
@@ -226,22 +209,6 @@ func main() {
 	}
 
 	logrus.Info("Server shutdown complete.")
-}
-
-// Add the writePidToFile function
-func writePidToFile(filename string, pid int) error {
-	file, err := os.Create(filename)
-	if (err != nil) {
-		return err
-	}
-	defer file.Close()
-
-	_, err = file.WriteString(strconv.Itoa(pid))
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func initClamAV(socket string) (*clamd.Clamd, error) {
