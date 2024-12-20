@@ -136,6 +136,9 @@ func main() {
 
 	router := handlers.SetupRouter(conf, handlerDeps)
 
+	// Apply CORS middleware
+	router.Use(handlers.CORSMiddleware)
+
 	// Configure server timeouts
 	server := &http.Server{
 		Addr:         ":" + conf.Server.ListenPort,
