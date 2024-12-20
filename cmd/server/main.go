@@ -2,25 +2,32 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"mime"
 	"net"
 	"net/http"
-	"time"
+	"net/url"
 	"os"
+	"strconv"
+	"time"
+
 	// "strconv" // Removed unused import
 	"path/filepath"
-	
+
 	// "strings" // Removed unused import
 	// "net/url" // Removed unused import
 
 	"github.com/dutchcoders/go-clamd"
 	"github.com/go-redis/redis/v8"
+	"github.com/patrickmn/go-cache" // Added import for in-memory cache
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/renz/hmac-file-server/config"   // Corrected import path
 	"github.com/renz/hmac-file-server/handlers" // Corrected import path
 	"github.com/renz/hmac-file-server/utils"    // Corrected import path
 	"github.com/sirupsen/logrus"
-	"github.com/patrickmn/go-cache" // Added import for in-memory cache
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -148,6 +155,14 @@ func main() {
 
 	router := handlers.SetupRouter(conf, handlerDeps)
 
+	// Example usage of handleUpload with conf
+	http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
+		// Example values for absFilename and a
+		absFilename := "example.txt"
+		a := r.URL.Query()
+		handleUpload(w, r, absFilename, a, *conf)
+	})
+
 	// Apply CORS middleware
 	router.Use(handlers.CORSMiddleware)
 
@@ -236,4 +251,52 @@ func initRedis(ctx context.Context, conf config.RedisConfig) *redis.Client {
 		return nil
 	}
 	return rdb
+}
+
+func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, a url.Values, conf config.Config) {
+    // ...existing code...
+
+    // Enhanced HMAC validation
+    var protocolVersion string
+    if a.Get("v2") != "" {
+        protocolVersion = "v2"
+    } else if a.Get("token") != "" {
+        protocolVersion = "token"
+    } else if a.Get("v") != "" {
+        protocolVersion = "v"
+    } else {
+		logrus.Warn("No HMAC attached to URL.")
+        http.Error(w, "No HMAC attached to URL. Expecting 'v', 'v2', or 'token' parameter as MAC", http.StatusForbidden)
+        return
+    }
+
+    mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
+
+    if protocolVersion == "v" {
+        mac.Write([]byte(fileStorePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
+    } else {
+        contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
+        if contentType == "" {
+            contentType = "application/octet-stream"
+        }
+        mac.Write([]byte(fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType))
+    }
+
+    calculatedMAC := mac.Sum(nil)
+
+    providedMACHex := a.Get(protocolVersion)
+    providedMAC, err := hex.DecodeString(providedMACHex)
+    if err != nil {
+		logrus.Warn("Invalid MAC encoding")
+        http.Error(w, "Invalid MAC encoding", http.StatusForbidden)
+        return
+    }
+
+    if !hmac.Equal(calculatedMAC, providedMAC) {
+		logrus.Warn("Invalid MAC")
+        http.Error(w, "Invalid MAC", http.StatusForbidden)
+        return
+    }
+
+    // ...existing code...
 }
