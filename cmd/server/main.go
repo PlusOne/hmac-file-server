@@ -8,6 +8,8 @@ import (
 	"time"
 	"os"
 	"strconv"
+	"path/filepath"
+	"log"
 
 	"github.com/dutchcoders/go-clamd"
 	"github.com/go-redis/redis/v8"
@@ -24,9 +26,37 @@ var (
 )
 
 func main() {
-	conf, err := config.LoadConfig("config.toml")
+	// Define configuration file paths in order of priority
+	configPaths := []string{
+		"/etc/hmac-file-server/config.toml",
+	}
+
+	// Attempt to get the parent directory of the executable
+	execPath, err := os.Executable()
+	if err == nil {
+		execDir := filepath.Dir(execPath)
+		parentDir := filepath.Dir(execDir)
+		fallbackConfig := filepath.Join(parentDir, "config.toml")
+		configPaths = append(configPaths, fallbackConfig)
+	}
+
+	var configFile string
+	for _, path := range configPaths {
+		if _, err := os.Stat(path); err == nil {
+			configFile = path
+			break
+		}
+	}
+
+	if configFile == "" {
+		log.Fatalf("Error loading configuration: no config.toml found in /etc/hmac-file-server or parent directory of the executable")
+	}
+
+	logrus.Debugf("Loading configuration from: %s", configFile)
+
+	conf, err := config.LoadConfig(configFile)
 	if err != nil {
-		logrus.Fatalf("Error loading configuration: %v", err)
+		logrus.Fatalf("Error loading configuration from %s: %v", configFile, err)
 	}
 	
 	logrus.Info("Configuration loaded successfully.")
