@@ -26,6 +26,10 @@ var (
 )
 
 func main() {
+	// Add debugging statements at the start
+	logrus.Debug("Starting HMAC File Server...")
+	logrus.Debugf("Process ID (PID): %d", os.Getpid())
+
 	// Define configuration file paths in order of priority
 	configPaths := []string{
 		"/etc/hmac-file-server/config.toml",
@@ -54,11 +58,14 @@ func main() {
 
 	logrus.Debugf("Loading configuration from: %s", configFile)
 
+	// Load configuration
+	logrus.Debug("Attempting to load configuration...")
 	conf, err := config.LoadConfig(configFile)
 	if err != nil {
 		logrus.Fatalf("Error loading configuration from %s: %v", configFile, err)
 	}
-	
+
+	logrus.Debug("Configuration successfully loaded.")
 	logrus.Info("Configuration loaded successfully.")
 
 	utils.SetupLogging(conf.Server.LogLevel, conf.Server.LogFile, conf.Server.LoggingJSON)
@@ -67,6 +74,9 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+
+	logrus.Debug("Initializing worker pools and services...")
 
 	// Initialize HMAC worker pool without using global variables
 	logrus.Infof("HMAC worker pool initialized with %d workers.", conf.Workers.NumWorkers)
@@ -175,6 +185,8 @@ func main() {
 	}
 
 	fmt.Printf("PID %d written to %s\n", pid, pidFilename)
+
+	logrus.Debug("Starting HTTP server...")
 
 	go func() {
 		logrus.Infof("Metrics server listening on :8081")
