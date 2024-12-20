@@ -148,7 +148,7 @@ func setDefaults() {
 	viper.SetDefault("server.AutoAdjustWorkers", true)
 	viper.SetDefault("server.NetworkEvents", false)
 	viper.SetDefault("server.LoggingJSON", false)
-	viper.SetDefault("server.PidFilePath", "./hmac_server.pid")
+	viper.SetDefault("server.PidFilePath", "/var/run/hmac-file-server/hmac-file-server.pid") // Updated default
 	viper.SetDefault("server.CleanupOnExit", true)
 
 	viper.SetDefault("timeouts.ReadTimeout", "4800s")

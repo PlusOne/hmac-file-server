@@ -13,7 +13,7 @@ autoadjustworkers = true
 networkevents = false
 temppath = "/tmp/hmac"
 loggingjson = false
-pidfilepath = "./hmac_file_server.pid"
+pidfilepath = "/var/run/hmac-file-server/hmac-file-server.pid"
 cleanuponexit = true
 
 [iso]
