@@ -448,6 +448,21 @@ The HMAC File Server can be configured using the `config.toml` file or environme
   Character set used for the ISO.  
   *Default:* `utf-8`
 
+## System Info Logs
+
+Upon startup, the server logs detailed environment information, such as:
+
+time="2024-12-20T09:27:11+01:00" level=info msg="Features: Prometheus Metrics, Chunked Uploads, ClamAV Scanning"  
+time="2024-12-20T09:27:11+01:00" level=info msg="Build Date: 2024-10-28"  
+time="2024-12-20T09:27:11+01:00" level=info msg="Operating System: linux"  
+time="2024-12-20T09:27:11+01:00" level=info msg="Architecture: amd64"  
+time="2024-12-20T09:27:11+01:00" level=info msg="Number of CPUs: 8"  
+time="2024-12-20T09:27:11+01:00" level=info msg="Go Version: go1.22.0"  
+time="2024-12-20T09:27:11+01:00" level=info msg="Total Memory: 15684 MB"  
+time="2024-12-20T09:27:11+01:00" level=info msg="Free Memory: 1153 MB"  
+time="2024-12-20T09:27:11+01:00" level=info msg="Used Memory: 5257 MB"  
+time="2024-12-20T09:27:11+01:00" level=info msg="CPU Model: Intel(R) Core(TM) i7-10510U CPU @ 1.80GHz, Cores: 1, Mhz: 4900.000000"
+
 ## Usage
 
 1. Build the server:

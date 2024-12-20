@@ -53,6 +53,9 @@ func main() {
 		ClamAVWorkerPool <- struct{}{}
 	}
 
+	logrus.Infof("Initialized %d upload workers: [0 1 2 ... %d]", conf.Workers.NumWorkers, conf.Workers.NumWorkers-1)
+	logrus.Infof("Initialized %d scan workers: [0 1 2 ... %d]", clamAVWorkers, clamAVWorkers-1)
+
 	// Initialize ClamAV and Redis clients as needed
 	var redisClient *redis.Client
 

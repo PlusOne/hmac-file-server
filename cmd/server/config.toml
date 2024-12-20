@@ -7,7 +7,7 @@ logfile = "./hmac-file-server.log"
 metricsenabled = false
 metricsport = "8081"
 filettl = "180d"
-minfreebytes = "50GB"
+minfreebytes = "2GB"
 deduplicationenabled = true
 autoadjustworkers = true
 networkevents = false
@@ -54,8 +54,8 @@ scanfileextensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".j
 [redis]
 redisenabled = false
 redisdbindex = 1
-redisaddr = "redis-server:6379"
-redispassword = "securepassword"
+redisaddr = "localhost:6379"
+redispassword = ""
 redishealthcheckinterval = "60s"
 
 [workers]

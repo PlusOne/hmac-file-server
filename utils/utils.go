@@ -218,9 +218,15 @@ func LogSystemInfo(versionString string) {
 	if err != nil {
 		logrus.Errorf("Failed to get CPU info: %v", err)
 	} else {
+		cpuModel := cpuInfo[0].ModelName
+		totalCores := 0
+		totalMhz := 0.0
 		for _, info := range cpuInfo {
-			logrus.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
+			totalCores += int(info.Cores)
+			totalMhz += info.Mhz
 		}
+		avgMhz := totalMhz / float64(len(cpuInfo))
+		logrus.Infof("CPU Model: %s, Total Cores: %d, Avg Mhz: %.3f", cpuModel, totalCores, avgMhz)
 	}
 
 	partitions, err := disk.Partitions(false)
