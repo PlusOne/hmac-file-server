@@ -326,7 +326,9 @@ func SetupRouter(conf *config.Config, deps *HandlerDependencies) *mux.Router {
         handleUpload(w, r, conf, deps)
     }).Methods("POST")
 
-    router.HandleFunc("/uploads/{filename}", UploadFileHandler).Methods("PUT")
+	router.HandleFunc("/uploads/{filename}", func(w http.ResponseWriter, r *http.Request) {
+		UploadFileHandler(w, r, conf)
+	}).Methods("PUT")
 
     router.Use(LoggingMiddleware, RecoveryMiddleware, CORSMiddleware)
 
@@ -404,7 +406,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
     w.Write([]byte("File uploaded successfully"))
 }
 
-func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
+func UploadFileHandler(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -432,7 +434,10 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	filename := mux.Vars(r)["filename"]
-	storagePath := filepath.Join("/path/to/uploads", filename) // Example path
+
+	// Use configured upload path instead of hardcoding
+	storagePath := filepath.Join(conf.Server.StoragePath, filename)
+	logrus.Debugf("Using configured storage path: %s", storagePath)
 
 	out, err := os.Create(storagePath)
 	if err != nil {

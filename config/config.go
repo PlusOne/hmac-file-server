@@ -127,6 +127,9 @@ func LoadConfig(configFile string) (*Config, error) {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
+	// Log StoragePath for debug
+	logrus.Infof("StoragePath set to: %s", conf.Server.StoragePath)
+
 	return &conf, nil
 }
 

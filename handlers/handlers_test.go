@@ -29,7 +29,9 @@ func TestUploadFileHandler(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer dummyToken")
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(UploadFileHandler)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		UploadFileHandler(w, r, nil) // Pass nil or appropriate config if needed
+	})
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusCreated {
