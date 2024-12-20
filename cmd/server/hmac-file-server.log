@@ -1386,3 +1386,8 @@ time="2024-12-20T10:39:38+01:00" level=info msg="Redis is not enabled. Using fal
 time="2024-12-20T10:39:38+01:00" level=info msg="PID 60592 written to ./hmac_file_server.pid"
 time="2024-12-20T10:39:38+01:00" level=info msg="Starting HMAC File Server on port 8080..."
 time="2024-12-20T10:39:38+01:00" level=info msg="Metrics server listening on :8081"
+time="2024-12-20T11:09:34+01:00" level=info msg="Received signal interrupt. Shutting down server..."
+time="2024-12-20T11:09:34+01:00" level=info msg="Received signal interrupt, performing cleanup."
+time="2024-12-20T11:09:34+01:00" level=info msg="CleanupExpiredFiles routine stopped."
+time="2024-12-20T11:09:34+01:00" level=info msg="Server shutdown complete."
+time="2024-12-20T11:09:34+01:00" level=info msg="PID file ./hmac_file_server.pid removed"
