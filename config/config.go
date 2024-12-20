@@ -175,6 +175,8 @@ func setDefaults() {
 		".3gp", ".3g2", ".mp3", ".ogg",
 	})
 
+	viper.SetDefault("downloads.ChunkSize", "8192")
+
 	viper.SetDefault("clamav.ClamAVEnabled", false)
 	viper.SetDefault("clamav.ClamAVSocket", "/var/run/clamav/clamd.ctl")
 	viper.SetDefault("clamav.NumScanWorkers", 4)
