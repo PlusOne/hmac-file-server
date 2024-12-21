@@ -264,7 +264,7 @@ func flushLogMessages() {
 
 func main() {
 	// Initialize Configuration
-	conf, err := config.LoadConfig("cmd/server/config.toml")
+	conf, err := config.LoadConfig("./config.toml")
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
@@ -1488,7 +1488,7 @@ func initRedis() {
 	defer cancel()
 
 	_, err := redisClient.Ping(ctx).Result()
-	if err != nil {
+	if (err != nil) {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
 	log.Info("Connected to Redis successfully")
