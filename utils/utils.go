@@ -2,13 +2,11 @@ package utils
 
 import (
 	"context" // Standard library
-	"errors"  // Added import for error handling
 	"fmt"     // Added import for error formatting
 	"net"
 	"net/http"      // Fixed: Added missing closing quote
 	"os/signal"     // Added import
 	"path/filepath" // Added import for file path
-	"regexp"        // Added import for regex
 	"runtime"       // Added import for runtime info
 	"strconv"       // Added import for size parsing
 	"strings"

@@ -49,6 +49,16 @@ type HandlerDependencies struct {
 	ClamAVWorkerPool chan struct{}
 }
 
+func SetupHandlerDependencies(redisClient *redis.Client, inMemoryCache *cache.Cache, clamAVClient *clamd.Clamd, hmacWorkerPool chan struct{}, clamAVWorkerPool chan struct{}) *HandlerDependencies {
+    return &HandlerDependencies{
+        RedisClient:     redisClient,
+        InMemoryCache:   inMemoryCache,
+        ClamAVClient:    clamAVClient,
+        HMACWorkerPool:  hmacWorkerPool,
+        ClamAVWorkerPool: clamAVWorkerPool,
+    }
+}
+
 // HTTP Handlers
 
 func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, deps *HandlerDependencies) {
@@ -471,7 +481,8 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request, conf *config.Conf
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, file)	if err != nil {
+	_, err = io.Copy(out, file)
+	if err != nil {
 		logrus.Errorf("Error writing file: %v", err)
 		http.Error(w, "File write error", http.StatusInternalServerError)
 		return
@@ -482,9 +493,10 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request, conf *config.Conf
 	w.Write([]byte("File uploaded successfully"))
 }
 
-func handleRequest(w http.ResponseWriter, r *http.Request) {
+func handleRequest(w http.ResponseWriter, r *http.Request, conf *config.Config) {
 	// ...existing code...
 
+	p := ""
 	fileStorePath := strings.TrimPrefix(p, "/")
 	if fileStorePath == "" || fileStorePath == "/" {
 		logrus.Warn("Access to root directory is forbidden")
@@ -503,7 +515,8 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodPut:
-		handleUpload(w, r, absFilename, fileStorePath, a, conf)
+		deps := &HandlerDependencies{}
+		handleUpload(w, r, conf, deps)
 	case http.MethodHead, http.MethodGet:
 		handleDownload(w, r, absFilename, fileStorePath)
 	case http.MethodOptions:
@@ -514,4 +527,12 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
+}
+
+func handleDownload(w http.ResponseWriter, r *http.Request, absFilename any, fileStorePath string) {
+	panic("unimplemented")
+}
+
+func sanitizeFilePath(s, fileStorePath string) (any, any) {
+	panic("unimplemented")
 }

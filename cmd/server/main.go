@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	// "strconv" // Removed unused import
@@ -146,6 +147,9 @@ func main() {
 	handlerDeps := handlers.SetupHandlerDependencies(redisClient, inMemoryCache, ClamAVClient, HMACWorkerPool, ClamAVWorkerPool)
 
 	router := handlers.SetupRouter(conf, handlerDeps)
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		handleRequest(w, r, *conf)
+	})
 
 	// Start the cleanup routine with error handling
 	go utils.CleanupExpiredFiles(ctx, conf.Server.StoragePath, conf.Server.FileTTL)
@@ -248,7 +252,7 @@ func initRedis(ctx context.Context, conf config.RedisConfig) *redis.Client {
 	return rdb
 }
 
-func handleUpload(w http.ResponseWriter, r *http.Request, absFilename string, a url.Values, conf config.Config) {
+func handleUpload(w http.ResponseWriter, r *http.Request, a url.Values, conf config.Config) {
     // ...existing code...
 
     // Enhanced HMAC validation
@@ -268,8 +272,10 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename string, a 
     mac := hmac.New(sha256.New, []byte(conf.Security.Secret))
 
     if protocolVersion == "v" {
+        fileStorePath := ""
         mac.Write([]byte(fileStorePath + "\x20" + strconv.FormatInt(r.ContentLength, 10)))
     } else {
+        fileStorePath := ""
         contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
         if contentType == "" {
             contentType = "application/octet-stream"
@@ -298,12 +304,13 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename string, a 
 
 // ...existing code...
 
-func handleRequest(w http.ResponseWriter, r *http.Request) {
+func handleRequest(w http.ResponseWriter, r *http.Request, conf config.Config) {
 	// ...existing code...
 
+	p := ""
 	fileStorePath := strings.TrimPrefix(p, "/")
 	if fileStorePath == "" || fileStorePath == "/" {
-		log.Warn("Access to root directory is forbidden")
+		logrus.Warn("Access to root directory is forbidden")
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	} else if fileStorePath[0] == '/' {
@@ -312,16 +319,31 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	absFilename, err := sanitizeFilePath(conf.Server.StoragePath, fileStorePath)
 	if err != nil {
-		log.WithFields(logrus.Fields{"file": fileStorePath, "error": err}).Warn("Invalid file path")
+		logrus.WithFields(logrus.Fields{"file": fileStorePath, "error": err}).Warn("Invalid file path")
 		http.Error(w, "Invalid file path", http.StatusBadRequest)
 		return
 	}
 
 	switch r.Method {
 	case http.MethodPut:
-		handleUpload(w, r, absFilename, fileStorePath, a, conf)
+		handleUpload(w, r, url.Values{}, conf)
 	case http.MethodHead, http.MethodGet:
 		handleDownload(w, r, absFilename, fileStorePath)
 	case http.MethodOptions:
 		w.Header().Set("Allow", "OPTIONS, GET, PUT, HEAD")
-		return	default:		log.WithField("method", r.Method).Warn("Invalid HTTP method for upload directory")		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)		return	}}// ...existing code...
+				return
+			default:
+				logrus.WithField("method", r.Method).Warn("Invalid HTTP method for upload directory")
+				http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+				return
+			}
+		}
+
+func handleDownload(w http.ResponseWriter, r *http.Request, absFilename any, fileStorePath string) {
+	panic("unimplemented")
+}
+
+func sanitizeFilePath(s, fileStorePath string) (any, any) {
+	panic("unimplemented")
+}
+		// ...existing code...
