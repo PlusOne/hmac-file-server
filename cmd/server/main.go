@@ -185,7 +185,7 @@ const (
 
 func main() {
 	// Load configuration
-	cfg, err := config.LoadConfig("/path/to/config.toml") // Provide the correct config file path
+	cfg, err := config.LoadConfig("cmd/server/config.toml") // Ensure the correct path to the config file
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
