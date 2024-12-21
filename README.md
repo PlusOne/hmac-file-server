@@ -19,76 +19,65 @@ go build -o hmac-file-server ./cmd/server
 
 ## Configuration
 
-The server loads the configuration from `/etc/hmac-file-server/config.toml` during startup. Ensure that this file is correctly set up before running the server.
+The server uses a `config.toml` file located at `cmd/server/config.toml`. Configuration is managed using the `Config` struct and parsed with `viper`.
 
-### Key Configuration Sections
+### Available Configuration Keys
 
-- **Server**
-  - `listenport`: Port on which the server listens.
-  - `unixsocket`: Enable Unix socket.
-  - `storagepath`: Path where files are stored.
-  - `loglevel`: Logging level.
-  - `logfile`: Path to the log file.
-  - `metricsenabled`: Enable Prometheus metrics.
-  - `metricsport`: Port for metrics server.
-  - `filettl`: Time-to-live for stored files.
-  - `minfreebytes`: Minimum free bytes required on storage.
-  - `deduplicationenabled`: Enable file deduplication.
-  - `autoadjustworkers`: Automatically adjust worker pool size.
-  - `networkevents`: Enable network event logging.
-  - `temppath`: Temporary path for uploads.
-  - `loggingjson`: Log in JSON format.
-  - `pidfilepath`: Path to store PID file.
-  - `cleanuponexit`: Cleanup PID file on exit.
+- `server.listenport`: Port to listen on.
+- `server.unixsocket`: Enable Unix socket.
+- `server.storagepath`: Path to store uploads.
+- `server.loglevel`: Logging level.
+- `server.logfile`: Path to log file.
+- `server.metricsenabled`: Enable Prometheus metrics.
+- `server.metricsport`: Port for metrics.
+- `server.filettl`: Time-to-live for files.
+- `server.minfreebytes`: Minimum free bytes on storage.
+- `server.deduplicationenabled`: Enable deduplication.
+- `server.autoadjustworkers`: Auto-adjust worker pool.
+- `server.networkevents`: Enable network event logging.
+- `server.temppath`: Temporary path for operations.
+- `server.loggingjson`: Enable JSON logging.
+- `server.pidfilepath`: Path to PID file.
+- `server.cleanuponexit`: Clean up on exit.
 
-- **ISO**
-  - `enabled`: Enable ISO creation.
-  - `size`: Size of the ISO.
-  - `mountpoint`: Mount point for ISO.
-  - `charset`: Character set for ISO.
+- `iso.enabled`: Enable ISO mounting.
+- `iso.size`: Size of ISO storage.
+- `iso.mountpoint`: Mount point for ISO.
+- `iso.charset`: Character set for ISO.
 
-- **Timeouts**
-  - `readtimeout`: HTTP server read timeout.
-  - `writetimeout`: HTTP server write timeout.
-  - `idletimeout`: HTTP server idle timeout.
+- `timeouts.readtimeout`: Read timeout.
+- `timeouts.writetimeout`: Write timeout.
+- `timeouts.idletimeout`: Idle timeout.
 
-- **Security**
-  - `secret`: Secret key for HMAC.
+- `security.secret`: Secret key for HMAC.
 
-- **Versioning**
-  - `enableversioning`: Enable file versioning.
-  - `maxversions`: Maximum number of file versions.
+- `versioning.enableversioning`: Enable file versioning.
+- `versioning.maxversions`: Maximum number of versions.
 
-- **Uploads**
-  - `resumableuploadsenabled`: Enable resumable uploads.
-  - `chunkeduploadsenabled`: Enable chunked uploads.
-  - `chunksize`: Size of each upload chunk.
-  - `allowedextensions`: Allowed file extensions for uploads.
+- `uploads.resumableuploadsenabled`: Enable resumable uploads.
+- `uploads.chunkeduploadsenabled`: Enable chunked uploads.
+- `uploads.chunksize`: Chunk size for uploads.
+- `uploads.allowedextensions`: Allowed file extensions for uploads.
 
-- **Downloads**
-  - `resumabledownloadsenabled`: Enable resumable downloads.
-  - `chunkeddownloadsenabled`: Enable chunked downloads.
-  - `chunksize`: Size of each download chunk.
+- `downloads.resumabledownloadsenabled`: Enable resumable downloads.
+- `downloads.chunkeddownloadsenabled`: Enable chunked downloads.
+- `downloads.chunksize`: Chunk size for downloads.
 
-- **ClamAV**
-  - `clamavenabled`: Enable ClamAV virus scanning.
-  - `clamavsocket`: ClamAV socket path.
-  - `numscanworkers`: Number of ClamAV scan workers.
-  - `scanfileextensions`: File extensions to scan.
+- `clamav.clamavenabled`: Enable ClamAV scanning.
+- `clamav.clamavsocket`: ClamAV socket path.
+- `clamav.numscanworkers`: Number of ClamAV scan workers.
+- `clamav.scanfileextensions`: File extensions to scan.
 
-- **Redis**
-  - `redisenabled`: Enable Redis for caching.
-  - `redisdbindex`: Redis DB index.
-  - `redisaddr`: Redis address.
-  - `redispassword`: Redis password.
-  - `redishealthcheckinterval`: Redis health check interval.
+- `redis.redisenabled`: Enable Redis.
+- `redis.redisdbindex`: Redis DB index.
+- `redis.redisaddr`: Redis address.
+- `redis.redispassword`: Redis password.
+- `redis.redishealthcheckinterval`: Redis health check interval.
 
-- **Workers**
-  - `numworkers`: Number of workers.
-  - `uploadqueuesize`: Size of the upload queue.
+- `workers.numworkers`: Number of worker pool workers.
+- `workers.uploadqueuesize`: Upload queue size.
 
-- **File**
-  - `filerevision`: File revision number.
+- `file.filerevision`: File revision number.
 
 ### FileTTL
 

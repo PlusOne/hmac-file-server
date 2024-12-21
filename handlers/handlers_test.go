@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/renz/hmac-file-server/config"
 )
 
 func TestUploadFileHandler(t *testing.T) {
@@ -46,4 +48,54 @@ func TestUploadFileHandler(t *testing.T) {
 	}
 
 	t.Log("Completed TestUploadFileHandler")
+}
+
+func TestUploadHandler(t *testing.T) {
+	cfg := &config.Config{
+		Uploads: config.UploadsConfig{
+			ResumableUploadsEnabled: true,
+		},
+	}
+	h := NewHandler(cfg)
+
+	req, err := http.NewRequest("POST", "/upload", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(h.UploadHandler)
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Add more assertions as needed
+}
+
+func TestDownloadHandler(t *testing.T) {
+	cfg := &config.Config{
+		Downloads: config.DownloadsConfig{
+			ChunkedDownloadsEnabled: true,
+		},
+	}
+	h := NewHandler(cfg)
+
+	req, err := http.NewRequest("GET", "/download", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(h.DownloadHandler)
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Add more assertions as needed
 }

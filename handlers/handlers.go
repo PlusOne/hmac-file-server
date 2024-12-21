@@ -57,13 +57,11 @@ func SetupHandlerDependencies(redisClient *redis.Client, inMemoryCache *cache.Ca
 
 type Handler struct {
 	cfg *config.Config
-	// ...other fields...
 }
 
 func NewHandler(cfg *config.Config) *Handler {
 	return &Handler{
 		cfg: cfg,
-		// ...initialize other fields...
 	}
 }
 
@@ -308,14 +306,14 @@ func getStoragePath(filename string, conf *config.Config) string {
 
 func createFile(tempFilename string, r *http.Request) error {
     file, err := os.Create(tempFilename)
-    if err != nil {
+    if (err != nil) {
         return err
     }
     defer file.Close()
 
     // Example: Copying the request body to the file
     _, err = io.Copy(file, r.Body)
-    if err != nil {
+    if (err != nil) {
         return err
     }
 
@@ -416,7 +414,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
     // Call createFile to handle the file creation
     err := createFile(tempFilename, r)
-    if err != nil {
+    if (err != nil) {
         http.Error(w, "Failed to create file", http.StatusInternalServerError)
         log.Printf("Error creating file: %v", err)
         return
@@ -484,5 +482,17 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request, conf *config.Conf
 
 func handleDownload(w http.ResponseWriter, r *http.Request, absFilename any, fileStorePath string) {
 	panic("unimplemented")
+}
+
+func (h *Handler) UploadHandler(w http.ResponseWriter, r *http.Request) {
+    // Implement the upload handler logic here
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte("Upload handler response"))
+}
+
+func (h *Handler) DownloadHandler(w http.ResponseWriter, r *http.Request) {
+    // Implement the download logic here
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte("File downloaded successfully"))
 }
 

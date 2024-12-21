@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -102,9 +103,10 @@ type Config struct {
 	Workers    WorkersConfig    `mapstructure:"workers"`
 	File       FileConfig       `mapstructure:"file"`
 	ISO        ISOConfig        `mapstructure:"iso"`
+	UnusedKeys []string         // To store unused configuration keys
 }
 
-// Update LoadConfig to handle day-based durations if utils.ParseDuration is extended
+// LoadConfig loads the configuration from the specified file
 func LoadConfig(configFile string) (*Config, error) {
 	logrus.Info("Loading configuration from file")
 	conf, err := loadConfigInternal(configFile)
@@ -137,6 +139,20 @@ func loadConfigInternal(configFile string) (Config, error) {
 
 	if err := validateConfig(&conf); err != nil {
 		return Config{}, fmt.Errorf("invalid config: %w", err)
+	}
+
+	// Identify unused keys
+	allKeys := viper.AllKeys()
+	usedKeys := getStructKeys()
+	for _, key := range allKeys {
+		if !contains(usedKeys, strings.ToLower(key)) {
+			conf.UnusedKeys = append(conf.UnusedKeys, key)
+		}
+	}
+
+	// Log warnings for unused keys
+	if len(conf.UnusedKeys) > 0 {
+		logrus.Warnf("Warning: The following configuration keys are unused: %v", conf.UnusedKeys)
 	}
 
 	// Log StoragePath for debug
@@ -317,4 +333,76 @@ func validateConfig(conf *Config) error {
 	return nil
 }
 
-// You may need to update utils.ParseDuration to handle 'd' for days
+func getStructKeys() []string {
+	keys := []string{
+		"server.listenport",
+		"server.unixsocket",
+		"server.storagepath",
+		"server.loglevel",
+		"server.logfile",
+		"server.metricsenabled",
+		"server.metricsport",
+		"server.filettl",
+		"server.minfreebytes",
+		"server.deduplicationenabled",
+		"server.autoadjustworkers",
+		"server.networkevents",
+		"server.temppath",
+		"server.loggingjson",
+		"server.pidfilepath",
+		"server.cleanuponexit",
+		"iso.enabled",
+		"iso.size",
+		"iso.mountpoint",
+		"iso.charset",
+		"timeouts.readtimeout",
+		"timeouts.writetimeout",
+		"timeouts.idletimeout",
+		"security.secret",
+		"versioning.enableversioning",
+		"versioning.maxversions",
+		"uploads.resumableuploadsenabled",
+		"uploads.chunkeduploadsenabled",
+		"uploads.chunksize",
+		"uploads.allowedextensions",
+		"downloads.resumabledownloadsenabled",
+		"downloads.chunkeddownloadsenabled",
+		"downloads.chunksize",
+		"clamav.clamavenabled",
+		"clamav.clamavsocket",
+		"clamav.numscanworkers",
+		"clamav.scanfileextensions",
+		"redis.redisenabled",
+		"redis.redisdbindex",
+		"redis.redisaddr",
+		"redis.redispassword",
+		"redis.redishealthcheckinterval",
+		"workers.numworkers",
+		"workers.uploadqueuesize",
+		"file.filerevision",
+	}
+	return keys
+}
+
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+type Handler struct {
+}
+
+// DownloadHandler handles file download requests
+func (h *Handler) DownloadHandler(w http.ResponseWriter, r *http.Request) {
+	// Implement the download logic here
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("File downloaded successfully"))
+}
+
+func Setup(_ Config) {
+    // ... existing code
+}

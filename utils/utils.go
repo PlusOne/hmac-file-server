@@ -30,6 +30,8 @@ import (
 	"encoding/hex"
 	"log"
 	"os"
+
+	// Removed import to avoid import cycle
 )
 
 // ...existing code...
@@ -395,3 +397,5 @@ func ManagePID(pidFilePath string) (func(), error) {
 
 	return cleanup, nil
 }
+
+// Removed InitializeClamAV function to avoid import cycle

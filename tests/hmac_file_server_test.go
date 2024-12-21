@@ -190,3 +190,20 @@ func TestHandler(t *testing.T) {
 
 	// ...write tests using h...
 }
+
+func TestLoadConfig(t *testing.T) {
+	cfg, err := config.LoadConfig("../cmd/server/config.toml")
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Check required fields
+	if cfg.Server.ListenPort == "" {
+		t.Errorf("Server.ListenPort is not set")
+	}
+
+	// Check for unused keys
+	if len(cfg.UnusedKeys) > 0 {
+		t.Logf("Unused configuration keys: %v", cfg.UnusedKeys)
+	}
+}
