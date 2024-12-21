@@ -1,4 +1,3 @@
-
 //
 // This test file checks for the presence (or absence) of the functions
 // upload_file(), generate_hmac(), validate_hmac(), and download_file()
@@ -13,9 +12,14 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"mime"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -117,4 +121,58 @@ func TestDownloadFileNegativeCase(t *testing.T) {
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("Expected 404 Not Found, got %d", rr.Code)
 	}
+}
+
+func TestHandleRequest_XMPPClient(t *testing.T) {
+	// Setup
+	server := httptest.NewServer(setupRouter())
+	defer server.Close()
+
+	// Prepare the file to upload
+	filePath := "example.txt"
+	fileContent := []byte("This is a test file.")
+	err := ioutil.WriteFile(filePath, fileContent, 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+	defer os.Remove(filePath)
+
+	// Calculate HMAC
+	secret := "a-orc-and-a-humans-is-drinking-ale"
+	fileStorePath := "uploads/example.txt"
+	contentLength := int64(len(fileContent))
+	contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(fileStorePath + "\x00" + strconv.FormatInt(contentLength, 10) + "\x00" + contentType))
+	calculatedMAC := hex.EncodeToString(mac.Sum(nil))
+
+	// Create PUT request with HMAC
+	url := fmt.Sprintf("%s/%s?v2=%s", server.URL, fileStorePath, calculatedMAC)
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(fileContent))
+	if err != nil {
+		t.Fatalf("Failed to create PUT request: %v", err)
+	}
+	req.Header.Set("Content-Type", contentType)
+
+	// Perform the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("PUT request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Validate response
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("Expected status 201 Created, got %d. Response: %s", resp.StatusCode, string(body))
+	}
+}
+
+func setupRouter() http.Handler {
+	panic("unimplemented")
 }
