@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/dutchcoders/go-clamd"
@@ -118,26 +119,31 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, d
 		logrus.Fatalf("Invalid MinFreeBytes: %v", err)
 	}
 	if err := utils.CheckStorageSpace(conf.Server.StoragePath, minFreeBytes); err != nil {
-		http.Error(w, "Not enough free space", http.StatusInsufficientStorage)
+		logrus.Errorf("Insufficient storage space: %v", err)
+		http.Error(w, "Insufficient storage space", http.StatusInsufficientStorage)
 		return
 	}
 
 	sha256Hash, tempFilePath, err := saveUploadedFile(r, conf)
 	if err != nil {
+		logrus.Errorf("Error saving uploaded file: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	logrus.Infof("File uploaded and saved to temp path: %s", tempFilePath)
 
 	if conf.Server.DeduplicationEnabled {
-		if handleDeduplication(storagePath, sha256Hash, conf) {
-			http.Error(w, "File already exists", http.StatusConflict)
-			return
+		if handleDeduplication(storagePath, sha256Hash, conf, deps) {
+			logrus.Info("Deduplication successful")
+			// Optionally, respond or take additional actions
+		} else {
+			logrus.Warn("Deduplication failed or file is unique")
 		}
 	}
 
 	if err := os.Rename(tempFilePath, storagePath); err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		logrus.Errorf("Error moving file from %s to %s: %v", tempFilePath, storagePath, err)
+		http.Error(w, "Failed to store the uploaded file", http.StatusInternalServerError)
 		return
 	}
 
@@ -147,18 +153,19 @@ func handleUpload(w http.ResponseWriter, r *http.Request, conf *config.Config, d
 		ext := filepath.Ext(storagePath)
 		if shouldScanExtension(ext, conf.ClamAV.ScanFileExtensions) {
 			if !scanFile(storagePath) {
-				http.Error(w, "Uploaded file is infected", http.StatusBadRequest)
-				os.Remove(storagePath)
+				logrus.Warnf("File %s failed ClamAV scan", storagePath)
+				http.Error(w, "File failed virus scan", http.StatusForbidden)
 				return
 			}
-			logrus.Infof("ClamAV scan passed for file: %s", storagePath)
 		}
 	}
 
 	if conf.ISO.Enabled {
 		go func() {
 			if err := createISO(storagePath, conf.ISO.Charset); err != nil {
-				logrus.Errorf("Failed to create ISO: %v", err)
+				logrus.Errorf("Error creating ISO for %s: %v", storagePath, err)
+			} else {
+				logrus.Infof("ISO created for %s", storagePath)
 			}
 		}()
 	}
@@ -212,9 +219,8 @@ func shouldScanExtension(ext string, s []string) bool {
 	panic("unimplemented")
 }
 
-func handleDeduplication(storagePath, sha256Hash string, conf *config.Config) bool {
-	var deps *HandlerDependencies
-	exists, existingPath := checkFileExists(sha256Hash, conf, deps)
+func handleDeduplication(storagePath, sha256Hash string, conf *config.Config, deps *HandlerDependencies) bool {
+    exists, existingPath := checkFileExists(sha256Hash, conf, deps)
     if exists {
         os.Remove(storagePath)
         os.Link(existingPath, storagePath)
@@ -385,7 +391,7 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -465,8 +471,7 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request, conf *config.Conf
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, file)
-	if err != nil {
+	_, err = io.Copy(out, file)	if err != nil {
 		logrus.Errorf("Error writing file: %v", err)
 		http.Error(w, "File write error", http.StatusInternalServerError)
 		return
@@ -475,4 +480,38 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request, conf *config.Conf
 	logrus.Infof("File '%s' uploaded successfully as '%s'", handler.Filename, filename)
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("File uploaded successfully"))
+}
+
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+	// ...existing code...
+
+	fileStorePath := strings.TrimPrefix(p, "/")
+	if fileStorePath == "" || fileStorePath == "/" {
+		logrus.Warn("Access to root directory is forbidden")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	} else if fileStorePath[0] == '/' {
+		fileStorePath = fileStorePath[1:]
+	}
+
+	absFilename, err := sanitizeFilePath(conf.Server.StoragePath, fileStorePath)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{"file": fileStorePath, "error": err}).Warn("Invalid file path")
+		http.Error(w, "Invalid file path", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		handleUpload(w, r, absFilename, fileStorePath, a, conf)
+	case http.MethodHead, http.MethodGet:
+		handleDownload(w, r, absFilename, fileStorePath)
+	case http.MethodOptions:
+		w.Header().Set("Allow", "OPTIONS, GET, PUT, HEAD")
+		return
+	default:
+		logrus.WithField("method", r.Method).Warn("Invalid HTTP method for upload directory")
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
 }

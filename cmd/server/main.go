@@ -142,26 +142,21 @@ func main() {
 		ClamAVClient = client
 	}
 
-	handlerDeps := &handlers.HandlerDependencies{
-		RedisClient:      redisClient,
-		InMemoryCache:    inMemoryCache,
-		ClamAVClient:     ClamAVClient, // Ensure ClamAVClient is initialized
-		HMACWorkerPool:   HMACWorkerPool,
-		ClamAVWorkerPool: ClamAVWorkerPool,
-	}
+	// Initialize HandlerDependencies
+	handlerDeps := handlers.SetupHandlerDependencies(redisClient, inMemoryCache, ClamAVClient, HMACWorkerPool, ClamAVWorkerPool)
+
+	router := handlers.SetupRouter(conf, handlerDeps)
 
 	// Start the cleanup routine with error handling
 	go utils.CleanupExpiredFiles(ctx, conf.Server.StoragePath, conf.Server.FileTTL)
 
-	router := handlers.SetupRouter(conf, handlerDeps)
-
-	// Example usage of handleUpload with conf
-	http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
-		// Example values for absFilename and a
-		absFilename := "example.txt"
-		a := r.URL.Query()
-		handleUpload(w, r, absFilename, a, *conf)
-	})
+	// Remove the redundant /upload route defined using http.HandleFunc
+	// http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
+	//     // Example values for absFilename and a
+	//     absFilename := "example.txt"
+	//     a := r.URL.Query()
+	//     handleUpload(w, r, absFilename, a, *conf)
+	// })
 
 	// Apply CORS middleware
 	router.Use(handlers.CORSMiddleware)
@@ -253,7 +248,7 @@ func initRedis(ctx context.Context, conf config.RedisConfig) *redis.Client {
 	return rdb
 }
 
-func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, a url.Values, conf config.Config) {
+func handleUpload(w http.ResponseWriter, r *http.Request, absFilename string, a url.Values, conf config.Config) {
     // ...existing code...
 
     // Enhanced HMAC validation
@@ -300,3 +295,33 @@ func handleUpload(w http.ResponseWriter, r *http.Request, fileStorePath string, 
 
     // ...existing code...
 }
+
+// ...existing code...
+
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+	// ...existing code...
+
+	fileStorePath := strings.TrimPrefix(p, "/")
+	if fileStorePath == "" || fileStorePath == "/" {
+		log.Warn("Access to root directory is forbidden")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	} else if fileStorePath[0] == '/' {
+		fileStorePath = fileStorePath[1:]
+	}
+
+	absFilename, err := sanitizeFilePath(conf.Server.StoragePath, fileStorePath)
+	if err != nil {
+		log.WithFields(logrus.Fields{"file": fileStorePath, "error": err}).Warn("Invalid file path")
+		http.Error(w, "Invalid file path", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		handleUpload(w, r, absFilename, fileStorePath, a, conf)
+	case http.MethodHead, http.MethodGet:
+		handleDownload(w, r, absFilename, fileStorePath)
+	case http.MethodOptions:
+		w.Header().Set("Allow", "OPTIONS, GET, PUT, HEAD")
+		return	default:		log.WithField("method", r.Method).Warn("Invalid HTTP method for upload directory")		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)		return	}}// ...existing code...

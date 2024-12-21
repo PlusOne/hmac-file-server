@@ -1,6 +1,7 @@
 # HMAC File Server
 
-A secure file server implementing HMAC authentication.
+## Overview
+HMAC File Server is a secure file storage solution that utilizes HMAC for authentication and supports features like deduplication, virus scanning, and more.
 
 ## Features
 
@@ -18,7 +19,80 @@ go build -o hmac-file-server ./cmd/server
 
 ## Configuration
 
-See [config.toml](./cmd/server/config.toml) for configuration options.
+The server is configured using the `config.toml` file located at:
+
+```
+/home/renz/source/hmac-file-server/cmd/server/config.toml
+```
+
+### Key Configuration Sections
+
+- **Server**
+  - `listenport`: Port on which the server listens.
+  - `unixsocket`: Enable Unix socket.
+  - `storagepath`: Path where files are stored.
+  - `loglevel`: Logging level.
+  - `logfile`: Path to the log file.
+  - `metricsenabled`: Enable Prometheus metrics.
+  - `metricsport`: Port for metrics server.
+  - `filettl`: Time-to-live for stored files.
+  - `minfreebytes`: Minimum free bytes required on storage.
+  - `deduplicationenabled`: Enable file deduplication.
+  - `autoadjustworkers`: Automatically adjust worker pool size.
+  - `networkevents`: Enable network event logging.
+  - `temppath`: Temporary path for uploads.
+  - `loggingjson`: Log in JSON format.
+  - `pidfilepath`: Path to store PID file.
+  - `cleanuponexit`: Cleanup PID file on exit.
+
+- **ISO**
+  - `enabled`: Enable ISO creation.
+  - `size`: Size of the ISO.
+  - `mountpoint`: Mount point for ISO.
+  - `charset`: Character set for ISO.
+
+- **Timeouts**
+  - `readtimeout`: HTTP server read timeout.
+  - `writetimeout`: HTTP server write timeout.
+  - `idletimeout`: HTTP server idle timeout.
+
+- **Security**
+  - `secret`: Secret key for HMAC.
+
+- **Versioning**
+  - `enableversioning`: Enable file versioning.
+  - `maxversions`: Maximum number of file versions.
+
+- **Uploads**
+  - `resumableuploadsenabled`: Enable resumable uploads.
+  - `chunkeduploadsenabled`: Enable chunked uploads.
+  - `chunksize`: Size of each upload chunk.
+  - `allowedextensions`: Allowed file extensions for uploads.
+
+- **Downloads**
+  - `resumabledownloadsenabled`: Enable resumable downloads.
+  - `chunkeddownloadsenabled`: Enable chunked downloads.
+  - `chunksize`: Size of each download chunk.
+
+- **ClamAV**
+  - `clamavenabled`: Enable ClamAV virus scanning.
+  - `clamavsocket`: ClamAV socket path.
+  - `numscanworkers`: Number of ClamAV scan workers.
+  - `scanfileextensions`: File extensions to scan.
+
+- **Redis**
+  - `redisenabled`: Enable Redis for caching.
+  - `redisdbindex`: Redis DB index.
+  - `redisaddr`: Redis address.
+  - `redispassword`: Redis password.
+  - `redishealthcheckinterval`: Redis health check interval.
+
+- **Workers**
+  - `numworkers`: Number of workers.
+  - `uploadqueuesize`: Size of the upload queue.
+
+- **File**
+  - `filerevision`: File revision number.
 
 ### FileTTL
 
@@ -157,8 +231,6 @@ Charset = "utf-8"
 Ensure that the specified mount point is writable and has sufficient space for the ISO size.
 
 ## Running the Server
-
-To build and run the HMAC File Server, follow these steps:
 
 1. **Build the Server:**
 
@@ -486,6 +558,35 @@ time="2024-12-20T09:27:11+01:00" level=info msg="CPU Model: Intel(R) Core(TM) i7
    curl -F "file=@yourfile.txt" http://localhost:8080/upload?file=yourfile.txt&v=YOUR_MAC
    ```
 
-## PUT /uploads/{filename}
-- Requires an Authorization header (e.g., "Authorization: Bearer <token>").
-- Expects a multipart/form-data upload with a "file" field.
+## API Endpoints
+
+- **Upload File:**
+  - `POST /upload`
+  - Headers:
+    - `Authorization: Bearer <token>`
+  - Query Parameters:
+    - `file`: Absolute filename.
+    - `v`, `v2`, or `token`: HMAC signature.
+  - Body:
+    - Multipart form with `file` field.
+
+- **Download File:**
+  - `GET /uploads/{filename}`
+  - Headers:
+    - `Authorization: Bearer <token>`
+
+## Logging
+
+Logs are written based on the `loglevel` and `logfile` configurations. If `loggingjson` is enabled, logs are in JSON format.
+
+## Metrics
+
+Prometheus metrics are available at `http://<server>:8081/metrics` if `metricsenabled` is set to `true`.
+
+## Graceful Shutdown
+
+The server supports graceful shutdown, ensuring that ongoing requests are completed before exiting.
+
+## License
+
+MIT License

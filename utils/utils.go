@@ -100,74 +100,27 @@ func SetupGracefulShutdown(server *http.Server, ctx context.Context, cancel cont
 	}()
 }
 
-// ParseDuration extends time.ParseDuration to support 'd' (days) and 'y' (years).
+// ParseDuration extends time.ParseDuration to handle day-based durations
 func ParseDuration(s string) (time.Duration, error) {
-	// Regular expression to match durations with optional 'd' and 'y' units
-	re := regexp.MustCompile(`(?i)^((?P<years>\d+)y)?((?P<days>\d+)d)?((?P<hours>\d+)h)?((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?$`)
-	match := re.FindStringSubmatch(s)
-	if match == nil {
-		return 0, errors.New("invalid duration format")
-	}
-
-	duration := time.Duration(0)
-	paramsMap := make(map[string]string)
-	for i, name := range re.SubexpNames() {
-		if i != 0 && name != "" && match[i] != "" {
-			paramsMap[name] = match[i]
-		}
-	}
-
-	if yearsStr, ok := paramsMap["years"]; ok {
-		years, err := strconv.Atoi(yearsStr)
+	if strings.HasSuffix(s, "d") {
+		daysPart := strings.TrimSuffix(s, "d")
+		days, err := strconv.Atoi(daysPart)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("invalid duration format: %w", err)
 		}
-		duration += time.Duration(years) * 365 * 24 * time.Hour
+		return time.Duration(days) * 24 * time.Hour, nil
 	}
-
-	if daysStr, ok := paramsMap["days"]; ok {
-		days, err := strconv.Atoi(daysStr)
-		if err != nil {
-			return 0, err
-		}
-		duration += time.Duration(days) * 24 * time.Hour
-	}
-
-	if hoursStr, ok := paramsMap["hours"]; ok {
-		hours, err := strconv.Atoi(hoursStr)
-		if err != nil {
-			return 0, err
-		}
-		duration += time.Duration(hours) * time.Hour
-	}
-
-	if minutesStr, ok := paramsMap["minutes"]; ok {
-		minutes, err := strconv.Atoi(minutesStr)
-		if err != nil {
-			return 0, err
-		}
-		duration += time.Duration(minutes) * time.Minute
-	}
-
-	if secondsStr, ok := paramsMap["seconds"]; ok {
-		seconds, err := strconv.Atoi(secondsStr)
-		if err != nil {
-			return 0, err
-		}
-		duration += time.Duration(seconds) * time.Second
-	}
-
-	return duration, nil
+	return time.ParseDuration(s)
 }
 
-// ParseDurationOrDefault parses a duration string and returns the duration or a default value if parsing fails.
-func ParseDurationOrDefault(durationStr string, defaultDuration time.Duration) time.Duration {
-	duration, err := ParseDuration(durationStr)
+// ParseDurationOrDefault parses the duration or returns a default if parsing fails
+func ParseDurationOrDefault(s string, defaultDur time.Duration) time.Duration {
+	dur, err := ParseDuration(s)
 	if err != nil {
-		logrus.Warnf("Invalid duration '%s', using default: %v", durationStr, defaultDuration)
-		return defaultDuration
+		logrus.Warnf("Invalid duration '%s', using default: %v", s, defaultDur)
+		return defaultDur
 	}
-	return duration
+	return dur
 }
 
 // AutoAdjustWorkers dynamically adjusts the number of HMAC workers based on system resources.

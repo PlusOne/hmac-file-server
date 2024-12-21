@@ -278,7 +278,7 @@ func validateConfig(conf *Config) error {
 		logrus.Infof("Created StoragePath: %s", conf.Server.StoragePath)
 		fileInfo, err = os.Stat(conf.Server.StoragePath) // Re-check after creating the directory
 		if err != nil {
-			return fmt.Errorf("error accessing StoragePath: %w", err)
+			return fmt.Errorf("error accessing StoragePath after creation: %w", err)
 		}
 	} else if err != nil {
 		return fmt.Errorf("error accessing StoragePath: %w", err)
