@@ -19,11 +19,7 @@ go build -o hmac-file-server ./cmd/server
 
 ## Configuration
 
-The server is configured using the `config.toml` file located at:
-
-```
-/home/renz/source/hmac-file-server/cmd/server/config.toml
-```
+The server loads the configuration from `/etc/hmac-file-server/config.toml` during startup. Ensure that this file is correctly set up before running the server.
 
 ### Key Configuration Sections
 

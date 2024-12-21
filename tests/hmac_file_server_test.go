@@ -23,6 +23,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/renz/hmac-file-server/config"
+	"github.com/renz/hmac-file-server/handlers"
 )
 
 // TestCheckFunctions simply verifies whether the named functions
@@ -175,4 +178,15 @@ func TestHandleRequest_XMPPClient(t *testing.T) {
 
 func setupRouter() http.Handler {
 	panic("unimplemented")
+}
+
+func TestHandler(t *testing.T) {
+	cfg, err := config.LoadConfig("../cmd/server/config.toml")
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	_ = handlers.NewHandler(cfg)
+
+	// ...write tests using h...
 }
