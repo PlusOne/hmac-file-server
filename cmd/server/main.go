@@ -10,13 +10,11 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/dutchcoders/go-clamd" // ClamAV integration
 	"github.com/go-redis/redis/v8"    // Redis integration
-	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shirou/gopsutil/cpu"
@@ -26,7 +24,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
-
 
 // parseTTL converts a human-readable TTL string to a time.Duration
 func parseTTL(ttlStr string) (time.Duration, error) {
@@ -157,11 +154,8 @@ var (
 	versionString  string = "v2.0-stable"
 	log                   = logrus.New()
 	uploadQueue    chan UploadTask
-	fileInfoCache  *cache.Cache
 	clamClient     *clamd.Clamd
 	redisClient    *redis.Client
-	redisConnected bool
-	mu             sync.RWMutex
 
 	uploadDuration      prometheus.Histogram
 	uploadErrorsTotal   prometheus.Counter
@@ -185,16 +179,10 @@ const (
 	MinFreeBytes = 1 << 30
 )
 
-var bufferPool = sync.Pool{
-	New: func() interface{} {
-		buf := make([]byte, 32*1024)
-		return &buf
-	},
-}
 
-const maxConcurrentOperations = 10
+// Removed unused constant maxConcurrentOperations
 
-var semaphore = make(chan struct{}, maxConcurrentOperations)
+// Removed unused semaphore variable
 
 func main() {
 	setDefaults()
@@ -218,15 +206,13 @@ func main() {
 		}
 	}
 
-	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
-
 	err = os.MkdirAll(conf.Server.StoragePath, os.ModePerm)
 	if err != nil {
 		log.Fatalf("Error creating store directory: %v", err)
 	}
 	log.WithField("directory", conf.Server.StoragePath).Info("Store directory is ready")
 
-	err = checkFreeSpaceWithRetry(conf.Server.StoragePath, 3, 5*time.Second)
+	err = checkFreeSpaceWithRetry(3, 5*time.Second)
 	if err != nil {
 		log.Fatalf("Insufficient free space: %v", err)
 	}
@@ -310,7 +296,7 @@ func main() {
 		}()
 	}
 
-	setupGracefulShutdown(server, cancel)
+	setupGracefulShutdown(server)
 
 	if conf.Server.AutoAdjustWorkers {
 		go monitorWorkerPerformance(ctx, &conf.Server, &conf.Workers, &conf.ClamAV)
@@ -635,7 +621,7 @@ func initRedis() {
 		redisClient = nil
 	} else {
 		log.Info("Redis client initialized successfully.")
-		redisConnected = true
+		// Redis is connected
 	}
 }
 
@@ -652,9 +638,9 @@ func MonitorRedisHealth(ctx context.Context, client *redis.Client, interval time
 			_, err := client.Ping(ctx).Result()
 			if err != nil {
 				log.WithError(err).Warn("Redis health check failed.")
-				redisConnected = false
+				// Redis is not connected
 			} else {
-				redisConnected = true
+				// Redis is connected
 			}
 		}
 	}
@@ -674,7 +660,7 @@ func uploadWorker(ctx context.Context) {
 			log.Info("Stopping upload worker.")
 			return
 		case task := <-uploadQueue:
-			err := handleUpload(task.AbsFilename, task.Request)
+			err := handleUpload()
 			task.Result <- err
 		}
 	}
@@ -694,18 +680,18 @@ func scanWorker(ctx context.Context) {
 			log.Info("Stopping scan worker.")
 			return
 		case task := <-scanQueue:
-			err := handleScan(task.AbsFilename)
+			err := handleScan()
 			task.Result <- err
 		}
 	}
 }
 
-func handleUpload(absFilename string, r *http.Request) error {
+func handleUpload() error {
 	// Handle file upload logic here
 	return nil
 }
 
-func handleScan(absFilename string) error {
+func handleScan() error {
 	// Handle file scan logic here
 	return nil
 }
@@ -743,7 +729,7 @@ func cleanExpiredFiles(storagePath string, ttl time.Duration) {
 	// Clean expired files logic here
 }
 
-func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
+func setupGracefulShutdown(server *http.Server) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
@@ -779,9 +765,9 @@ func verifyAndCreateISOContainer() error {
 	return nil
 }
 
-func checkFreeSpaceWithRetry(storagePath string, retries int, delay time.Duration) error {
+func checkFreeSpaceWithRetry(retries int, delay time.Duration) error {
 	for i := 0; i < retries; i++ {
-		err := checkFreeSpace(storagePath)
+		err := checkFreeSpace()
 		if err == nil {
 			return nil
 		}
@@ -791,7 +777,7 @@ func checkFreeSpaceWithRetry(storagePath string, retries int, delay time.Duratio
 	return fmt.Errorf("free space check failed after %d retries", retries)
 }
 
-func checkFreeSpace(storagePath string) error {
+func checkFreeSpace() error {
 	// Check free space logic here
 	return nil
 }
