@@ -645,8 +645,12 @@ func logSystemInfo() {
 	log.Infof("Used Memory: %v MB", v.Used/1024/1024)
 
 	cpuInfo, _ := cpu.Info()
+	uniqueCPUModels := make(map[string]bool)
 	for _, info := range cpuInfo {
-		log.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
+		if !uniqueCPUModels[info.ModelName] {
+			log.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
+			uniqueCPUModels[info.ModelName] = true
+		}
 	}
 
 	partitions, _ := disk.Partitions(false)
