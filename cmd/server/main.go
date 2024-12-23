@@ -416,8 +416,10 @@ func autoAdjustWorkers() (int, int) {
 	cpuCores, _ := cpu.Counts(true)
 
 	numWorkers := cpuCores * 2
-	if v.Available < 2*1024*1024*1024 {
+	if v.Available < 4*1024*1024*1024 { // Less than 4GB available
 		numWorkers = max(numWorkers/2, 1)
+	} else if v.Available < 8*1024*1024*1024 { // Less than 8GB available
+		numWorkers = max(numWorkers*3/4, 1)
 	}
 	queueSize := numWorkers * 10
 
