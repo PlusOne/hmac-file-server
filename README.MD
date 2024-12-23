@@ -65,6 +65,10 @@ If `AutoAdjustWorkers = true`, the values for `NumWorkers` and `NumScanWorkers` 
 
 Setting `NetworkEvents = false` in the server configuration disables the logging and tracking of network-related events within the application. This means that functionalities such as monitoring IP changes or recording network activity will be turned off.
 
+### Precaching
+
+The `precaching` feature allows the server to pre-cache storage paths for faster access. This can improve performance by reducing the time needed to access frequently used storage paths.
+
 ---
 
 ## Example `config.toml`
@@ -81,13 +85,15 @@ MetricsPort = "9090"
 FileTTL = "1y"
 DeduplicationEnabled = true
 MinFreeBytes = "100MB"
-AutoAdjustWorkers = true # Enable auto-adjustment for worker scaling
-NetworkEvents = false # IP changes or recording network activity will be turned off.
+AutoAdjustWorkers = true  # Enable auto-adjustment for worker scaling
+NetworkEvents = false     # Disable logging and tracking of network-related events
+PIDFilePath = "./hmac_file_server.pid"  # Path to PID file
+Precaching = true  # Enable pre-caching of storage paths
 
 [timeouts]
 ReadTimeout = "480s"
 WriteTimeout = "480s"
-IdleTimeout = "65s" # nginx/apache2 keep-a-live 60s
+IdleTimeout = "65s"  # nginx/apache2 keep-alive 60s
 
 [security]
 Secret = "changeme"
@@ -124,11 +130,8 @@ RedisHealthCheckInterval = "120s"
 NumWorkers = 4
 UploadQueueSize = 5000
 
-[iso]
-Enabled = false
-Size = "2TB"
-MountPoint = "/mnt/iso"
-Charset = "utf-8"
+[file]
+FileRevision = 1  # Revision number for file handling
 ```
 
 ---

@@ -2,7 +2,7 @@
 listenport = "8075"
 unixsocket = false
 storagepath = "./upload"
-loglevel = "info"
+loglevel = "debug"
 logfile = "./hmac-file-server.log"
 metricsenabled = true
 metricsport = "9075"
