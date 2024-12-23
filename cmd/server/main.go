@@ -1747,7 +1747,7 @@ func DeduplicateFiles(storeDir string) error {
 
 func computeFileHash(filePath string) (string, error) {
 	file, err := os.Open(filePath)
-	if err != nil {
+	if (err != nil) {
 		return "", fmt.Errorf("unable to open file %s: %w", filePath, err)
 	}
 	defer file.Close()
@@ -2074,18 +2074,20 @@ func handleCorruptedISOFile(isoPath string, files []string, size string, charset
 }
 
 func preCacheExistingFiles(storagePath string) error {
-	err := filepath.Walk(storagePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			fileInfoCache.Set(path, info, cache.DefaultExpiration)
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("error pre-caching files: %w", err)
-	}
-	log.Infof("Pre-cached existing files in %s", storagePath)
-	return nil
+    err := filepath.Walk(storagePath, func(path string, info os.FileInfo, err error) error {
+        if err != nil {
+            log.Errorf("Error accessing path %s: %v", path, err)
+            return nil // Continue walking
+        }
+        if !info.IsDir() {
+            fileInfoCache.Set(path, info, cache.DefaultExpiration)
+            log.Debugf("Cached file info for %s", path)
+        }
+        return nil
+    })
+    if err != nil {
+        return fmt.Errorf("error walking the path %q: %v", storagePath, err)
+    }
+    log.Infof("Pre-cached existing files in %s", storagePath)
+    return nil
 }
