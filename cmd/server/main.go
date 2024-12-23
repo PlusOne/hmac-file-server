@@ -110,6 +110,7 @@ type ServerConfig struct {
 	AutoAdjustWorkers    bool   `mapstructure:"AutoAdjustWorkers"`
 	NetworkEvents        bool   `mapstructure:"NetworkEvents"` // Added field
 	PrecachingEnabled    bool   `mapstructure:"precaching"`    // Added field
+	PIDFilePath          string `mapstructure:"pidfilepath"`   // Added field
 }
 
 type TimeoutConfig struct {
@@ -269,6 +270,28 @@ func flushLogMessages() {
 	logMessages = []string{}
 }
 
+// writePIDFile writes the current process ID to the specified pid file
+func writePIDFile(pidPath string) error {
+	pid := os.Getpid()
+	pidStr := strconv.Itoa(pid)
+	err := os.WriteFile(pidPath, []byte(pidStr), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write PID file: %v", err)
+	}
+	log.Infof("PID %d written to %s", pid, pidPath)
+	return nil
+}
+
+// removePIDFile removes the PID file
+func removePIDFile(pidPath string) {
+	err := os.Remove(pidPath)
+	if err != nil {
+		log.Warnf("failed to remove PID file %s: %v", pidPath, err)
+	} else {
+		log.Infof("PID file %s removed", pidPath)
+	}
+}
+
 func main() {
 	setDefaults()
 
@@ -281,6 +304,11 @@ func main() {
 		log.Fatalf("Error reading config: %v", err)
 	}
 	log.Info("Configuration loaded successfully.")
+
+	err = writePIDFile(conf.Server.PIDFilePath) // Write PID file after config is loaded
+	if err != nil {
+		log.Fatalf("Error writing PID file: %v", err)
+	}
 
 	initializeWorkerSettings(&conf.Server, &conf.Workers, &conf.ClamAV)
 
@@ -520,6 +548,7 @@ func setDefaults() {
 	viper.SetDefault("server.AutoAdjustWorkers", true)
 	viper.SetDefault("server.NetworkEvents", true) // Set default
 	viper.SetDefault("server.precaching", true)    // Set default for precaching
+	viper.SetDefault("server.pidfilepath", "/var/run/hmacfileserver.pid") // Set default for PID file path
 	_, err := parseTTL("1D")
 	if err != nil {
 		log.Warnf("Failed to parse TTL: %v", err)
@@ -1591,7 +1620,7 @@ func handleNetworkEvents(ctx context.Context) {
 			log.Info("Stopping network event handler.")
 			return
 		case event, ok := <-networkEvents:
-			if !ok {
+			if (!ok) {
 				log.Info("Network events channel closed.")
 				return
 			}
@@ -1633,28 +1662,16 @@ func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-quit
-		log.Infof("Received signal %s. Initiating shutdown...", sig)
-
-		ctxShutdown, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer shutdownCancel()
-
-		if err := server.Shutdown(ctxShutdown); err != nil {
-			log.Errorf("Server shutdown failed: %v", err)
-		} else {
-			log.Info("Server shutdown gracefully.")
-		}
-
+		log.Infof("Received signal %s. Initiating graceful shutdown...", sig)
+		removePIDFile(conf.Server.PIDFilePath) // Ensure PID file is removed
 		cancel()
-
-		close(uploadQueue)
-		log.Info("Upload queue closed.")
-		close(scanQueue)
-		log.Info("Scan queue closed.")
-		close(networkEvents)
-		log.Info("Network events channel closed.")
-
-		log.Info("Shutdown process completed. Exiting application.")
-		os.Exit(0)
+		ctx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer shutdownCancel()
+		if err := server.Shutdown(ctx); err != nil {
+			log.Errorf("Graceful shutdown failed: %v", err)
+		} else {
+			log.Info("Server gracefully stopped")
+		}
 	}()
 }
 
