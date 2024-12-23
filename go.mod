@@ -1,6 +1,6 @@
 module github.com/PlusOne/hmac-file-server
 
-go 1.21
+go 1.22
 
 require (
 	github.com/gdamore/tcell/v2 v2.7.4
