@@ -305,6 +305,7 @@ func main() {
 	setupLogging()
 	logSystemInfo()
 	initMetrics()
+	initMetricsServer()
 	log.Info("Prometheus metrics initialized.")
 
 	uploadQueue = make(chan UploadTask, conf.Workers.UploadQueueSize)
@@ -668,24 +669,88 @@ func logSystemInfo() {
 }
 
 func initMetrics() {
-	uploadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_upload_duration_seconds", Help: "Histogram of file upload duration."})
-	uploadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_upload_errors_total", Help: "Total number of file upload errors."})
-	uploadsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_uploads_total", Help: "Total number of successful file uploads."})
-	downloadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_download_duration_seconds", Help: "Histogram of file download duration."})
-	downloadsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_downloads_total", Help: "Total number of successful file downloads."})
-	downloadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "hmac", Name: "file_server_download_errors_total", Help: "Total number of file download errors."})
-	memoryUsage = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "memory_usage_bytes", Help: "Current memory usage in bytes."})
-	cpuUsage = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "cpu_usage_percent", Help: "CPU usage as a percentage."})
-	activeConnections = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "active_connections_total", Help: "Total number of active connections."})
-	requestsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{Namespace: "hmac", Name: "http_requests_total", Help: "Total HTTP requests."}, []string{"method", "path"})
-	goroutines = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "hmac", Name: "goroutines_count", Help: "Number of goroutines."})
-	uploadSizeBytes = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_upload_size_bytes", Help: "Histogram of uploaded file sizes."})
-	downloadSizeBytes = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "hmac", Name: "file_server_download_size_bytes", Help: "Histogram of downloaded file sizes."})
+	uploadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "hmac",
+		Name:      "file_server_upload_duration_seconds",
+		Help:      "Histogram of file upload duration.",
+	})
+	uploadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "hmac",
+		Name:      "file_server_upload_errors_total",
+		Help:      "Total number of file upload errors.",
+	})
+	uploadsTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "hmac",
+		Name:      "file_server_uploads_total",
+		Help:      "Total number of successful file uploads.",
+	})
+	downloadDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "hmac",
+		Name:      "file_server_download_duration_seconds",
+		Help:      "Histogram of file download duration.",
+	})
+	downloadsTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "hmac",
+		Name:      "file_server_downloads_total",
+		Help:      "Total number of successful file downloads.",
+	})
+	downloadErrorsTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "hmac",
+		Name:      "file_server_download_errors_total",
+		Help:      "Total number of file download errors.",
+	})
+	memoryUsage = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "hmac",
+		Name:      "memory_usage_bytes",
+		Help:      "Current memory usage in bytes.",
+	})
+	cpuUsage = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "hmac",
+		Name:      "cpu_usage_percent",
+		Help:      "CPU usage as a percentage.",
+	})
+	activeConnections = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "hmac",
+		Name:      "active_connections_total",
+		Help:      "Total number of active connections.",
+	})
+	requestsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "hmac",
+		Name:      "http_requests_total",
+		Help:      "Total HTTP requests.",
+	}, []string{"method", "path"})
+	goroutines = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "hmac",
+		Name:      "goroutines_count",
+		Help:      "Number of goroutines.",
+	})
+	uploadSizeBytes = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "hmac",
+		Name:      "file_server_upload_size_bytes",
+		Help:      "Histogram of uploaded file sizes.",
+	})
+	downloadSizeBytes = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "hmac",
+		Name:      "file_server_download_size_bytes",
+		Help:      "Histogram of downloaded file sizes.",
+	})
 
 	if conf.Server.MetricsEnabled {
 		prometheus.MustRegister(uploadDuration, uploadErrorsTotal, uploadsTotal)
-		prometheus.MustRegister(downloadDuration, downloadsTotal, downloadErrorsTotal)
+		prometheus.MustRegister(downloadDuration, downloadErrorsTotal, downloadsTotal)
 		prometheus.MustRegister(memoryUsage, cpuUsage, activeConnections, requestsTotal, goroutines, uploadSizeBytes, downloadSizeBytes)
+	}
+}
+
+func initMetricsServer() {
+	if conf.Server.MetricsEnabled {
+		go func() {
+			http.Handle("/metrics", promhttp.Handler())
+			log.Infof("Metrics server started at :%s/metrics", conf.Server.MetricsPort)
+			if err := http.ListenAndServe(":"+conf.Server.MetricsPort, nil); err != nil {
+				log.Errorf("Metrics server failed: %v", err)
+			}
+		}()
 	}
 }
 
@@ -698,15 +763,35 @@ func updateSystemMetrics(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			v, _ := mem.VirtualMemory()
-			memoryUsage.Set(float64(v.Used) / float64(v.Total) * 100)
-			c, _ := cpu.Percent(0, false)
-			if len(c) > 0 {
-				cpuUsage.Set(c[0])
+			// Update memory usage
+			v, err := mem.VirtualMemory()
+			if err == nil {
+				memoryUsage.Set(float64(v.Used))
+			} else {
+				log.Errorf("Error fetching memory usage: %v", err)
 			}
+
+			// Update CPU usage
+			cpuPercents, err := cpu.Percent(0, false)
+			if err == nil && len(cpuPercents) > 0 {
+				cpuUsage.Set(cpuPercents[0])
+			} else {
+				log.Errorf("Error fetching CPU usage: %v", err)
+			}
+
+			// Update goroutines count
 			goroutines.Set(float64(runtime.NumGoroutine()))
+
+			// Update active connections (this may require additional implementation)
+			activeConnections.Set(float64(getActiveConnections()))
 		}
 	}
+}
+
+func getActiveConnections() int {
+	// Implement a way to track active connections
+	// This might involve middleware to increment/decrement a counter
+	return 0 // Placeholder
 }
 
 func fileExists(filePath string) (bool, int64) {
