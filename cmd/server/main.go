@@ -638,7 +638,8 @@ func logSystemInfo() {
 	log.Infof("Used Memory: %v MB", v.Used/1024/1024)
 
 	cpuInfo, _ := cpu.Info()
-	for _, info := range cpuInfo {
+	if len(cpuInfo) > 0 {
+		info := cpuInfo[0]
 		log.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
 	}
 
