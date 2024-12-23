@@ -1,0 +1,60 @@
+[server]
+listenport = "8075"
+unixsocket = false
+storagepath = "./upload"
+loglevel = "info"
+logfile = "./hmac-file-server.log"
+metricsenabled = true
+metricsport = "9075"
+DeduplicationEnabled = true
+filettl = "356D"
+minfreebytes = "100GB"
+NetworkChangeMonitoring = false
+AutoAdjustWorkers = true
+ResumeableUploads = true
+ResumeableDownloads = true
+LogLimiter = true
+
+[iso]
+enabled = false
+size = "1TB"
+mountpoint = "/mnt/nfs_vol01/hmac-file-server/iso/"
+charset = "utf-8"
+
+[timeouts]
+readtimeout = "3600s"
+writetimeout = "3600s"
+idletimeout = "65s"
+
+[security]
+secret = "a-orc-and-a-humans-is-drinking-ale"
+
+[versioning]
+enableversioning = false
+maxversions = 1
+
+[uploads]
+resumableuploadsenabled = true
+chunkeduploadsenabled = true
+chunksize = "32MB"
+
+[clamav]
+clamavenabled = false
+clamavsocket = "/var/run/clamav/clamd.ctl"
+numscanworkers = 4
+ScanFileExtensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"] 
+
+[redis]
+redisenabled = false
+redisdbindex = 0
+redisaddr = "localhost:6379"
+redispassword = ""
+redishealthcheckinterval = "120s"
+
+[workers]
+UploadQueueSize = 1000
+NumWorkers = 4
+NumScanWorkers = 4
+
+[file]
+filerevision = 1
