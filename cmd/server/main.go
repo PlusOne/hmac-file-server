@@ -285,6 +285,13 @@ func main() {
 	}
 
 	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
+	
+	err = precacheStoragePath(conf.Server.StoragePath)
+	if err != nil {
+		log.Warnf("Pre-caching storage path failed: %v", err)
+	} else {
+		log.Info("Pre-cached all files in the storage path.")
+	}
 
 	err = os.MkdirAll(conf.Server.StoragePath, os.ModePerm)
 	if err != nil {
@@ -1613,7 +1620,7 @@ func MonitorRedisHealth(ctx context.Context, client *redis.Client, checkInterval
 			err := client.Ping(ctx).Err()
 			mu.Lock()
 			if err != nil {
-				if redisConnected {
+				if (redisConnected) {
 					log.Errorf("Redis health check failed: %v", err)
 				}
 				redisConnected = false
@@ -2063,4 +2070,18 @@ func handleCorruptedISOFile(isoPath string, files []string, size string, charset
 		return fmt.Errorf("failed to recreate ISO: %w", err)
 	}
 	return nil
+}
+
+func precacheStoragePath(dir string) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Warnf("Error accessing path %s: %v", path, err)
+			return nil // Continue walking
+		}
+		if !info.IsDir() {
+			fileInfoCache.Set(path, info, cache.DefaultExpiration)
+			log.Debugf("Cached file info for %s", path)
+		}
+		return nil
+	})
 }
