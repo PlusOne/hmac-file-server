@@ -163,6 +163,11 @@ type ISOConfig struct {
 	Charset    string `mapstructure:"charset"`
 }
 
+type PasteConfig struct {
+	Enabled     bool   `mapstructure:"enabled"`
+	StoragePath string `mapstructure:"storagePath"`
+}
+
 type Config struct {
 	Server     ServerConfig     `mapstructure:"server"`
 	Timeouts   TimeoutConfig    `mapstructure:"timeouts"`
@@ -174,6 +179,7 @@ type Config struct {
 	Workers    WorkersConfig    `mapstructure:"workers"`
 	File       FileConfig       `mapstructure:"file"`
 	ISO        ISOConfig        `mapstructure:"iso"`
+	Paste      PasteConfig      `mapstructure:"paste"`
 }
 
 type UploadTask struct {
@@ -576,6 +582,10 @@ func validateConfig(conf *Config) error {
 		if conf.ISO.Charset == "" {
 			return fmt.Errorf("ISO charset must be set")
 		}
+	}
+
+	if conf.Paste.Enabled && conf.Paste.StoragePath == "" {
+		return fmt.Errorf("paste is enabled but 'storagePath' is not set in '[paste]' section")
 	}
 
 	return nil

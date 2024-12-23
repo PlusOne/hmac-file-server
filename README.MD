@@ -99,8 +99,13 @@ MaxVersions = 1
 [uploads]
 ResumableUploadsEnabled = true
 ChunkedUploadsEnabled = true
-ChunkSize = "32MB"
+ChunkSize = "64MB"
 AllowedExtensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"]
+
+[downloads]
+ResumableDownloadsEnabled = true
+ChunkedDownloadsEnabled = true
+ChunkSize = "64MB"
 
 [clamav]
 ClamAVEnabled = false
@@ -184,3 +189,12 @@ Prometheus metrics include:
 - **ClamAV Integration**: Scan uploaded files for viruses using ClamAV.
 - **Redis Caching**: Utilize Redis for caching file metadata for faster access.
 - **Auto-Adjust Worker Scaling**: Optimize the number of workers dynamically based on system resources.
+
+---
+
+## Build & Run
+1. Clone the repository.
+2. Build the server:  
+   go build -o hmac-file-server cmd/server/main.go
+3. Run the server:  
+   ./hmac-file-server --config ./cmd/server/config.toml
