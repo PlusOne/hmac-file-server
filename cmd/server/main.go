@@ -170,12 +170,18 @@ type PasteConfig struct {
 	StoragePath string `mapstructure:"storagePath"`
 }
 
+type DownloadsConfig struct {
+	ResumableDownloadEnabled bool   `mapstructure:"ResumableDownloadEnabled"`
+	ChunkSize                string `mapstructure:"ChunkSize"`
+}
+
 type Config struct {
 	Server     ServerConfig     `mapstructure:"server"`
 	Timeouts   TimeoutConfig    `mapstructure:"timeouts"`
 	Security   SecurityConfig   `mapstructure:"security"`
 	Versioning VersioningConfig `mapstructure:"versioning"`
 	Uploads    UploadsConfig    `mapstructure:"uploads"`
+	Downloads  DownloadsConfig  `mapstructure:"downloads"`
 	ClamAV     ClamAVConfig     `mapstructure:"clamav"`
 	Redis      RedisConfig      `mapstructure:"redis"`
 	Workers    WorkersConfig    `mapstructure:"workers"`
@@ -602,6 +608,67 @@ func validateConfig(conf *Config) error {
 
 	if conf.Paste.Enabled && conf.Paste.StoragePath == "" {
 		return fmt.Errorf("paste is enabled but 'storagePath' is not set in '[paste]' section")
+	}
+
+	// Validate Downloads Configuration
+	if conf.Downloads.ResumableDownloadEnabled {
+		if conf.Downloads.ChunkSize == "" {
+			return fmt.Errorf("downloads.chunkSize must be set when resumable downloads are enabled")
+		}
+		if _, err := parseSize(conf.Downloads.ChunkSize); err != nil {
+			return fmt.Errorf("invalid downloads.chunkSize: %v", err)
+		}
+	}
+
+	// Validate Uploads Configuration
+	if conf.Uploads.ResumableUploadsEnabled {
+		if conf.Uploads.ChunkSize == "" {
+			return fmt.Errorf("uploads.chunkSize must be set when resumable uploads are enabled")
+		}
+		if _, err := parseSize(conf.Uploads.ChunkSize); err != nil {
+			return fmt.Errorf("invalid uploads.chunkSize: %v", err)
+		}
+	}
+
+	// Validate Workers Configuration
+	if conf.Workers.NumWorkers <= 0 {
+		return fmt.Errorf("workers.numWorkers must be greater than 0")
+	}
+	if conf.Workers.UploadQueueSize <= 0 {
+		return fmt.Errorf("workers.uploadQueueSize must be greater than 0")
+	}
+
+	// Validate ClamAV Configuration
+	if conf.ClamAV.ClamAVEnabled {
+		if conf.ClamAV.ClamAVSocket == "" {
+			return fmt.Errorf("clamav.clamAVSocket must be set when ClamAV is enabled")
+		}
+		if conf.ClamAV.NumScanWorkers <= 0 {
+			return fmt.Errorf("clamav.numScanWorkers must be greater than 0")
+		}
+	}
+
+	// Validate ISO Configuration
+	if conf.ISO.Enabled {
+		if conf.ISO.Size == "" {
+			return fmt.Errorf("iso.size must be set when ISO is enabled")
+		}
+		if _, err := parseSize(conf.ISO.Size); err != nil {
+			return fmt.Errorf("invalid iso.size: %v", err)
+		}
+		if conf.ISO.MountPoint == "" {
+			return fmt.Errorf("iso.mountPoint must be set when ISO is enabled")
+		}
+		if conf.ISO.Charset == "" {
+			return fmt.Errorf("iso.charset must be set when ISO is enabled")
+		}
+	}
+
+	// Validate Paste Configuration
+	if conf.Paste.Enabled {
+		if conf.Paste.StoragePath == "" {
+			return fmt.Errorf("paste.storagePath must be set when paste is enabled")
+		}
 	}
 
 	return nil
