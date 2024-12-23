@@ -596,7 +596,7 @@ func validateConfig(conf *Config) error {
 
 func setupLogging() {
 	level, err := logrus.ParseLevel(conf.Server.LogLevel)
-	if err != nil {
+	if (err != nil) {
 		log.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
 	}
 	log.SetLevel(level)
@@ -607,7 +607,7 @@ func setupLogging() {
 			MaxSize:    100, // megabytes
 			MaxBackups: 3,
 			MaxAge:     28, // days
-			Compress:   true, // disabled by default
+			Compress:   true, // compress old log files
 		})
 	} else {
 		log.SetOutput(os.Stdout)
@@ -1618,7 +1618,7 @@ func MonitorRedisHealth(ctx context.Context, client *redis.Client, checkInterval
 				}
 				redisConnected = false
 			} else {
-				if !redisConnected {
+				if (!redisConnected) {
 					log.Info("Redis reconnected successfully")
 				}
 				redisConnected = true
