@@ -286,6 +286,8 @@ func main() {
 
 	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
 	
+	// Starting pre-caching of storage path
+	log.Info("Starting pre-caching of storage path...")
 	err = precacheStoragePath(conf.Server.StoragePath)
 	if err != nil {
 		log.Warnf("Pre-caching storage path failed: %v", err)
