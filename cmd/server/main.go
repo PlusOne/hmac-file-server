@@ -375,9 +375,12 @@ func main() {
 
 	if conf.Server.MetricsEnabled {
 		go func() {
-			http.Handle("/metrics", promhttp.Handler())
+			metricsServer := &http.Server{
+				Addr:    ":" + conf.Server.MetricsPort,
+				Handler: promhttp.Handler(),
+			}
 			log.Infof("Metrics server started on port %s", conf.Server.MetricsPort)
-			if err := http.ListenAndServe(":"+conf.Server.MetricsPort, nil); err != nil {
+			if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Fatalf("Metrics server failed: %v", err)
 			}
 		}()
