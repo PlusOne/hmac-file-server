@@ -15,6 +15,7 @@ temppath = "/tmp/hmac"
 loggingjson = false
 pidfilepath = "./hmac_file_server.pid"
 cleanuponexit = true
+precaching = true
 
 [iso]
 enabled = false

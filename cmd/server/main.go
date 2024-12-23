@@ -109,6 +109,7 @@ type ServerConfig struct {
 	MinFreeByte          string `mapstructure:"MinFreeByte"`
 	AutoAdjustWorkers    bool   `mapstructure:"AutoAdjustWorkers"`
 	NetworkEvents        bool   `mapstructure:"NetworkEvents"` // Added field
+	PrecachingEnabled    bool   `mapstructure:"precaching"`    // Added field
 }
 
 type TimeoutConfig struct {
@@ -286,13 +287,15 @@ func main() {
 
 	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
 	
-	// Starting pre-caching of storage path
-	log.Info("Starting pre-caching of storage path...")
-	err = precacheStoragePath(conf.Server.StoragePath)
-	if err != nil {
-		log.Warnf("Pre-caching storage path failed: %v", err)
-	} else {
-		log.Info("Pre-cached all files in the storage path.")
+	if conf.Server.PrecachingEnabled { // Conditionally perform pre-caching
+		// Starting pre-caching of storage path
+		log.Info("Starting pre-caching of storage path...")
+		err = precacheStoragePath(conf.Server.StoragePath)
+		if err != nil {
+			log.Warnf("Pre-caching storage path failed: %v", err)
+		} else {
+			log.Info("Pre-cached all files in the storage path.")
+		}
 	}
 
 	err = os.MkdirAll(conf.Server.StoragePath, os.ModePerm)
@@ -510,6 +513,7 @@ func setDefaults() {
 	viper.SetDefault("server.MinFreeBytes", "100MB")
 	viper.SetDefault("server.AutoAdjustWorkers", true)
 	viper.SetDefault("server.NetworkEvents", true) // Set default
+	viper.SetDefault("server.precaching", true)    // Set default for precaching
 	_, err := parseTTL("1D")
 	if err != nil {
 		log.Warnf("Failed to parse TTL: %v", err)
