@@ -1597,7 +1597,7 @@ func initRedis() {
 	defer cancel()
 
 	_, err := redisClient.Ping(ctx).Result()
-	if err != nil {
+	if (err != nil) {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
 	log.Info("Connected to Redis successfully")
