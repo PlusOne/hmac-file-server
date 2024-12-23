@@ -297,6 +297,11 @@ func main() {
 		log.Fatalf("Insufficient free space: %v", err)
 	}
 
+	err = preCacheExistingFiles(conf.Server.StoragePath)
+	if err != nil {
+		log.Fatalf("Error pre-caching existing files: %v", err)
+	}
+
 	setupLogging()
 	logSystemInfo()
 	initMetrics()
@@ -2063,5 +2068,22 @@ func handleCorruptedISOFile(isoPath string, files []string, size string, charset
 	if err != nil {
 		return fmt.Errorf("failed to recreate ISO: %w", err)
 	}
+	return nil
+}
+
+func preCacheExistingFiles(storagePath string) error {
+	err := filepath.Walk(storagePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			fileInfoCache.Set(path, info, cache.DefaultExpiration)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error pre-caching files: %w", err)
+	}
+	log.Infof("Pre-cached existing files in %s", storagePath)
 	return nil
 }
