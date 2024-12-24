@@ -736,6 +736,28 @@ func validateConfig(conf *Config) error {
 		}
 	}
 
+	// Verify that the primary storage path is accessible
+	if err := checkStoragePath(conf.Server.StoragePath); err != nil {
+		return fmt.Errorf("storage path check failed: %w", err)
+	}
+
+	return nil
+}
+
+func checkStoragePath(path string) error {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		log.Errorf("Storage path does not exist: %s", path)
+		return err
+	}
+	if err != nil {
+		log.Errorf("Error accessing storage path: %v", err)
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("not a directory: %s", path)
+	}
+	log.Infof("Verified storage path is accessible: %s", path)
 	return nil
 }
 
@@ -851,6 +873,7 @@ func updateSystemMetrics(ctx context.Context) {
 }
 
 func fileExists(filePath string) (bool, int64) {
+	log.Debugf("Checking file existence: %s", filePath)
 	if cachedInfo, found := fileInfoCache.Get(filePath); found {
 		if info, ok := cachedInfo.(os.FileInfo); ok {
 			return !info.IsDir(), info.Size()
