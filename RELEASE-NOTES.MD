@@ -84,7 +84,18 @@ The `precaching` feature allows the server to pre-cache storage paths for faster
   ```toml
   [deduplication]
   enabled = true
-  storagepath = "/mnt/nfs_vol01/hmac-file-server/deduplication/"
+  directory = "/mnt/hmac-storage/deduplication/"
+  ```
+
+### Thumbnail Support
+
+- **Description:** Added support for thumbnail creation to generate smaller versions of uploaded images.
+- **Configuration:**
+  ```toml
+  [thumbnails]
+  enabled = true
+  directory = "/mnt/hmac-storage/thumbnails/"
+  size = "200x200"
   ```
 
 ---

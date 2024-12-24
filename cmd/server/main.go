@@ -38,6 +38,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"
+	"github.com/disintegration/imaging"
 )
 
 // parseSize converts a human-readable size string to bytes
@@ -182,6 +183,12 @@ type DeduplicationConfig struct {
 	StoragePath string `mapstructure:"storagepath"`
 }
 
+type ThumbnailsConfig struct {
+	Enabled   bool   `mapstructure:"enabled"`
+	Directory string `mapstructure:"directory"`
+	Size      string `mapstructure:"size"`
+}
+
 type Config struct {
 	Server         ServerConfig         `mapstructure:"server"`
 	Timeouts       TimeoutConfig        `mapstructure:"timeouts"`
@@ -196,6 +203,7 @@ type Config struct {
 	ISO            ISOConfig            `mapstructure:"iso"`
 	Paste          PasteConfig          `mapstructure:"paste"`
 	Deduplication  DeduplicationConfig  `mapstructure:"deduplication"`
+	Thumbnails     ThumbnailsConfig     `mapstructure:"thumbnails"`
 }
 
 type UploadTask struct {
@@ -718,6 +726,16 @@ func validateConfig(conf *Config) error {
 		}
 	}
 
+	if conf.Thumbnails.Enabled {
+		if conf.Thumbnails.Directory == "" {
+			return fmt.Errorf("thumbnails.directory is required when thumbnails are enabled")
+		}
+		// Optionally, check if thumbnails storage path exists
+		if _, err := os.Stat(conf.Thumbnails.Directory); os.IsNotExist(err) {
+			return fmt.Errorf("thumbnails.directory does not exist: %s", conf.Thumbnails.Directory)
+		}
+	}
+
 	return nil
 }
 
@@ -1005,6 +1023,16 @@ func processUpload(task UploadTask) error {
 			return err
 		}
 		log.Infof("ISO container handled successfully for file: %s", absFilename)
+	}
+
+	if conf.Thumbnails.Enabled {
+		err = generateThumbnail(absFilename, conf.Thumbnails.Directory, conf.Thumbnails.Size)
+		if err != nil {
+			log.Errorf("Failed to generate thumbnail for %s: %v", absFilename, err)
+			uploadErrorsTotal.Inc()
+			return err
+		}
+		log.Infof("Thumbnail generated for %s", absFilename)
 	}
 
 	log.WithFields(logrus.Fields{"file": absFilename}).Info("File uploaded and processed successfully")
@@ -2196,4 +2224,48 @@ func precacheStoragePath(dir string) error {
 		}
 		return nil
 	})
+}
+
+func generateThumbnail(originalPath, thumbnailDir, size string) error {
+	// Implement thumbnail generation logic here
+	// For example, using an image processing library like "github.com/disintegration/imaging"
+
+	img, err := imaging.Open(originalPath)
+	if err != nil {
+		return err
+	}
+
+	// Parse size (e.g., "200x200")
+	dimensions := strings.Split(size, "x")
+	if len(dimensions) != 2 {
+		return fmt.Errorf("invalid thumbnail size format: %s", size)
+	}
+
+	width, err := strconv.Atoi(dimensions[0])
+	if err != nil {
+		return fmt.Errorf("invalid thumbnail width: %s", dimensions[0])
+	}
+
+	height, err := strconv.Atoi(dimensions[1])
+	if err != nil {
+		return fmt.Errorf("invalid thumbnail height: %s", dimensions[1])
+	}
+
+	thumb := imaging.Thumbnail(img, width, height, imaging.Lanczos) // Example size
+
+	baseName := filepath.Base(originalPath)
+	thumbName := strings.TrimSuffix(baseName, filepath.Ext(baseName)) + "_thumb" + filepath.Ext(baseName)
+	thumbPath := filepath.Join(thumbnailDir, thumbName)
+
+	err = os.MkdirAll(thumbnailDir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	err = imaging.Save(thumb, thumbPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

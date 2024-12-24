@@ -17,7 +17,12 @@ loggingjson = false
 
 [deduplication]
 enabled = true
-storagepath = "/mnt/nfs_vol01/hmac-file-server/deduplication/"
+directory = "/mnt/hmac-storage/deduplication/"
+
+[thumbnails]
+enabled = true
+directory = "/mnt/hmac-storage/thumbnails/"
+size = "200x200"
 
 [iso]
 enabled = false

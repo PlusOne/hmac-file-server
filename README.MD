@@ -79,6 +79,31 @@ Set `enabled` to true in the `[deduplication]` section of `config.toml` to enabl
 
 ---
 
+## Deduplication
+
+Set `enabled` to true in the `[deduplication]` section of `config.toml` to enable file deduplication. Specify the `directory` where deduplicated files will be stored.
+
+### Example `config.toml`
+
+```toml
+[deduplication]
+enabled = true
+directory = "/mnt/hmac-storage/deduplication/"
+```
+
+## Thumbnails
+
+Set `enabled` to true in the `[thumbnails]` section of `config.toml` to enable thumbnail creation. Specify the `directory` where thumbnails will be stored and the `size` of the thumbnails.
+
+### Example `config.toml`
+
+```toml
+[thumbnails]
+enabled = true
+directory = "/mnt/hmac-storage/thumbnails/"
+size = "200x200"
+```
+
 ## Example `config.toml`
 
 ```toml
