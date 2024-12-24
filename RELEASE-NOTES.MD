@@ -200,34 +200,4 @@ Use tools like **cURL** or **Postman** to test file uploads and downloads.
 curl -X PUT -H "Authorization: Bearer <HMAC-TOKEN>" -F "file=@example.txt" http://localhost:8080/uploads/example.txt
 ```
 
-Replace `<HMAC-TOKEN>` with a valid HMAC signature generated using the configured `Secret`.
-
----
-
-## Monitoring
-
-Prometheus metrics include:
-- File upload/download durations
-- Memory usage
-- CPU usage
-- Active connections
-- HTTP requests metrics (total, method, path)
-
----
-
-## Additional Features
-
-- **Deduplication**: Automatically remove duplicate files based on hashing.
-- **Versioning**: Store multiple versions of files and keep a maximum of `MaxVersions` versions.
-- **ClamAV Integration**: Scan uploaded files for viruses using ClamAV.
-- **Redis Caching**: Utilize Redis for caching file metadata for faster access.
-- **Auto-Adjust Worker Scaling**: Optimize the number of workers dynamically based on system resources.
-
----
-
-## Build & Run
-1. Clone the repository.
-2. Build the server:  
-   go build -o hmac-file-server cmd/server/main.go
-3. Run the server:  
-   ./hmac-file-server --config ./cmd/server/config.toml
+Replace `<HMAC-TOKEN>` with a valid HMAC signature
