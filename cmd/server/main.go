@@ -179,8 +179,8 @@ type DownloadsConfig struct {
 }
 
 type DeduplicationConfig struct {
-	Enabled     bool   `mapstructure:"enabled"`
-	StoragePath string `mapstructure:"storagepath"`
+	Enabled   bool   `mapstructure:"enabled"`
+	Directory string `mapstructure:"directory"`
 }
 
 type ThumbnailsConfig struct {
@@ -717,12 +717,12 @@ func validateConfig(conf *Config) error {
 	}
 
 	if conf.Deduplication.Enabled {
-		if conf.Deduplication.StoragePath == "" {
-			return fmt.Errorf("deduplication.storagepath is required when deduplication is enabled")
+		if conf.Deduplication.Directory == "" {
+			return fmt.Errorf("deduplication.directory is required when deduplication is enabled")
 		}
-		// Optionally, check if deduplication storage path exists
-		if _, err := os.Stat(conf.Deduplication.StoragePath); os.IsNotExist(err) {
-			return fmt.Errorf("deduplication.storagepath does not exist: %s", conf.Deduplication.StoragePath)
+		// Optionally, check if deduplication directory exists
+		if _, err := os.Stat(conf.Deduplication.Directory); os.IsNotExist(err) {
+			return fmt.Errorf("deduplication.directory does not exist: %s", conf.Deduplication.Directory)
 		}
 	}
 
