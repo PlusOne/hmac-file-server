@@ -65,7 +65,44 @@ If `AutoAdjustWorkers = true`, the values for `NumWorkers` and `NumScanWorkers` 
 
 Setting `NetworkEvents = false` in the server configuration disables the logging and tracking of network-related events within the application. This means that functionalities such as monitoring IP changes or recording network activity will be turned off.
 
+### Precaching
+
+The `precaching` feature allows the server to pre-cache storage paths for faster access. This can improve performance by reducing the time needed to access frequently used storage paths.
+
+### Thumbnail Creation
+
+Set `thumbnail` to true in the `[server]` section of `config.toml` to enable image thumbnail generation.
+
+### Deduplication
+
+Set `enabled` to true in the `[deduplication]` section of `config.toml` to enable file deduplication. Specify the `directory` where deduplicated files will be stored.
+
 ---
+
+## Deduplication
+
+Set `enabled` to true in the `[deduplication]` section of `config.toml` to enable file deduplication. Specify the `directory` where deduplicated files will be stored.
+
+### Example `config.toml`
+
+```toml
+[deduplication]
+enabled = true
+directory = "/mnt/hmac-storage/deduplication/"
+```
+
+## Thumbnails
+
+Set `enabled` to true in the `[thumbnails]` section of `config.toml` to enable thumbnail creation. Specify the `directory` where thumbnails will be stored and the `size` of the thumbnails.
+
+### Example `config.toml`
+
+```toml
+[thumbnails]
+enabled = true
+directory = "/mnt/hmac-storage/thumbnails/"
+size = "200x200"
+```
 
 ## Example `config.toml`
 
@@ -81,13 +118,16 @@ MetricsPort = "9090"
 FileTTL = "1y"
 DeduplicationEnabled = true
 MinFreeBytes = "100MB"
-AutoAdjustWorkers = true # Enable auto-adjustment for worker scaling
-NetworkEvents = false # IP changes or recording network activity will be turned off.
+AutoAdjustWorkers = true  # Enable auto-adjustment for worker scaling
+NetworkEvents = false     # Disable logging and tracking of network-related events
+PIDFilePath = "./hmac_file_server.pid"  # Path to PID file
+Precaching = true  # Enable pre-caching of storage paths
+ThumbnailEnabled = false  # Whether to create thumbnails for uploaded images
 
 [timeouts]
 ReadTimeout = "480s"
 WriteTimeout = "480s"
-IdleTimeout = "65s" # nginx/apache2 keep-a-live 60s
+IdleTimeout = "65s"  # nginx/apache2 keep-alive 60s
 
 [security]
 Secret = "changeme"
@@ -99,8 +139,13 @@ MaxVersions = 1
 [uploads]
 ResumableUploadsEnabled = true
 ChunkedUploadsEnabled = true
-ChunkSize = "32MB"
+ChunkSize = "64MB"
 AllowedExtensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"]
+
+[downloads]
+ResumableDownloadsEnabled = true
+ChunkedDownloadsEnabled = true
+ChunkSize = "64MB"
 
 [clamav]
 ClamAVEnabled = false
@@ -119,11 +164,107 @@ RedisHealthCheckInterval = "120s"
 NumWorkers = 4
 UploadQueueSize = 5000
 
+[file]
+FileRevision = 1  # Revision number for file handling
+
+[deduplication]
+enabled = true
+directory = "/mnt/nfs_vol01/hmac-file-server/deduplication/"
+```
+
+---
+
+## HMAC File Server - Version 2.2 Stable
+
+Below is an example configuration file (config.toml) you can use as a reference (with sensitive data removed):
+
+```toml
+[server]
+listenport = "8080"
+unixsocket = false
+storagepath = "/mnt/nfs_vol01/hmac-file-server/"
+loglevel = "debug"
+logfile = "/var/log/hmac-file-server.log"
+metricsenabled = true
+metricsport = "9090"
+deduplicationenabled = true
+minfreebytes = "5GB"
+filettl = "2Y"
+autoadjustworkers = true
+networkevents = false
+pidfilepath = "./hmac-file-server.pid"
+precaching = true
+
+[deduplication]
+enabled = true
+directory = "/mnt/nfs_vol01/hmac-storage/deduplication/"
+
+[thumbnails]
+enabled = true
+directory = "/mnt/nfs_vol01/hmac-file-server/thumbnails/"
+size = "200x200"
+
 [iso]
-Enabled = false
-Size = "2TB"
-MountPoint = "/mnt/iso"
-Charset = "utf-8"
+enabled = false
+size = "1TB"
+mountpoint = "/mnt/nfs_vol01/hmac-file-server/iso/"
+charset = "utf-8"
+
+[timeouts]
+readtimeout = "3600s"
+writetimeout = "3600s"
+idletimeout = "3600s"
+
+[security]
+secret = "stellar-wisdom-orbit-echo"
+
+[versioning]
+enableversioning = false
+maxversions = 1
+
+[uploads]
+resumableuploadsenabled = false
+chunkeduploadsenabled = true
+chunksize = "32MB"
+allowedextensions = [
+    ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif",
+    ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4",
+    ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm",
+    ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
+]
+
+[downloads]
+chunkeddownloadsenabled = false
+chunksize = "32MB"
+allowedextensions = [
+    ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif",
+    ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4",
+    ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm",
+    ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
+]
+
+[clamav]
+clamavenabled = true
+clamavsocket = "/var/run/clamav/clamd.ctl"
+numscanworkers = 4
+scanfileextensions = [
+    ".exe", ".dll", ".bin", ".com", ".bat",
+    ".sh", ".php", ".js"
+]
+
+[redis]
+redisenabled = true
+redisdbindex = 0
+redisaddr = "localhost:6379"
+redispassword = ""
+redishealthcheckinterval = "120s"
+
+[workers]
+numworkers = 4
+uploadqueuesize = 5000
+
+[file]
+filerevision = 1
 ```
 
 ---
@@ -184,3 +325,12 @@ Prometheus metrics include:
 - **ClamAV Integration**: Scan uploaded files for viruses using ClamAV.
 - **Redis Caching**: Utilize Redis for caching file metadata for faster access.
 - **Auto-Adjust Worker Scaling**: Optimize the number of workers dynamically based on system resources.
+
+---
+
+## Build & Run
+1. Clone the repository.
+2. Build the server:  
+   go build -o hmac-file-server cmd/server/main.go
+3. Run the server:  
+   ./hmac-file-server --config ./cmd/server/config.toml
