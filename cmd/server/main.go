@@ -223,6 +223,11 @@ type NetworkEvent struct {
 	Details string
 }
 
+// Add a new field to store the creation date of files
+type FileMetadata struct {
+	CreationDate time.Time
+}
+
 var (
 	conf           Config
 	versionString  string = "v2.2-trash"
@@ -230,6 +235,7 @@ var (
 	uploadQueue    chan UploadTask
 	networkEvents  chan NetworkEvent
 	fileInfoCache  *cache.Cache
+	fileMetadataCache *cache.Cache
 	clamClient     *clamd.Clamd
 	redisClient    *redis.Client
 	redisConnected bool
@@ -336,6 +342,7 @@ func main() {
 	}
 
 	fileInfoCache = cache.New(5*time.Minute, 10*time.Minute)
+	fileMetadataCache = cache.New(5*time.Minute, 10*time.Minute)
 
 	if conf.Server.PrecachingEnabled { // Conditionally perform pre-caching
 		// Starting pre-caching of storage path
@@ -768,7 +775,7 @@ func checkStoragePath(path string) error {
 
 func setupLogging() {
 	level, err := logrus.ParseLevel(conf.Server.LogLevel)
-	if err != nil {
+	if (err != nil) {
 		log.Fatalf("Invalid log level: %s", conf.Server.LogLevel)
 	}
 	log.SetLevel(level)
@@ -1042,13 +1049,16 @@ func processUpload(task UploadTask) error {
 	}
 	log.Infof("File moved to final destination: %s", absFilename)
 
+	// Store file creation date in metadata cache
+	fileMetadataCache.Set(absFilename, FileMetadata{CreationDate: time.Now()}, cache.DefaultExpiration)
+
 	log.Debugf("Verifying existence immediately after rename: %s", absFilename)
 	exists, size := fileExists(absFilename)
 	log.Debugf("Exists? %v, Size: %d", exists, size)
 
 	// Gajim and Dino do not require a callback or acknowledgement beyond HTTP success.
 	callbackURL := r.Header.Get("Callback-URL")
-	if callbackURL != "" {
+	if (callbackURL != "") {
 		log.Warnf("Callback-URL provided (%s) but not needed. Ignoring.", callbackURL)
 		// We do not block or wait, just ignore.
 	}
@@ -1790,7 +1800,7 @@ func setupGracefulShutdown(server *http.Server, cancel context.CancelFunc) {
 }
 
 func initRedis() {
-	if !conf.Redis.RedisEnabled {
+	if (!conf.Redis.RedisEnabled) {
 		log.Info("Redis is disabled in configuration.")
 		return
 	}
@@ -1868,15 +1878,29 @@ func runFileCleaner(ctx context.Context, storeDir string, ttl time.Duration) {
 				if err != nil {
 					return err
 				}
-				if info.IsDir() {
-					return nil
-				}
-				if now.Sub(info.ModTime()) > ttl {
-					err := os.Remove(path)
-					if err != nil {
-						log.WithError(err).Errorf("Failed to remove expired file: %s", path)
+				if !info.IsDir() {
+					// Check if file metadata is cached
+					if metadata, found := fileMetadataCache.Get(path); found {
+						if fileMetadata, ok := metadata.(FileMetadata); ok {
+							if now.Sub(fileMetadata.CreationDate) > ttl {
+								err := os.Remove(path)
+								if err != nil {
+									log.WithError(err).Errorf("Failed to remove expired file: %s", path)
+								} else {
+									log.Infof("Removed expired file: %s", path)
+								}
+							}
+						}
 					} else {
-						log.Infof("Removed expired file: %s", path)
+						// If metadata is not cached, use file modification time
+						if now.Sub(info.ModTime()) > ttl {
+							err := os.Remove(path)
+							if err != nil {
+								log.WithError(err).Errorf("Failed to remove expired file: %s", path)
+							} else {
+								log.Infof("Removed expired file: %s", path)
+							}
+						}
 					}
 				}
 				return nil
@@ -2284,7 +2308,8 @@ func precacheStoragePath(dir string) error {
 		}
 		if !info.IsDir() {
 			fileInfoCache.Set(path, info, cache.DefaultExpiration)
-			log.Debugf("Cached file info for %s", path)
+			fileMetadataCache.Set(path, FileMetadata{CreationDate: info.ModTime()}, cache.DefaultExpiration)
+			log.Debugf("Cached file info and metadata for %s", path)
 		}
 		return nil
 	})
@@ -2354,17 +2379,33 @@ func handleFileCleanup(conf *Config) {
 }
 
 func deleteOldFiles(conf *Config, ttl time.Duration) {
-	cutoff := time.Now().Add(-ttl)
 	err := filepath.Walk(conf.Server.StoragePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && info.ModTime().Before(cutoff) {
-			err := os.Remove(path)
-			if err != nil {
-				log.Printf("Failed to delete %s: %v", path, err)
+		if !info.IsDir() {
+			// Check if file metadata is cached
+			if metadata, found := fileMetadataCache.Get(path); found {
+				if fileMetadata, ok := metadata.(FileMetadata); ok {
+					if time.Since(fileMetadata.CreationDate) > ttl {
+						err := os.Remove(path)
+						if err != nil {
+							log.Printf("Failed to delete %s: %v", path, err)
+						} else {
+							log.Printf("Deleted old file: %s", path)
+						}
+					}
+				}
 			} else {
-				log.Printf("Deleted old file: %s", path)
+				// If metadata is not cached, use file modification time
+				if time.Since(info.ModTime()) > ttl {
+					err := os.Remove(path)
+					if err != nil {
+						log.Printf("Failed to delete %s: %v", path, err)
+					} else {
+						log.Printf("Deleted old file: %s", path)
+					}
+				}
 			}
 		}
 		return nil
