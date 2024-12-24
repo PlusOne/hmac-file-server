@@ -1024,6 +1024,7 @@ func processUpload(task UploadTask) error {
 		return nil
 	}
 
+	log.Debugf("Renaming temp file %s -> %s", tempFilename, absFilename)
 	err = os.Rename(tempFilename, absFilename)
 	defer func() {
 		if err != nil {
@@ -1036,6 +1037,10 @@ func processUpload(task UploadTask) error {
 	}
 	log.Infof("File moved to final destination: %s", absFilename)
 
+	log.Debugf("Verifying existence immediately after rename: %s", absFilename)
+	exists, size := fileExists(absFilename)
+	log.Debugf("Exists? %v, Size: %d", exists, size)
+
 	// Gajim and Dino do not require a callback or acknowledgement beyond HTTP success.
 	callbackURL := r.Header.Get("Callback-URL")
 	if callbackURL != "" {
@@ -1045,6 +1050,8 @@ func processUpload(task UploadTask) error {
 
 	if conf.Server.DeduplicationEnabled {
 		log.Debugf("Performing deduplication check for %s", task.AbsFilename)
+		log.Debugf("Dedup check: Using hash %s to find existing path", hashVal)
+		log.Debugf("Existing path found in Redis: %s", existingPath)
 		err = handleDeduplication(context.Background(), absFilename)
 		if err != nil {
 			log.WithError(err).Error("Deduplication failed")
