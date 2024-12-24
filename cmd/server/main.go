@@ -1029,6 +1029,7 @@ func processUpload(task UploadTask) error {
 	}
 
 	if conf.Server.DeduplicationEnabled {
+		log.Debugf("Performing deduplication check for %s", task.AbsFilename)
 		err = handleDeduplication(context.Background(), absFilename)
 		if err != nil {
 			log.WithError(err).Error("Deduplication failed")
