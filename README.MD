@@ -258,6 +258,20 @@ Prometheus metrics include:
 
 ---
 
+### Comparsion
+
+| Feature / Project                        | HMAC File Server | Prosody HTTP Upload External | xmpp-http-upload (horazont) | Prosody Filer | ngx_http_upload | xmpp-http-upload (nyovaya) |
+|------------------------------------------|------------------|------------------------------|-----------------------------|---------------|-----------------|---------------------------|
+| **Programming Language**                 | Go               | PHP                           | Python                       | Go            | Nginx module    | Python                     |
+| **Framework/Environment**                | Standalone       | Prosody Module                | Standalone                   | Standalone    | Nginx           | Standalone                 |
+| **XMPP Compatibility**                   | Custom           | Prosody                       | Custom                       | Prosody       | N/A             | Custom                     |
+| **External Storage Support**             | Yes (S3, etc.)   | No                            | Yes                          | No            | No              | Yes                        |
+| **Security Features**                    | HMAC             | Simple token                  | Simple token                 | None          | None            | Simple token               |
+| **Primary Function**                     | File upload      | XMPP HTTP file upload         | File upload                  | XMPP file upload | HTTP file upload | File upload              |
+| **Special Features**                     | Data deduplication | None                        | None                          | Lightweight   | Optimized for high performance | None             |
+
+---
+
 ## Build & Run
 1. Clone the repository.
 2. Build the server:  
