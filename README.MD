@@ -95,6 +95,7 @@ metricsport = "9090"
 deduplicationenabled = true
 minfreebytes = "5GB"
 filettl = "2Y"
+filettlenabled = true  # Enable or disable file TTL
 autoadjustworkers = true
 networkevents = false
 pidfilepath = "./hmac-file-server.pid"
