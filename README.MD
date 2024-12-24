@@ -234,7 +234,7 @@ Prometheus metrics include:
 
 ---
 
-### Comparison
+### Overview of other Projects (xep0363)
 
 | Feature/Project             | HMAC FS | mod_http_upload_ext | xmpp-http-upload (horazont) | Prosody Filer | ngx_http_upload | xmpp-http-upload (nyovaya) |
 |-----------------------------|---------|----------------------|-----------------------------|---------------|----------------|----------------------------|
