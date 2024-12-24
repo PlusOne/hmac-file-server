@@ -1,3 +1,4 @@
+
 # HMAC File Server
 
 **HMAC File Server** is a secure, scalable, and feature-rich file server with advanced capabilities like HMAC authentication, resumable uploads, chunked uploads, file versioning, and optional ClamAV scanning for file integrity and security. This server is built with extensibility and operational monitoring in mind, including Prometheus metrics support and Redis integration.
@@ -69,9 +70,9 @@ Setting `NetworkEvents = false` in the server configuration disables the logging
 
 The `precaching` feature allows the server to pre-cache storage paths for faster access. This can improve performance by reducing the time needed to access frequently used storage paths.
 
-### Thumbnail Creation
+### Added thumbnail support
 
-Set `thumbnail` to true in the `[server]` section of `config.toml` to enable image thumbnail generation.
+- New configuration option `thumbnail` in `[server]` to enable or disable generating image thumbnails
 
 ---
 
