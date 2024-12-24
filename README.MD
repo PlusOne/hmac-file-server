@@ -89,6 +89,7 @@ AutoAdjustWorkers = true  # Enable auto-adjustment for worker scaling
 NetworkEvents = false     # Disable logging and tracking of network-related events
 PIDFilePath = "./hmac_file_server.pid"  # Path to PID file
 Precaching = true  # Enable pre-caching of storage paths
+ThumbnailEnabled = false  # Whether to create thumbnails for uploaded images
 
 [timeouts]
 ReadTimeout = "480s"

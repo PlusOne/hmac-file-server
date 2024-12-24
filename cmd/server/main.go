@@ -111,6 +111,7 @@ type ServerConfig struct {
 	NetworkEvents        bool   `mapstructure:"NetworkEvents"` // Added field
 	PrecachingEnabled    bool   `mapstructure:"precaching"`    // Added field
 	PIDFilePath          string `mapstructure:"pidfilepath"`   // Added field
+	ThumbnailEnabled     bool   `mapstructure:"thumbnail"`     // Added field
 }
 
 type TimeoutConfig struct {
@@ -549,6 +550,7 @@ func setDefaults() {
 	viper.SetDefault("server.NetworkEvents", true) // Set default
 	viper.SetDefault("server.precaching", true)    // Set default for precaching
 	viper.SetDefault("server.pidfilepath", "/var/run/hmacfileserver.pid") // Set default for PID file path
+	viper.SetDefault("server.thumbnail", false) // Set default for thumbnail
 	_, err := parseTTL("1D")
 	if err != nil {
 		log.Warnf("Failed to parse TTL: %v", err)
