@@ -1,43 +1,44 @@
 [server]
 listenport = "8080"
 unixsocket = false
-storagepath = "/"
+storagepath = "/mnt/nfs_vol01/hmac-file-server/"
 loglevel = "debug"
-logfile = "./tmp/hmac-file-server.log"
+logfile = "/var/log/hmac-file-server.log"
 metricsenabled = true
-metricsport = "8081"
-filettl = "180d"
-minfreebytes = "2GB"
+metricsport = "9090"
+filettl = "90D"
+minfreebytes = "5GB"
+deduplicationenabled = true
 autoadjustworkers = true
 networkevents = false
-temppath = "./tmp"
+temppath = "/tmp/hmac"
 loggingjson = false
-pidfilepath = "hmac_file_server.pid"
+pidfilepath = "./hmac-file-server.pid"
 cleanuponexit = true
-precaching = false
+filettlenabled = true
 
 [deduplication]
-enabled = false
-directory = "./deduplication"
+enabled = true
+directory = "/mnt/nfs_vol01/hmac-storage/deduplication/"
 
 [thumbnails]
-enabled = false
-directory = "./thumbnails"
+enabled = true
+directory = "/mnt/nfs_vol01/hmac-file-server/thumbnails/"
 size = "200x200"
 
 [iso]
 enabled = false
 size = "1TB"
-mountpoint = "./iso"
+mountpoint = "/mnt/nfs_vol01/hmac-file-server/iso/"
 charset = "utf-8"
 
 [timeouts]
-readtimeout = "1800s"
-writetimeout = "1800s"
-idletimeout = "1800s"
+readtimeout = "3600s"
+writetimeout = "3600s"
+idletimeout = "3600s"
 
 [security]
-secret = "a-orc-and-a-humans-is-drinking-ale"
+secret = "stellar-wisdom-orbit-echo"
 
 [versioning]
 enableversioning = false
@@ -45,31 +46,39 @@ maxversions = 1
 
 [uploads]
 resumableuploadsenabled = false
-chunkeduploadsenabled = false
-chunksize = "64MB"
-allowedextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg", ".zip", ".rar"]
+chunkeduploadsenabled = true
+chunksize = "32MB"
+allowedextensions = [
+    ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif",
+    ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4",
+    ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm",
+    ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
+]
 
 [downloads]
-resumabledownloadsenabled = false
+resumabledownloadsenabled = true
 chunkeddownloadsenabled = false
-chunksize = "64MB"
+chunksize = "32MB"
 
 [clamav]
-clamavenabled = false
+clamavenabled = true
 clamavsocket = "/var/run/clamav/clamd.ctl"
 numscanworkers = 4
-scanfileextensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"]
+scanfileextensions = [
+    ".exe", ".dll", ".bin", ".com", ".bat",
+    ".sh", ".php", ".js"
+]
 
 [redis]
-redisenabled = false
-redisdbindex = 1
+redisenabled = true
+redisdbindex = 0
 redisaddr = "localhost:6379"
 redispassword = ""
-redishealthcheckinterval = "60s"
+redishealthcheckinterval = "120s"
 
 [workers]
 numworkers = 4
-uploadqueuesize = 1000
+uploadqueuesize = 5000
 
 [file]
 filerevision = 1

@@ -104,6 +104,7 @@ type ServerConfig struct {
 	LogFile              string `mapstructure:"LogFile"`
 	MetricsEnabled       bool   `mapstructure:"MetricsEnabled"`
 	MetricsPort          string `mapstructure:"MetricsPort"`
+	FileTTLEnabled       bool   `mapstructure:"FileTTLEnabled"`
 	FileTTL              string `mapstructure:"FileTTL"`
 	MinFreeBytes         string `mapstructure:"MinFreeBytes"`
 	DeduplicationEnabled bool   `mapstructure:"DeduplicationEnabled"`
@@ -565,6 +566,7 @@ func setDefaults() {
 	viper.SetDefault("server.precaching", true)                           // Set default for precaching
 	viper.SetDefault("server.pidfilepath", "/var/run/hmacfileserver.pid") // Set default for PID file path
 	viper.SetDefault("server.thumbnail", false)                           // Set default for thumbnail
+	viper.SetDefault("server.FileTTLEnabled", true)                       // Set default for FileTTLEnabled
 	_, err := parseTTL("1D")
 	if err != nil {
 		log.Warnf("Failed to parse TTL: %v", err)
@@ -2327,4 +2329,47 @@ func generateThumbnail(originalPath, thumbnailDir, size string) error {
 	}
 
 	return nil
+}
+
+func handleFileCleanup(conf *Config) {
+	if conf.Server.FileTTLEnabled {
+		ttlDuration, err := parseTTL(conf.Server.FileTTL)
+		if err != nil {
+			log.Fatalf("Invalid TTL configuration: %v", err)
+		}
+		log.Printf("File TTL is enabled. Files older than %v will be deleted.", ttlDuration)
+
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				deleteOldFiles(conf, ttlDuration)
+			}
+		}
+	} else {
+		log.Println("File TTL is disabled. No files will be automatically deleted.")
+	}
+}
+
+func deleteOldFiles(conf *Config, ttl time.Duration) {
+	cutoff := time.Now().Add(-ttl)
+	err := filepath.Walk(conf.Server.StoragePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && info.ModTime().Before(cutoff) {
+			err := os.Remove(path)
+			if err != nil {
+				log.Printf("Failed to delete %s: %v", path, err)
+			} else {
+				log.Printf("Deleted old file: %s", path)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Printf("Error during file cleanup: %v", err)
+	}
 }
