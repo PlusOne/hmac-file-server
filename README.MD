@@ -104,7 +104,7 @@ directory = "/mnt/hmac-storage/thumbnails/"
 size = "200x200"
 ```
 
-## HMAC File Server - Version 2.2 Stable
+## config.toml
 
 Below is an example configuration file (config.toml) you can use as a reference (with sensitive data removed):
 
