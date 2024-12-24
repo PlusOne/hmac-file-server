@@ -1,0 +1,75 @@
+[server]
+listenport = "8080"
+unixsocket = false
+storagepath = "/"
+loglevel = "debug"
+logfile = "./tmp/hmac-file-server.log"
+metricsenabled = true
+metricsport = "8081"
+filettl = "180d"
+minfreebytes = "2GB"
+autoadjustworkers = true
+networkevents = false
+temppath = "./tmp"
+loggingjson = false
+pidfilepath = "hmac_file_server.pid"
+cleanuponexit = true
+precaching = false
+
+[deduplication]
+enabled = false
+directory = "./deduplication"
+
+[thumbnails]
+enabled = false
+directory = "./thumbnails"
+size = "200x200"
+
+[iso]
+enabled = false
+size = "1TB"
+mountpoint = "./iso"
+charset = "utf-8"
+
+[timeouts]
+readtimeout = "1800s"
+writetimeout = "1800s"
+idletimeout = "1800s"
+
+[security]
+secret = "a-orc-and-a-humans-is-drinking-ale"
+
+[versioning]
+enableversioning = false
+maxversions = 1
+
+[uploads]
+resumableuploadsenabled = false
+chunkeduploadsenabled = false
+chunksize = "64MB"
+allowedextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg", ".zip", ".rar"]
+
+[downloads]
+resumabledownloadsenabled = false
+chunkeddownloadsenabled = false
+chunksize = "64MB"
+
+[clamav]
+clamavenabled = false
+clamavsocket = "/var/run/clamav/clamd.ctl"
+numscanworkers = 4
+scanfileextensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"]
+
+[redis]
+redisenabled = false
+redisdbindex = 1
+redisaddr = "localhost:6379"
+redispassword = ""
+redishealthcheckinterval = "60s"
+
+[workers]
+numworkers = 4
+uploadqueuesize = 1000
+
+[file]
+filerevision = 1
