@@ -1,26 +1,34 @@
 [server]
 listenport = "8080"
 unixsocket = false
-storagepath = "./uploads"
-loglevel = "debug"Q
-logfile = "./hmac-file-server.log"
+storagepath = "/"
+loglevel = "debug"
+logfile = "./tmp/hmac-file-server.log"
 metricsenabled = true
 metricsport = "8081"
 filettl = "180d"
 minfreebytes = "2GB"
-deduplicationenabled = true
 autoadjustworkers = true
 networkevents = false
-temppath = "/tmp/hmac"
+temppath = "./tmp"
 loggingjson = false
-pidfilepath = "./hmac_file_server.pid"
+pidfilepath = "hmac_file_server.pid"
 cleanuponexit = true
-precaching = true
+precaching = false
+
+[deduplication]
+enabled = false
+directory = "./deduplication"
+
+[thumbnails]
+enabled = false
+directory = "./thumbnails"
+size = "200x200"
 
 [iso]
 enabled = false
 size = "1TB"
-mountpoint = "/mnt/nfs_vol01/hmac-file-server/iso/"
+mountpoint = "./iso"
 charset = "utf-8"
 
 [timeouts]
@@ -42,8 +50,8 @@ chunksize = "64MB"
 allowedextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg", ".zip", ".rar"]
 
 [downloads]
-resumabledownloadsenabled = true
-chunkeddownloadsenabled = true
+resumabledownloadsenabled = false
+chunkeddownloadsenabled = false
 chunksize = "64MB"
 
 [clamav]
