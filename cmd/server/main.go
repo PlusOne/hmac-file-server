@@ -1428,16 +1428,24 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 }
 
 func handleDownload(w http.ResponseWriter, r *http.Request, absFilename, fileStorePath string) {
+	log.Debugf("Attempting to download file from path: %s", absFilename)
+
 	fileInfo, err := getFileInfo(absFilename)
 	if err != nil {
-		log.WithError(err).Error("Failed to get file information")
-		http.Error(w, "Not Found", http.StatusNotFound)
-		downloadErrorsTotal.Inc()
-		return
-	} else if fileInfo.IsDir() {
-		log.Warn("Directory listing forbidden")
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		downloadErrorsTotal.Inc()
+		log.Errorf("Failed to get file information for %s: %v", absFilename, err)
+		// If file doesn't exist, list directory contents for debug
+		if os.IsNotExist(err) {
+			dir := filepath.Dir(absFilename)
+			items, dirErr := os.ReadDir(dir)
+			if dirErr == nil {
+				for _, it := range items {
+					log.Debugf("Dir item: %s", it.Name())
+				}
+			} else {
+				log.Warnf("Could not read directory %s: %v", dir, dirErr)
+			}
+		}
+		http.NotFound(w, r)
 		return
 	}
 
