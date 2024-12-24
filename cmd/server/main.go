@@ -464,6 +464,9 @@ func main() {
 			log.Fatalf("Server failed: %v", err)
 		}
 	}
+
+	// Start file cleanup in a separate goroutine
+	go handleFileCleanup(&conf)
 }
 
 func max(a, b int) int {
@@ -2342,11 +2345,8 @@ func handleFileCleanup(conf *Config) {
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				deleteOldFiles(conf, ttlDuration)
-			}
+		for range ticker.C {
+			deleteOldFiles(conf, ttlDuration)
 		}
 	} else {
 		log.Println("File TTL is disabled. No files will be automatically deleted.")
