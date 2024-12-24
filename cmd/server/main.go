@@ -2068,42 +2068,34 @@ func checkStorageSpace(storagePath string, minFreeBytes int64) error {
 }
 
 func handleDeduplication(ctx context.Context, absFilename string) error {
+	log.Debugf("Starting deduplication for: %s", absFilename)
 	checksum, err := computeSHA256(ctx, absFilename)
 	if err != nil {
-		log.Errorf("Failed to compute SHA256 for %s: %v", absFilename, err)
-		return fmt.Errorf("checksum computation failed: %w", err)
+		log.Errorf("Failed to compute checksum for %s: %v", absFilename, err)
+		return err
 	}
 	log.Debugf("Computed checksum for %s: %s", absFilename, checksum)
 
 	existingPath, err := redisClient.Get(ctx, checksum).Result()
 	if err != nil {
-		if err == redis.Nil {
-			err = redisClient.Set(ctx, checksum, absFilename, 0).Err()
-			if err != nil {
-				log.Errorf("Redis error setting checksum %s: %v", checksum, err)
-				return fmt.Errorf("redis error: %w", err)
-			}
-			log.Infof("Stored new checksum %s for file %s", checksum, absFilename)
-			return nil
-		}
-		log.Errorf("Redis error fetching checksum %s: %v", checksum, err)
-		return fmt.Errorf("redis error: %w", err)
+		log.Debugf("Redis lookup for checksum failed: %v", err)
+	}
+	if existingPath != "" {
+		log.Debugf("Found existing file for checksum at: %s", existingPath)
 	}
 
 	if existingPath != absFilename {
-		if _, err := os.Stat(existingPath); os.IsNotExist(err) {
-			log.Errorf("Existing file for checksum %s not found at %s", checksum, existingPath)
-			return fmt.Errorf("existing file not found: %w", err)
-		}
-
+		log.Debugf("Attempting to link or move %s to %s", absFilename, existingPath)
 		err = os.Link(existingPath, absFilename)
 		if err != nil {
 			log.Errorf("Failed linking %s to %s: %v", existingPath, absFilename, err)
 			return fmt.Errorf("failed link: %w", err)
 		}
 		log.Infof("Created hard link for duplicate file %s -> %s", absFilename, existingPath)
+		exists, size := fileExists(existingPath)
+		log.Debugf("Post-dedup check: Exists=%v, Size=%d at %s", exists, size, existingPath)
 	} else {
-		log.Infof("File %s already exists with same checksum", absFilename)
+		log.Debugf("No existing path found or same file; skipping dedup move.")
 	}
 
 	return nil
