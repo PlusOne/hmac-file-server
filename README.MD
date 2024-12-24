@@ -73,6 +73,10 @@ The `precaching` feature allows the server to pre-cache storage paths for faster
 
 Set `thumbnail` to true in the `[server]` section of `config.toml` to enable image thumbnail generation.
 
+### Deduplication
+
+Set `enabled` to true in the `[deduplication]` section of `config.toml` to enable file deduplication. Specify the `storagepath` where deduplicated files will be stored.
+
 ---
 
 ## Example `config.toml`
@@ -137,6 +141,10 @@ UploadQueueSize = 5000
 
 [file]
 FileRevision = 1  # Revision number for file handling
+
+[deduplication]
+enabled = true
+storagepath = "/mnt/nfs_vol01/hmac-file-server/deduplication/"
 ```
 
 ---

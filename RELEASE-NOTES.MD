@@ -1,4 +1,3 @@
-
 # HMAC File Server
 
 **HMAC File Server** is a secure, scalable, and feature-rich file server with advanced capabilities like HMAC authentication, resumable uploads, chunked uploads, file versioning, and optional ClamAV scanning for file integrity and security. This server is built with extensibility and operational monitoring in mind, including Prometheus metrics support and Redis integration.
@@ -73,6 +72,20 @@ The `precaching` feature allows the server to pre-cache storage paths for faster
 ### Added thumbnail support
 
 - New configuration option `thumbnail` in `[server]` to enable or disable generating image thumbnails
+
+---
+
+## New Features
+
+### Deduplication Support
+
+- **Description:** Added support for file deduplication to save storage space by storing a single copy of identical files.
+- **Configuration:**
+  ```toml
+  [deduplication]
+  enabled = true
+  storagepath = "/mnt/nfs_vol01/hmac-file-server/deduplication/"
+  ```
 
 ---
 

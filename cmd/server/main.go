@@ -177,19 +177,25 @@ type DownloadsConfig struct {
 	ChunkSize                string `mapstructure:"ChunkSize"`
 }
 
+type DeduplicationConfig struct {
+	Enabled     bool   `mapstructure:"enabled"`
+	StoragePath string `mapstructure:"storagepath"`
+}
+
 type Config struct {
-	Server     ServerConfig     `mapstructure:"server"`
-	Timeouts   TimeoutConfig    `mapstructure:"timeouts"`
-	Security   SecurityConfig   `mapstructure:"security"`
-	Versioning VersioningConfig `mapstructure:"versioning"`
-	Uploads    UploadsConfig    `mapstructure:"uploads"`
-	Downloads  DownloadsConfig  `mapstructure:"downloads"`
-	ClamAV     ClamAVConfig     `mapstructure:"clamav"`
-	Redis      RedisConfig      `mapstructure:"redis"`
-	Workers    WorkersConfig    `mapstructure:"workers"`
-	File       FileConfig       `mapstructure:"file"`
-	ISO        ISOConfig        `mapstructure:"iso"`
-	Paste      PasteConfig      `mapstructure:"paste"`
+	Server         ServerConfig         `mapstructure:"server"`
+	Timeouts       TimeoutConfig        `mapstructure:"timeouts"`
+	Security       SecurityConfig       `mapstructure:"security"`
+	Versioning     VersioningConfig     `mapstructure:"versioning"`
+	Uploads        UploadsConfig        `mapstructure:"uploads"`
+	Downloads      DownloadsConfig      `mapstructure:"downloads"`
+	ClamAV         ClamAVConfig         `mapstructure:"clamav"`
+	Redis          RedisConfig          `mapstructure:"redis"`
+	Workers        WorkersConfig        `mapstructure:"workers"`
+	File           FileConfig           `mapstructure:"file"`
+	ISO            ISOConfig            `mapstructure:"iso"`
+	Paste          PasteConfig          `mapstructure:"paste"`
+	Deduplication  DeduplicationConfig  `mapstructure:"deduplication"`
 }
 
 type UploadTask struct {
@@ -699,6 +705,16 @@ func validateConfig(conf *Config) error {
 	if conf.Paste.Enabled {
 		if conf.Paste.StoragePath == "" {
 			return fmt.Errorf("paste.storagePath must be set when paste is enabled")
+		}
+	}
+
+	if conf.Deduplication.Enabled {
+		if conf.Deduplication.StoragePath == "" {
+			return fmt.Errorf("deduplication.storagepath is required when deduplication is enabled")
+		}
+		// Optionally, check if deduplication storage path exists
+		if _, err := os.Stat(conf.Deduplication.StoragePath); os.IsNotExist(err) {
+			return fmt.Errorf("deduplication.storagepath does not exist: %s", conf.Deduplication.StoragePath)
 		}
 	}
 
