@@ -260,15 +260,13 @@ Prometheus metrics include:
 
 ### Comparsion
 
-| Feature / Project                        | HMAC File Server | Prosody HTTP Upload External | xmpp-http-upload (horazont) | Prosody Filer | ngx_http_upload | xmpp-http-upload (nyovaya) |
-|------------------------------------------|------------------|------------------------------|-----------------------------|---------------|-----------------|---------------------------|
-| **Programming Language**                 | Go               | PHP                           | Python                       | Go            | Nginx module    | Python                     |
-| **Framework/Environment**                | Standalone       | Prosody Module                | Standalone                   | Standalone    | Nginx           | Standalone                 |
-| **XMPP Compatibility**                   | Custom           | Prosody                       | Custom                       | Prosody       | N/A             | Custom                     |
-| **External Storage Support**             | Yes (S3, etc.)   | No                            | Yes                          | No            | No              | Yes                        |
-| **Security Features**                    | HMAC             | Simple token                  | Simple token                 | None          | None            | Simple token               |
-| **Primary Function**                     | File upload      | XMPP HTTP file upload         | File upload                  | XMPP file upload | HTTP file upload | File upload              |
-| **Special Features**                     | Data deduplication | None                        | None                          | Lightweight   | Optimized for high performance | None             |
+| Feature/Project             | HMAC FS | mod_http_upload_ext | xmpp-http-upload (horazont) | Prosody Filer | ngx_http_upload | xmpp-http-upload (nyovaya) |
+|-----------------------------|---------|----------------------|-----------------------------|---------------|----------------|----------------------------|
+| **Lang**                    | Go      | PHP                  | Python                      | Go            | C (Nginx)       | Python                     |
+| **Env**                     | Standalone | Prosody module       | Standalone                 | Standalone    | Nginx          | Standalone                 |
+| **XMPP**                    | No      | Yes                  | Yes                         | Yes           | No             | Yes                        |
+| **Ext. Storage**            | Yes     | No                   | Possible via plugins        | No            | No             | Yes                        |
+| **Auth / Security**         | HMAC    | Token-based          | Token-based                 | None          | Basic / None    | Token-based                |
 
 ---
 
