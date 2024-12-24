@@ -785,7 +785,7 @@ func logSystemInfo() {
 	cpuInfo, _ := cpu.Info()
 	uniqueCPUModels := make(map[string]bool)
 	for _, info := range cpuInfo {
-		if !uniqueCPUModels[info.ModelName] {
+		if (!uniqueCPUModels[info.ModelName]) {
 			log.Infof("CPU Model: %s, Cores: %d, Mhz: %f", info.ModelName, info.Cores, info.Mhz)
 			uniqueCPUModels[info.ModelName] = true
 		}

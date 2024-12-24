@@ -13,11 +13,7 @@ autoadjustworkers = true
 networkevents = false
 pidfilepath = "./hmac-file-server.pid"
 precaching = true
-loggingjson = false
-
-[deduplication]
-enabled = true
-directory = "/mnt/hmac-storage/deduplication/"
+#thumbnails = true
 
 [thumbnails]
 enabled = true
@@ -85,3 +81,7 @@ uploadqueuesize = 5000
 
 [file]
 filerevision = 1
+
+[deduplication]
+enabled = true
+directory = "/mnt/hmac-storage/deduplication/"
