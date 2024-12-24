@@ -8,10 +8,10 @@ metricsenabled = true
 metricsport = "9090"
 deduplicationenabled = true
 minfreebytes = "5GB"
-filettl = "1Y"
+filettl = "2Y"
 autoadjustworkers = true
 networkevents = false
-pidfilepath = "/var/run/hmacfileserver.pid"
+pidfilepath = "./hmac-file-server.pid"
 precaching = true
 loggingjson = false
 
@@ -21,7 +21,7 @@ directory = "/mnt/hmac-storage/deduplication/"
 
 [thumbnails]
 enabled = true
-directory = "/mnt/hmac-storage/thumbnails/"
+directory = "/mnt/nfs_vol01/hmac-file-server/thumbnails/"
 size = "200x200"
 
 [iso]
@@ -45,7 +45,7 @@ maxversions = 1
 [uploads]
 resumableuploadsenabled = false
 chunkeduploadsenabled = true
-chunksize = "64MB"
+chunksize = "32MB"
 allowedextensions = [
     ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif",
     ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4",
@@ -54,8 +54,8 @@ allowedextensions = [
 ]
 
 [downloads]
-chunkeddownloadsenabled = true
-chunksize = "64MB"
+chunkeddownloadsenabled = false
+chunksize = "32MB"
 allowedextensions = [
     ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif",
     ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4",
@@ -81,7 +81,7 @@ redishealthcheckinterval = "120s"
 
 [workers]
 numworkers = 4
-uploadqueuesize = 1000
+uploadqueuesize = 5000
 
 [file]
 filerevision = 1
