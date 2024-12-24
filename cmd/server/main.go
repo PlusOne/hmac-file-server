@@ -1009,7 +1009,22 @@ func processUpload(task UploadTask) error {
 		}
 	}
 
-	err := os.Rename(tempFilename, absFilename)
+	// Compute file hash first:
+	hashVal, err := computeSHA256(context.Background(), tempFilename)
+	if err != nil {
+		log.Errorf("Could not compute hash: %v", err)
+		return err
+	}
+	log.Infof("Computed hash for %s: %s", absFilename, hashVal)
+
+	// Check Redis for existing entry:
+	existingPath, redisErr := redisClient.Get(context.Background(), hashVal).Result()
+	if redisErr == nil && existingPath != "" {
+		log.Warnf("Duplicate upload detected. Using existing file at: %s", existingPath)
+		return nil
+	}
+
+	err = os.Rename(tempFilename, absFilename)
 	defer func() {
 		if err != nil {
 			os.Remove(tempFilename)
@@ -1057,6 +1072,15 @@ func processUpload(task UploadTask) error {
 			return err
 		}
 		log.Infof("Thumbnail generated for %s", absFilename)
+	}
+
+	if redisClient != nil {
+		errSet := redisClient.Set(context.Background(), hashVal, absFilename, 0).Err()
+		if errSet != nil {
+			log.Warnf("Failed storing hash reference: %v", errSet)
+		} else {
+			log.Infof("Hash reference stored: %s -> %s", hashVal, absFilename)
+		}
 	}
 
 	log.WithFields(logrus.Fields{"file": absFilename}).Info("File uploaded and processed successfully")
