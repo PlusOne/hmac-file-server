@@ -2077,26 +2077,30 @@ func handleDeduplication(ctx context.Context, absFilename string) error {
 	log.Debugf("Computed checksum for %s: %s", absFilename, checksum)
 
 	existingPath, err := redisClient.Get(ctx, checksum).Result()
-	if err != nil {
-		log.Debugf("Redis lookup for checksum failed: %v", err)
-	}
-	if existingPath != "" {
-		log.Debugf("Found existing file for checksum at: %s", existingPath)
+	if err == redis.Nil {
+		log.Debugf("No existing file found for checksum %s", checksum)
+		err = redisClient.Set(ctx, checksum, absFilename, 0).Err()
+		if err != nil {
+			log.Errorf("Failed to set checksum in Redis: %v", err)
+			return err
+		}
+		log.Infof("Stored checksum %s with path %s in Redis", checksum, absFilename)
+		return nil
+	} else if err != nil {
+		log.Errorf("Redis lookup error: %v", err)
+		return err
 	}
 
-	if existingPath != absFilename {
-		log.Debugf("Attempting to link or move %s to %s", absFilename, existingPath)
-		err = os.Link(existingPath, absFilename)
-		if err != nil {
-			log.Errorf("Failed linking %s to %s: %v", existingPath, absFilename, err)
-			return fmt.Errorf("failed link: %w", err)
-		}
-		log.Infof("Created hard link for duplicate file %s -> %s", absFilename, existingPath)
-		exists, size := fileExists(existingPath)
-		log.Debugf("Post-dedup check: Exists=%v, Size=%d at %s", exists, size, existingPath)
-	} else {
-		log.Debugf("No existing path found or same file; skipping dedup move.")
+	log.Infof("Found existing file for checksum %s at %s", checksum, existingPath)
+	err = os.Link(existingPath, absFilename)
+	if err != nil {
+		log.Errorf("Failed to create hard link: %v", err)
+		return err
 	}
+	log.Infof("Created hard link from %s to %s", absFilename, existingPath)
+
+	exists, size := fileExists(existingPath)
+	log.Debugf("Post-dedup check: Exists=%v, Size=%d at %s", exists, size, existingPath)
 
 	return nil
 }
