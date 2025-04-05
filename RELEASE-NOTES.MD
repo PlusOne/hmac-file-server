@@ -51,3 +51,19 @@ Thank you for using HMAC File Server! If you encounter any issues, feel free to 
 - Removed obsolete parameters for sorting
 - Further improvements to ISO-based storage handling
 - Fixed dual stack for upload (IPv4/IPv6)
+
+# [2.8-Stable](https://github.com/PlusOne/hmac-file-server/releases/tag/2.8-stable) · [Latest](https://github.com/PlusOne/hmac-file-server/releases/latest)
+
+## HMAC File Server – Release v2.8
+
+### What’s New
+- Improved IP stack handling: keep-alive enabled by default and enforced HTTP/2 for smoother Android transitions.
+- Simplified metrics registration to avoid any potential double-registration.
+
+### Bug Fixes
+- Removed duplicated “/metrics” endpoint registration that previously caused conflicts.
+- Reduced need for reconnecting on IP changes through longer idle connection settings.
+
+### Upgrade Notes
+- If using custom metrics setups, verify you only register “/metrics” once.
+- Keep-alive settings now default to a higher timeout. Confirm this aligns with your environment needs.
