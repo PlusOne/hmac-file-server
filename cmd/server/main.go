@@ -384,11 +384,18 @@ func createAndMountISO(size, mountpoint, charset string) error {
 var dialer = &net.Dialer{
 	DualStack: true,
 	Timeout:   5 * time.Second,
+	KeepAlive: 30 * time.Second, // Added keep-alive for better network change handling
 }
 
 var dualStackClient = &http.Client{
 	Transport: &http.Transport{
-		DialContext: dialer.DialContext,
+		DialContext:         dialer.DialContext,
+		ForceAttemptHTTP2:   true,                 // Enforce HTTP/2
+		IdleConnTimeout:     90 * time.Second,      // Longer idle connections
+		DisableKeepAlives:   false,                // Ensure keep-alives are enabled
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		// ...existing code...
 	},
 }
 
