@@ -390,9 +390,9 @@ var dialer = &net.Dialer{
 var dualStackClient = &http.Client{
 	Transport: &http.Transport{
 		DialContext:         dialer.DialContext,
-		ForceAttemptHTTP2:   true,                 // Enforce HTTP/2
-		IdleConnTimeout:     90 * time.Second,      // Longer idle connections
-		DisableKeepAlives:   false,                // Ensure keep-alives are enabled
+		ForceAttemptHTTP2:   true,             // Enforce HTTP/2
+		IdleConnTimeout:     90 * time.Second, // Longer idle connections
+		DisableKeepAlives:   false,            // Ensure keep-alives are enabled
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 10,
 		// ...existing code...
@@ -737,7 +737,7 @@ uploadqueuesize = 50
 # Add file-specific configurations here
 
 [build]
-version = "2.7-Stable"
+version = "2.8-Stable"
 `)
 }
 
