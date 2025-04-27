@@ -23,10 +23,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
-
-	"sync/atomic"
 
 	"github.com/dutchcoders/go-clamd" // ClamAV integration
 	"github.com/go-redis/redis/v8"    // Redis integration
@@ -2612,6 +2611,11 @@ func handleDeduplication(ctx context.Context, absFilename string) error {
 	existingPath := filepath.Join(dedupPath, filepath.Base(absFilename))
 	if _, err := os.Stat(existingPath); err == nil {
 		log.Infof("Found existing file for checksum %s at %s", checksum, existingPath)
+		err = os.Remove(absFilename)
+		if err != nil {
+			log.Errorf("Failed to remove file before create hardlink: %v", err)
+			return err
+		}
 		err = os.Link(existingPath, absFilename)
 		if err != nil {
 			log.Errorf("Failed to create hard link: %v", err)
