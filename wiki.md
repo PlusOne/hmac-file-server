@@ -944,6 +944,12 @@ curl -O "$BASE_URL/download/$FILENAME?ts=$TIMESTAMP&sig=$SIGNATURE"
 ### GitHub Actions Example
 
 ```yaml
+name: Build and Upload to HMAC
+
+on:
+  push:
+    branches: [ "main" ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -964,10 +970,14 @@ jobs:
 
 ## Optional Features
 
-- **TTL**: Auto-delete artifacts after a set time  
-- **Deduplication**: Only store unique files  
-- **Versioning**: Track changes to files over time  
-- **Virus Scanning**: Integrate with ClamAV
+- **TTL**  
+  Auto-delete artifacts after a set time.  
+- **Deduplication**  
+  Only store unique files.  
+- **Versioning**  
+  Track changes to files over time.  
+- **Virus Scanning**  
+  Integrate with ClamAV to scan uploaded files.
 
 ---
 
@@ -978,6 +988,7 @@ The HMAC File Server provides a built-in monitoring interface to track system pe
 ### System Data
 
 The monitoring interface displays key system metrics, including:
+
 - **CPU Usage**: Current CPU usage percentage.
 - **Memory Usage**: Current memory usage percentage.
 - **CPU Cores**: Number of CPU cores available.
