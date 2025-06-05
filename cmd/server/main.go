@@ -423,7 +423,29 @@ func main() {
 
 	var configFile string
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
+	var genConfig bool
+	var genConfigPath string
+	flag.BoolVar(&genConfig, "genconfig", false, "Print example configuration and exit.")
+	flag.StringVar(&genConfigPath, "genconfig-path", "", "Write example configuration to the given file and exit.")
 	flag.Parse()
+
+	if genConfig {
+		printExampleConfig()
+		os.Exit(0)
+	}
+	if genConfigPath != "" {
+		f, err := os.Create(genConfigPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to create file: %v\n", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		w := bufio.NewWriter(f)
+		fmt.Fprint(w, getExampleConfigString())
+		w.Flush()
+		fmt.Printf("Example config written to %s\n", genConfigPath)
+		os.Exit(0)
+	}
 
 	// Initialize Viper
 	viper.SetConfigType("toml")
@@ -781,6 +803,98 @@ uploadqueuesize = 50
 [build]
 version = "2.9-Stable"
 `)
+}
+
+func getExampleConfigString() string {
+	return `
+[server]
+bind_ip = "0.0.0.0"
+listenport = "8080"
+unixsocket = false
+storagepath = "./uploads"
+logfile = "/var/log/hmac-file-server.log"
+metricsenabled = true
+metricsport = "9090"
+minfreebytes = "100MB"
+filettl = "8760h"
+filettlenabled = true
+autoadjustworkers = true
+networkevents = true
+pidfilepath = "/var/run/hmacfileserver.pid"
+cleanuponexit = true
+precaching = true
+deduplicationenabled = true
+globalextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
+# FileNaming options: "HMAC", "None"
+filenaming = "HMAC"
+forceprotocol = "auto"
+
+[logging]
+level = "info"
+file = "/var/log/hmac-file-server.log"
+max_size = 100
+max_backups = 7
+max_age = 30
+compress = true
+
+[deduplication]
+enabled = true
+directory = "./deduplication"
+
+[iso]
+enabled = true
+size = "1GB"
+mountpoint = "/mnt/iso"
+charset = "utf-8"
+containerfile = "/mnt/iso/container.iso"
+
+[timeouts]
+readtimeout = "4800s"
+writetimeout = "4800s"
+idletimeout = "4800s"
+
+[security]
+secret = "changeme"
+
+[versioning]
+enableversioning = false
+maxversions = 1
+
+[uploads]
+resumableuploadsenabled = true
+chunkeduploadsenabled = true
+chunksize = "8192"
+allowedextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
+
+[downloads]
+resumabledownloadsenabled = true
+chunkeddownloadsenabled = true
+chunksize = "8192"
+allowedextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
+
+[clamav]
+clamavenabled = true
+clamavsocket = "/var/run/clamav/clamd.ctl"
+numscanworkers = 2
+scanfileextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
+
+[redis]
+redisenabled = true
+redisdbindex = 0
+redisaddr = "localhost:6379"
+redispassword = ""
+redishealthcheckinterval = "120s"
+
+[workers]
+numworkers = 4
+uploadqueuesize = 50
+
+[file]
+# Add file-specific configurations here
+
+[build]
+version = "2.9-Stable"
+`
 }
 
 func max(a, b int) int {
@@ -1883,6 +1997,8 @@ func handleUpload(w http.ResponseWriter, r *http.Request, absFilename, fileStore
 	err = createFile(tempFilename, r)
 	if err != nil {
 		log.WithFields(logrus.Fields{
+			
+					
 			"filename": finalFilename,
 		}).WithError(err).Error("Error creating temp file")
 		http.Error(w, "Error writing temp file", http.StatusInternalServerError)

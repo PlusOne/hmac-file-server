@@ -697,6 +697,23 @@ To set up a reverse proxy for the HMAC File Server, you can use either Apache2 o
 
 ---
 
+### Proxy Best Practices & Recommendations
+
+For production deployments, consider the following reverse proxy best practices:
+
+- **Timeouts**: Set reasonable timeouts (e.g., `proxy_read_timeout 300;` in Nginx) to avoid hanging connections.
+- **Buffer Sizes**: Increase buffer sizes for large file uploads/downloads if needed (e.g., `client_max_body_size 2G;` in Nginx).
+- **Headers**: Always set security headers (`X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`).
+- **Forwarded Headers**: Ensure `X-Forwarded-For` and `X-Forwarded-Proto` are set for correct client IP and protocol logging.
+- **HTTP/2**: Enable HTTP/2 for better performance if supported by your proxy and clients.
+- **SSL/TLS**: Terminate SSL at the proxy and use strong ciphers. Redirect HTTP to HTTPS.
+- **Health Checks**: Configure health checks for the backend server to enable automatic failover or alerting.
+- **Access Controls**: Restrict access to the management endpoints (e.g., `/metrics`) to trusted IPs only.
+
+See the official Nginx and Apache documentation for more advanced tuning options.
+
+---
+
 #### 3. ejabberd Configuration
 
 ```yaml
