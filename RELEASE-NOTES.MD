@@ -1,3 +1,27 @@
+# Release Notes for HMAC File Server 3.0
+
+## [3.0] - 2025-06-05
+
+### Added
+- `--genconfig` and `--genconfig-path` flags to generate example configurations on demand.
+- Robust dual-stack HTTP client with idle connection timeouts and keep-alive settings for seamless IPv4/IPv6 support.
+- Automated end-to-end tests for `--genconfig` generation and IPv4/IPv6 startup behavior.
+- Proxy best practices and recommendations (timeouts, buffer sizes, security headers) in documentation.
+- Enhanced startup logging of `BindIP`, `FileNaming`, and `ForceProtocol` settings.
+
+### Changed
+- Consolidated all configuration structs into a single `Config` type; removed duplicated and unused fields.
+- Improved `parseSize` and `parseTTL` functions with strict unit parsing and error handling.
+- Fixed Markdown lint issues in `CHANGELOG.md` and `wiki.md` for consistent headings and formatting.
+- Refined PID file write/remove logic and added graceful shutdown logging enhancements.
+
+### Fixed
+- Ensured seamless IPv4/IPv6 dual-stack handling with appropriate timeouts and error control.
+- Validated `--config` flag usage with clear error messages and fallback behavior.
+- Resolved edge cases in network protocol initialization preventing unexpected errors.
+
+---
+
 # Release Notes for HMAC File Server 2.7-Stable
 
 ## Summary
