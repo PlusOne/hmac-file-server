@@ -622,9 +622,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize network protocol: %v", err)
 	}
+	// Enhanced dual-stack HTTP client for robust IPv4/IPv6 and resource management
+	// See: https://pkg.go.dev/net/http#Transport for details on these settings
 	dualStackClient = &http.Client{
 		Transport: &http.Transport{
-			DialContext: dialer.DialContext,
+			DialContext:           dialer.DialContext,
+			IdleConnTimeout:       90 * time.Second, // Close idle connections after 90s
+			MaxIdleConns:          100,              // Max idle connections across all hosts
+			MaxIdleConnsPerHost:   10,               // Max idle connections per host
+			TLSHandshakeTimeout:   10 * time.Second, // Timeout for TLS handshake
+			ResponseHeaderTimeout: 15 * time.Second, // Timeout for reading response headers
 		},
 	}
 
