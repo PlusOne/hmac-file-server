@@ -25,11 +25,12 @@ This documentation provides detailed information on configuring, setting up, and
         - [Nginx Reverse Proxy](#nginx-reverse-proxy)
     - [3. ejabberd Configuration](#3-ejabberd-configuration)
     - [4. Systemd Service Setup](#4-systemd-service-setup)
-5. [Building for Different Architectures](#building-for-different-architectures)
-6. [Additional Recommendations](#additional-recommendations)
-7. [Notes](#notes)
-8. [Using HMAC File Server for CI/CD Build Artifacts](#using-hmac-file-server-for-ci-cd-build-artifacts)
-9. [Monitoring](#monitoring)
+5. [Running with Docker & Docker Compose](#running-with-docker--docker-compose)
+6. [Building for Different Architectures](#building-for-different-architectures)
+7. [Additional Recommendations](#additional-recommendations)
+8. [Notes](#notes)
+9. [Using HMAC File Server for CI/CD Build Artifacts](#using-hmac-file-server-for-ci-cd-build-artifacts)
+10. [Monitoring](#monitoring)
 
 ---
 
@@ -813,342 +814,184 @@ To set up the HMAC File Server as a systemd service, follow these steps:
 
 ---
 
-## Building for Different Architectures
+## Running with Docker & Docker Compose
 
-To build the HMAC File Server for different architectures, you can use the following commands:
+You can run the HMAC File Server using Docker and Docker Compose for easy deployment and environment management.
 
-### Building for Linux (x86_64)
-
-```sh
-GOOS=linux GOARCH=amd64 go build -o hmac-file-server-linux-amd64
-```
-
-### Building for ARM (32-bit)
-
-```sh
-GOOS=linux GOARCH=arm GOARM=7 go build -o hmac-file-server-linux-arm
-```
-
-### Building for ARM (64-bit)
-
-```sh
-GOOS=linux GOARCH=arm64 go build -o hmac-file-server-linux-arm64
-```
-
-### Building the Monitoring Tool
-
-The monitoring tool (`monitor.go`) is located in the `server/cmd/monitor/` directory and is compiled separately from the main HMAC File Server. Below are the instructions for building the monitoring tool:
-
-#### Building for Linux (x86_64)
-
-```sh
-GOOS=linux GOARCH=amd64 go build -o monitor-linux-amd64 ./server/cmd/monitor/monitor.go
-```
-
-#### Building for ARM (32-bit)
-
-```sh
-GOOS=linux GOARCH=arm GOARM=7 go build -o monitor-linux-arm ./server/cmd/monitor/monitor.go
-```
-
-#### Building for ARM (64-bit)
-
-```sh
-GOOS=linux GOARCH=arm64 go build -o monitor-linux-arm64 ./server/cmd/monitor/monitor.go
-```
-
-Once built, the monitoring tool can be executed independently to track system performance, Prometheus metrics, and active processes.
-
----
-
-## Additional Recommendations
-
-- **Security**: Ensure that the `secret` key in the `config.toml` file is changed to a unique, strong value to secure HMAC operations.
-- **Backups**: Regularly back up the `config.toml` file and any important data stored by the HMAC File Server.
-- **Monitoring**: Use monitoring tools like Prometheus and Grafana to keep track of server performance and metrics.
-
----
-
-## Notes
-
-- The HMAC File Server is designed to be flexible and configurable. Adjust the settings in the `config.toml` file to match your specific requirements and environment.
-- For any issues or questions, refer to the project's GitHub repository and documentation.
-
-## Using HMAC File Server for CI/CD Build Artifacts
-
-This guide explains how to use [HMAC File Server](https://github.com/PlusOne/hmac-file-server) to securely upload and download build artifacts in CI/CD pipelines.
-
----
-
-## Why Use HMAC File Server?
-
-- Secure, HMAC-authenticated access  
-- Self-hosted, no third-party storage needed  
-- Configurable TTL, versioning, and deduplication  
-- Prometheus metrics for monitoring  
-- Easily integrated into GitHub Actions, GitLab CI, Jenkins, etc.
-
----
-
-## Step 1: Set Up HMAC File Server
-
-Clone and build the server:
-
-```bash
-git clone https://github.com/PlusOne/hmac-file-server.git
-cd hmac-file-server
-go build -o hmac-file-server
-cp config.example.toml config.toml
-mkdir -p /data/artifacts
-./hmac-file-server -config config.toml
-```
-
-Update `config.toml` with:
-
-```toml
-[hmac]
-secret = "your-secret-key"
-
-[upload]
-enabled = true
-path = "/data/artifacts"
-
-[download]
-enabled = true
-```
-
----
-
-## Step 2: Generate Signed URLs
-
-Use HMAC to generate signed URLs for secure upload/download.
-
-### Upload Script
-
-```bash
-#!/bin/bash
-
-FILE_PATH="./build/output.tar.gz"
-FILENAME="output.tar.gz"
-SECRET="your-secret-key"
-BASE_URL="https://your-hmac-server.com"
-
-TIMESTAMP=$(date +%s)
-SIGNATURE=$(echo -n "$FILENAME$TIMESTAMP" | openssl dgst -sha256 -hmac "$SECRET" | sed 's/^.* //')
-
-curl -X PUT "$BASE_URL/upload/$FILENAME?ts=$TIMESTAMP&sig=$SIGNATURE" --data-binary "@$FILE_PATH"
-```
-
-### Download Script
-
-```bash
-#!/bin/bash
-
-FILENAME="output.tar.gz"
-SECRET="your-secret-key"
-BASE_URL="https://your-hmac-server.com"
-
-TIMESTAMP=$(date +%s)
-SIGNATURE=$(echo -n "$FILENAME$TIMESTAMP" | openssl dgst -sha256 -hmac "$SECRET" | sed 's/^.* //')
-
-curl -O "$BASE_URL/download/$FILENAME?ts=$TIMESTAMP&sig=$SIGNATURE"
-```
-
----
-
-## Step 3: Integrate into CI/CD
-
-### GitHub Actions Example
+### Docker Compose Example
 
 ```yaml
-name: Build and Upload to HMAC
+version: '3.8'
 
-on:
-  push:
-    branches: [ "main" ]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Build
-        run: |
-          mkdir -p build
-          echo "example artifact content" > build/output.tar.gz
-
-      - name: Upload Artifact to HMAC Server
-        run: bash scripts/upload-artifact.sh
+services:
+  hmac-file-server:
+    image: ghcr.io/plusone/hmac-file-server:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/etc/hmac-file-server
+      - ./data/uploads:/opt/hmac-file-server/data/uploads
+      - ./data/duplicates:/opt/hmac-file-server/data/duplicates
+      - ./data/temp:/opt/hmac-file-server/data/temp
+      - ./data/logs:/opt/hmac-file-server/data/logs
+    environment:
+      - CONFIG_PATH=/etc/hmac-file-server/config.toml
+    restart: unless-stopped
 ```
 
----
+**Key paths:**
+- `/etc/hmac-file-server/config.toml`: Main config file (mount your config here)
+- `/opt/hmac-file-server/data/uploads`: Upload storage
+- `/opt/hmac-file-server/data/duplicates`: Deduplication data
+- `/opt/hmac-file-server/data/temp`: Temporary files
+- `/opt/hmac-file-server/data/logs`: Log files
 
-## Optional Features
+### Docker Build
 
-- **TTL**  
-  Auto-delete artifacts after a set time.  
-- **Deduplication**  
-  Only store unique files.  
-- **Versioning**  
-  Track changes to files over time.  
-- **Virus Scanning**  
-  Integrate with ClamAV to scan uploaded files.
+The official Dockerfile supports multi-stage builds for minimal images:
 
----
+```dockerfile
+# Stage 1: Build
+FROM golang:1.24-alpine AS builder
 
-## Monitoring
+WORKDIR /build
+RUN apk add --no-cache git
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o hmac-file-server ./cmd/server/main.go
 
-The HMAC File Server provides a built-in monitoring interface to track system performance, Prometheus metrics, and active processes. Below is an overview of the monitoring features:
+# Stage 2: Runtime
+FROM alpine:latest
 
-### System Data
+RUN apk --no-cache add ca-certificates
 
-The monitoring interface displays key system metrics, including:
+RUN mkdir -p /opt/hmac-file-server/data/uploads \
+    && mkdir -p /opt/hmac-file-server/data/duplicates \
+    && mkdir -p /opt/hmac-file-server/data/temp \
+    && mkdir -p /opt/hmac-file-server/data/logs
 
-- **CPU Usage**: Current CPU usage percentage.
-- **Memory Usage**: Current memory usage percentage.
-- **CPU Cores**: Number of CPU cores available.
+WORKDIR /opt/hmac-file-server
 
-### Prometheus Metrics
+COPY --from=builder /build/hmac-file-server .
 
-The server exposes Prometheus metrics for tracking upload and download statistics:
-- **hmac_file_server_upload_errors_total**: Total number of upload errors.
-- **hmac_file_server_uploads_total**: Total number of successful uploads.
-- **hmac_file_server_downloads_total**: Total number of successful downloads.
+EXPOSE 8080
 
-These metrics can be integrated with Prometheus and visualized using tools like Grafana.
-
-### Process List
-
-The monitoring interface also provides a list of active processes, including:
-- Process ID (PID)
-- CPU usage percentage
-- Memory usage percentage
-- Command or service name
-
-This information helps in identifying resource-intensive processes and debugging performance issues.
-
-### Example Monitoring Output
-
-Below is an example of the monitoring interface output:
-
-```
-System Data
-Metric                Value
-CPU Usage             2.78%
-Memory Usage          26.49%
-CPU Cores             4
-
-Prometheus Metrics
-hmac_file_server_upload_errors_total   1.00
-hmac_file_server_uploads_total         4.00
-hmac_file_server_downloads_total       15.00
-
-Process List
-PID       CPU   MEM   COMMAND
-907752    0.12  2.69  /lib/systemd/systemd-journald
-4055132   0.12  0.03  /usr/sbin/qemu-ga
-2370782   0.11  0.00  kworker/0:2-wg-crypt-wg1
-2371119   0.10  0.08  bash
-2371096   0.10  0.14  sshd: root@pts/0
-2369170   0.09  0.00  kworker/0:0-mm_percpu_wq
-2371240   0.07  0.00  kworker/0:1-wg-crypt-wg1
-2371099   0.06  0.13  systemd --user
-868714    0.05  0.59  php-fpm: pool www
+CMD ["./hmac-file-server", "--config", "/etc/hmac-file-server/config.toml"]
 ```
 
-For more details on integrating Prometheus metrics, refer to the [Prometheus documentation](https://prometheus.io/docs/).
+### Example Docker Config
 
----
+A sample `config.toml` for Docker deployments:
 
-## License
-
-HMAC File Server is open-source and MIT licensed.
-
----
-
-## Resources
-
-- [HMAC File Server GitHub Repo](https://github.com/PlusOne/hmac-file-server)
-- [Configuration Docs](https://github.com/PlusOne/hmac-file-server/wiki)
-
-## Version 3.0 Release Note
-
-Version 2.8 is the last release before we begin integrating additional features and focusing on further stability patches.
-
-## CI/CD with HMAC File Server – Summary
-
-Sure! Here is a brief guide on how to use the HMAC File Server in your CI/CD pipeline:
-
----
-
-### 1. Server Setup
-
-```bash
-git clone https://github.com/PlusOne/hmac-file-server.git
-cd hmac-file-server
-go build -o hmac-file-server
-cp config.example.toml config.toml
-mkdir -p /data/artifacts
-./hmac-file-server -config config.toml
-```
-
-Update config.toml:
 ```toml
-[hmac]
-secret = "your-secret-key"
+[server]
+listenport = "8080"
+unixsocket = false
+storagepath = "/opt/hmac-file-server/data/uploads"
+metricsenabled = true
+metricsport = "9090"
+deduplicationenabled = true
+minfreebytes = "5GB"
+filettl = "2y"
+filettlenabled = false
+autoadjustworkers = true
+networkevents = false
+pidfilepath = "./hmac-file-server.pid"
+precaching = false
 
-[upload]
+[deduplication]
 enabled = true
-path = "/data/artifacts"
+directory = "/opt/hmac-file-server/data/duplicates"
 
-[download]
-enabled = true
+[logging]
+level = "debug"
+file = "./hmac-file-server.log"
+max_size = 100
+max_backups = 7
+max_age = 30
+compress = true
+
+[iso]
+enabled = false
+size = "1TB"
+mountpoint = "/mnt/nfs_vol01/hmac-file-server/iso/"
+charset = "utf-8"
+
+[timeouts]
+readtimeout = "3600s"
+writetimeout = "3600s"
+idletimeout = "3600s"
+
+[security]
+secret = "hmac-file-server-is-the-win"
+
+[versioning]
+enableversioning = false
+maxversions = 1
+
+[uploads]
+resumableuploadsenabled = false
+chunkeduploadsenabled = true
+chunksize = "32MB"
+allowedextensions = [
+  ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
+  ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg",
+  ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
+]
+
+[downloads]
+chunkeddownloadsenabled = false
+chunksize = "32MB"
+allowedextensions = [
+  ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
+  ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg",
+  ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
+]
+
+[clamav]
+clamavenabled = false
+clamavsocket = "/var/run/clamav/clamd.ctl"
+numscanworkers = 4
+scanfileextensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"]
+
+[redis]
+redisenabled = false
+redisdbindex = 0
+redisaddr = "localhost:6379"
+redispassword = ""
+redishealthcheckinterval = "120s"
+
+[workers]
+numworkers = 4
+uploadqueuesize = 5000
+
+[file]
+filerevision = 1
 ```
+
+### Quickstart with Docker Compose
+
+1. Place your `config.toml` in the `./config` directory.
+2. Run:
+
+```zsh
+docker compose up -d
+```
+
+3. The server will be available on `http://localhost:8080`.
 
 ---
 
-### 2. Upload & Download with HMAC
+## Table of Contents (updated)
 
-#### Upload Script
-
-```bash
-FILE="output.tar.gz"
-TS=$(date +%s)
-SIG=$(echo -n "$FILE$TS" | openssl dgst -sha256 -hmac "$SECRET" | sed 's/^.* //')
-curl -X PUT "$URL/upload/$FILE?ts=$TS&sig=$SIG" --data-binary "@build/$FILE"
-```
-
-#### Download Script
-
-```bash
-TS=$(date +%s)
-SIG=$(echo -n "$FILE$TS" | openssl dgst -sha256 -hmac "$SECRET" | sed 's/^.* //')
-curl -O "$URL/download/$FILE?ts=$TS&sig=$SIG"
-```
-
----
-
-### 3. Using in CI/CD (GitHub Actions)
-
-```yaml
-- name: Build
-  run: |
-    mkdir -p build
-    echo "artifact" > build/output.tar.gz
-
-- name: Upload
-  env:
-    SECRET: ${{ secrets.HMAC_SECRET }}
-  run: bash scripts/upload.sh
-```
-
----
-
-### Advantages
-
-- Secure (HMAC)
-- Self-hosted
-- Easy to integrate
-- No dependencies on third-party providers
+1. [Introduction](#introduction)
+2. [Configuration](#configuration)
+3. [Example Configuration](#example-configuration)
+4. [Setup Instructions](#setup-instructions)
+5. [Running with Docker & Docker Compose](#running-with-docker--docker-compose)
+6. [Building for Different Architectures](#building-for-different-architectures)
+7. [Additional Recommendations](#additional-recommendations)
+8. [Notes](#notes)
+9. [Using HMAC File Server for CI/CD Build Artifacts](#using-hmac-file-server-for-ci-cd-build-artifacts)
+10. [Monitoring](#monitoring)
