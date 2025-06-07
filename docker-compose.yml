@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  hmac-file-server:
+    image: ghcr.io/plusone/hmac-file-server:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/etc/hmac-file-server
+      - ./data/uploads:/opt/hmac-file-server/data/uploads
+      - ./data/duplicates:/opt/hmac-file-server/data/duplicates
+      - ./data/temp:/opt/hmac-file-server/data/temp
+      - ./data/logs:/opt/hmac-file-server/data/logs
+    environment:
+      - CONFIG_PATH=/etc/hmac-file-server/config.toml
+    restart: unless-stopped
