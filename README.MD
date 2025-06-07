@@ -1,4 +1,4 @@
-# HMAC File Server 2.9-Stable
+# HMAC File Server 3.0-Stable
 ## Overview
 The **HMAC File Server** ensures secure file uploads and downloads using HMAC authentication. It incorporates rate limiting, CORS support, retries, file versioning, and Unix socket support for enhanced flexibility. Redis integration provides efficient caching and session management. Prometheus metrics and a graceful shutdown mechanism ensure reliable and efficient file handling.
 
@@ -29,8 +29,10 @@ Special thanks to **Thomas Leister** for inspiration drawn from [[prosody-filer]
 
 ## Installation
 
+> **Tip:** You can also run HMAC File Server using Docker Compose for easy deployment. See `dockerenv/docker-compose.yml` for a ready-to-use example. The official image is available at `ghcr.io/plusone/hmac-file-server:latest`.
+
 ### Prerequisites
-- Go **1.20** or higher
+- Go **1.24** or higher
 - Redis server (optional, for caching)
 - ClamAV (optional, for virus scanning)
 
@@ -185,7 +187,7 @@ To build for different architectures:
 ---
 
 **Important Update:**
-- The minimum Go version required is now **1.20**. Please ensure your environment meets this requirement for successful compilation.
+- The minimum Go version required is now **1.24**. Please ensure your environment meets this requirement for successful compilation.
 
 ---
 
