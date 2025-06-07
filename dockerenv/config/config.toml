@@ -1,0 +1,83 @@
+[server]
+listenport = "8080"
+unixsocket = false
+storagepath = "/opt/hmac-file-server/data/uploads"
+metricsenabled = true
+metricsport = "9090"
+deduplicationenabled = true
+minfreebytes = "5GB"
+filettl = "2y"
+filettlenabled = false
+autoadjustworkers = true
+networkevents = false
+pidfilepath = "./hmac-file-server.pid"
+precaching = false
+
+[deduplication]
+enabled = true
+directory = "/opt/hmac-file-server/data/duplicates"
+
+[logging]
+level = "debug"
+file = "./hmac-file-server.log"
+max_size = 100
+max_backups = 7
+max_age = 30
+compress = true
+
+[iso]
+enabled = false
+size = "1TB"
+mountpoint = "/mnt/nfs_vol01/hmac-file-server/iso/"
+charset = "utf-8"
+
+[timeouts]
+readtimeout = "3600s"
+writetimeout = "3600s"
+idletimeout = "3600s"
+
+[security]
+secret = "hmac-file-server-is-the-win"
+
+[versioning]
+enableversioning = false
+maxversions = 1
+
+[uploads]
+resumableuploadsenabled = false
+chunkeduploadsenabled = true
+chunksize = "32MB"
+allowedextensions = [
+  ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
+  ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg",
+  ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
+]
+
+[downloads]
+chunkeddownloadsenabled = false
+chunksize = "32MB"
+allowedextensions = [
+  ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
+  ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg",
+  ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
+]
+
+[clamav]
+clamavenabled = false
+clamavsocket = "/var/run/clamav/clamd.ctl"
+numscanworkers = 4
+scanfileextensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"]
+
+[redis]
+redisenabled = false
+redisdbindex = 0
+redisaddr = "localhost:6379"
+redispassword = ""
+redishealthcheckinterval = "120s"
+
+[workers]
+numworkers = 4
+uploadqueuesize = 5000
+
+[file]
+filerevision = 1
