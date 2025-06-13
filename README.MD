@@ -45,18 +45,28 @@ cd hmac-file-server
 sudo ./installer.sh
 ```
 
-The installer will:
+The installer supports two deployment options:
+- **Native Installation**: Traditional systemd service with Go build
+- **Docker Deployment**: Containerized deployment with docker-compose
+
+**Native installation** features:
 - Install Go 1.24 (if needed)
 - Create system user and directories
 - Build and configure the server
 - Set up systemd service
 - Optionally install Redis and ClamAV
 
+**Docker deployment** features:
+- Complete docker-compose setup with Redis and ClamAV
+- Multi-stage Dockerfile for optimized builds
+- Automated container orchestration
+- Easy start/stop scripts
+
 For detailed installation instructions, see [INSTALL.MD](INSTALL.MD).
 
 ### Manual Installation
 
-> **Tip:** You can also run HMAC File Server using Docker Compose for easy deployment. See the Wiki for Docker setup instructions. The official image is available at `ghcr.io/plusone/hmac-file-server:latest`.
+> **Tip:** The automated installer now supports both native systemd installation and Docker deployment. For automated Docker setup, run `sudo ./installer.sh` and select option 2. For manual Docker setup, see the Wiki for detailed instructions. The official image is available at `ghcr.io/plusone/hmac-file-server:latest`.
 
 #### Prerequisites
 - Go **1.24** or higher

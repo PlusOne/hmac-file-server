@@ -7,15 +7,29 @@ All notable changes to this project will be documented in this file.
 ## [3.2] - Stable Release
 
 ### Added (3.2)
+- **Enhanced Installer Script**: Major improvements to the automated installer
+  - **Docker Deployment Option**: Complete Docker deployment workflow as alternative to native installation
+  - **Selectable Configuration Directory**: Users can now customize config directory instead of hardcoded paths
+  - **Installation Type Selection**: Choice between native systemd service or Docker deployment
+  - **Automated Docker Setup**: Generates docker-compose.yml, Dockerfile, and management scripts
 - **Enhanced Documentation**: Comprehensive update of all documentation files to match current codebase
 - **Protocol Specification Updates**: Detailed protocol documentation with implementation examples
 - **Configuration Validation**: Improved configuration structure validation and error reporting
 - **Developer Resources**: Updated build instructions and development setup guides
 
 ### Changed (3.2)
+- **Installer User Experience**: 
+  - Removed all Unicode symbols and emoticons for universal terminal compatibility
+  - Eliminated duplicate output during installation completion
+  - Streamlined configuration process with better prompts
 - **Documentation Structure**: Reorganized documentation for better clarity and maintenance
 - **Configuration Examples**: Updated all configuration examples to reflect current options
 - **API Documentation**: Enhanced API endpoint documentation with comprehensive examples
+
+### Fixed (3.2)
+- **Installer Compatibility**: Removed Unicode dependencies ensuring compatibility with all terminal types
+- **Output Duplication**: Fixed duplicate completion messages in installer workflow
+- **Path Configuration**: Enhanced flexibility in directory structure setup
 
 ### Completed (3.2)
 - **Feature Development**: Active development of new features and improvements

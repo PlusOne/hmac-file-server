@@ -1042,7 +1042,36 @@ To set up the HMAC File Server as a systemd service, follow these steps:
 
 You can run the HMAC File Server using Docker and Docker Compose for easy deployment and environment management.
 
-### Docker Compose Example
+### Automated Docker Deployment (Recommended)
+
+The easiest way to deploy with Docker is using the automated installer:
+
+```bash
+git clone https://github.com/PlusOne/hmac-file-server.git
+cd hmac-file-server
+sudo ./installer.sh
+```
+
+When prompted, select **Option 2: Docker deployment (docker-compose)**. The installer will:
+- Create a complete docker-compose.yml with Redis and ClamAV services
+- Generate an optimized multi-stage Dockerfile
+- Set up proper networking between services
+- Create start/stop scripts (`start.sh`, `stop.sh`)
+- Configure container-optimized configuration
+- Provide an isolated deployment directory structure
+
+After installation, manage your deployment with:
+```bash
+cd /path/to/your/deployment/directory
+./start.sh    # Start all services
+./stop.sh     # Stop all services
+```
+
+### Manual Docker Compose Setup
+
+### Manual Docker Compose Setup
+
+For manual Docker setup without the installer, use this docker-compose.yml:
 
 ```yaml
 version: '3.8'

@@ -2,14 +2,22 @@
 
 ## Quick Installation for XMPP Operators
 
-The HMAC File Server includes an automated installer script designed specifically for XMPP operators who want to quickly deploy a file sharing service for their chat servers.
+The HMAC File Server includes an automated installer script designed specifically for XMPP operators who want to quickly deploy a file sharing service for their chat servers. The installer now supports both **native systemd installation** and **Docker deployment**.
 
 ### Prerequisites
 
-- Linux system with systemd (Ubuntu 18.04+, CentOS 7+, Debian 9+, etc.)
+- Linux system with systemd (Ubuntu 18.04+, CentOS 7+, Debian 9+, etc.) for native installation
+- Docker and Docker Compose for containerized deployment
 - Root or sudo access
 - At least 1GB free disk space
 - Internet connection for downloading dependencies
+
+### Installation Options
+
+The installer provides two deployment methods:
+
+1. **Native Installation** (systemd service) - Traditional installation with Go build and systemd service
+2. **Docker Deployment** (docker-compose) - Containerized deployment with automatic service orchestration
 
 ### Installation
 
@@ -23,6 +31,37 @@ The HMAC File Server includes an automated installer script designed specificall
    ```bash
    sudo ./installer.sh
    ```
+
+3. **Choose deployment type:**
+   - **Option 1**: Native installation (systemd service)
+   - **Option 2**: Docker deployment (docker-compose)
+
+4. **Configure installation:**
+   - **System user** (default: `hmac-server`)
+   - **Installation/deployment directories**
+   - **Configuration directory** (customizable)
+   - **Server ports**
+   - **HMAC secret**: Choose automatic generation (recommended) or enter manually
+   - **Optional features** (JWT, Redis, ClamAV, SSL/TLS)
+
+### Docker Deployment Features
+
+When selecting Docker deployment, the installer will:
+- Create a complete docker-compose.yml with Redis and ClamAV services
+- Generate optimized Dockerfile for multi-stage builds
+- Set up proper networking between services
+- Create start/stop scripts for easy management
+- Configure container-optimized paths and volumes
+- Provide isolated deployment directory structure
+
+### Native Installation Features
+
+When selecting native installation, the installer will:
+- Install Go 1.24 (if needed)
+- Create system user and directories
+- Build and configure the server
+- Set up systemd service
+- Optionally install Redis and ClamAV
 
    **Alternative: Pre-set secrets via environment variables:**
    ```bash
@@ -80,6 +119,8 @@ mod_http_file_share:
 
 ### Post-Installation
 
+#### For Native Installation
+
 1. **Start the service:**
    ```bash
    sudo systemctl start hmac-file-server
@@ -95,7 +136,34 @@ mod_http_file_share:
    sudo journalctl -u hmac-file-server -f
    ```
 
-4. **Configure firewall (required):**
+#### For Docker Deployment
+
+1. **Start the containers:**
+   ```bash
+   cd /path/to/your/docker/deployment
+   ./start.sh
+   # Or manually: docker-compose up -d
+   ```
+
+2. **Check status:**
+   ```bash
+   docker-compose ps
+   ```
+
+3. **View logs:**
+   ```bash
+   docker-compose logs -f hmac-file-server
+   ```
+
+4. **Stop the containers:**
+   ```bash
+   ./stop.sh
+   # Or manually: docker-compose down
+   ```
+
+### Firewall Configuration
+
+4. **Configure firewall (required for both deployment types):**
    ```bash
    # Example for ufw (Ubuntu/Debian)
    sudo ufw allow 8080/tcp comment "HMAC File Server"
