@@ -4,7 +4,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.2] - Stable Release
+## [3.2] - Stable Release - 2025-06-13
 
 ### Added (3.2)
 - **Enhanced Installer Script**: Major improvements to the automated installer
@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - **Protocol Specification Updates**: Detailed protocol documentation with implementation examples
 - **Configuration Validation**: Improved configuration structure validation and error reporting
 - **Developer Resources**: Updated build instructions and development setup guides
+- **Repository Cleanup**: Comprehensive .gitignore for all major IDEs and development tools
 
 ### Changed (3.2)
 - **Installer User Experience**: 
