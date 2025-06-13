@@ -81,9 +81,9 @@ echo -e "${BLUE}                     █ HMAC File Server 3.2 Installer █${NC}
 echo -e "${BLUE}                           Professional XMPP Integration${NC}"
 echo ""
 echo -e "${YELLOW}────────────────────────────────────────────────────────────────────────────────${NC}"
-echo -e "${GREEN} ✓ Secure File Uploads & Downloads    ✓ JWT & HMAC Authentication${NC}"
-echo -e "${GREEN} ✓ Prometheus Metrics Integration     ✓ ClamAV Virus Scanning${NC}"  
-echo -e "${GREEN} ✓ Redis Cache & Session Management   ✓ Chunked Upload/Download Support${NC}"
+echo -e "${GREEN} Secure File Uploads & Downloads     JWT & HMAC Authentication${NC}"
+echo -e "${GREEN} Prometheus Metrics Integration      ClamAV Virus Scanning${NC}"  
+echo -e "${GREEN} Redis Cache & Session Management    Chunked Upload/Download Support${NC}"
 echo -e "${YELLOW}────────────────────────────────────────────────────────────────────────────────${NC}"
 echo ""
 
@@ -130,7 +130,7 @@ pre_installation_checks() {
         exit 1
     fi
     
-    echo -e "${GREEN}✅ Pre-installation checks passed${NC}"
+    echo -e "${GREEN}Pre-installation checks passed${NC}"
     echo ""
 }
 
@@ -178,6 +178,10 @@ get_user_input() {
     read -p "Installation directory [$DEFAULT_INSTALL_DIR]: " INSTALL_DIR
     INSTALL_DIR=${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}
     
+    # Configuration directory
+    read -p "Configuration directory [$DEFAULT_CONFIG_DIR]: " CONFIG_DIR
+    CONFIG_DIR=${CONFIG_DIR:-$DEFAULT_CONFIG_DIR}
+    
     # Data directory
     read -p "Data directory (uploads) [$DEFAULT_DATA_DIR]: " DATA_DIR
     DATA_DIR=${DATA_DIR:-$DEFAULT_DATA_DIR}
@@ -194,7 +198,7 @@ get_user_input() {
     if [[ -n "$HMAC_SECRET" ]]; then
         # Use environment variable if provided
         if [[ ${#HMAC_SECRET} -ge 32 ]]; then
-            echo -e "${GREEN}✅ Using HMAC secret from environment variable${NC}"
+            echo -e "${GREEN}Using HMAC secret from environment variable${NC}"
         else
             echo -e "${RED}Error: HMAC_SECRET environment variable must be at least 32 characters long${NC}"
             echo -e "${YELLOW}Current length: ${#HMAC_SECRET}${NC}"
@@ -217,7 +221,7 @@ get_user_input() {
                 1)
                     echo -e "${YELLOW}Generating secure HMAC secret...${NC}"
                     HMAC_SECRET=$(generate_random_key 48)
-                    echo -e "${GREEN}✅ Generated 48-character HMAC secret${NC}"
+                    echo -e "${GREEN}Generated 48-character HMAC secret${NC}"
                     echo -e "${BLUE}Secret preview: ${HMAC_SECRET:0:8}...${HMAC_SECRET: -8}${NC}"
                     break
                     ;;
@@ -230,13 +234,13 @@ get_user_input() {
                         else
                             # Fallback: use regular read with warning
                             echo ""
-                            echo -e "${YELLOW}⚠️  Note: Input will be visible (your terminal doesn't support hidden input)${NC}"
+                            echo -e "${YELLOW}Note: Input will be visible (your terminal doesn't support hidden input)${NC}"
                             echo -n "HMAC secret (minimum 32 characters): "
                             read -r HMAC_SECRET
                         fi
                         
                         if [[ ${#HMAC_SECRET} -ge 32 ]]; then
-                            echo -e "${GREEN}✅ HMAC secret accepted (${#HMAC_SECRET} characters)${NC}"
+                            echo -e "${GREEN}HMAC secret accepted (${#HMAC_SECRET} characters)${NC}"
                             break 2
                         else
                             echo -e "${RED}HMAC secret must be at least 32 characters long (you entered ${#HMAC_SECRET} characters)${NC}"
@@ -261,7 +265,7 @@ get_user_input() {
         if [[ -n "$JWT_SECRET" ]]; then
             # Use environment variable if provided
             if [[ ${#JWT_SECRET} -ge 32 ]]; then
-                echo -e "${GREEN}✅ Using JWT secret from environment variable${NC}"
+                echo -e "${GREEN}Using JWT secret from environment variable${NC}"
             else
                 echo -e "${RED}Error: JWT_SECRET environment variable must be at least 32 characters long${NC}"
                 echo -e "${YELLOW}Current length: ${#JWT_SECRET}${NC}"
@@ -284,7 +288,7 @@ get_user_input() {
                     1)
                         echo -e "${YELLOW}Generating secure JWT secret...${NC}"
                         JWT_SECRET=$(generate_random_key 48)
-                        echo -e "${GREEN}✅ Generated 48-character JWT secret${NC}"
+                        echo -e "${GREEN}Generated 48-character JWT secret${NC}"
                         echo -e "${BLUE}Secret preview: ${JWT_SECRET:0:8}...${JWT_SECRET: -8}${NC}"
                         break
                         ;;
@@ -297,13 +301,13 @@ get_user_input() {
                             else
                                 # Fallback: use regular read with warning
                                 echo ""
-                                echo -e "${YELLOW}⚠️  Note: Input will be visible (your terminal doesn't support hidden input)${NC}"
+                                echo -e "${YELLOW}Note: Input will be visible (your terminal doesn't support hidden input)${NC}"
                                 echo -n "JWT secret (minimum 32 characters): "
                                 read -r JWT_SECRET
                             fi
                             
                             if [[ ${#JWT_SECRET} -ge 32 ]]; then
-                                echo -e "${GREEN}✅ JWT secret accepted (${#JWT_SECRET} characters)${NC}"
+                                echo -e "${GREEN}JWT secret accepted (${#JWT_SECRET} characters)${NC}"
                                 break 2
                             else
                                 echo -e "${RED}JWT secret must be at least 32 characters long (you entered ${#JWT_SECRET} characters)${NC}"
@@ -374,17 +378,18 @@ get_user_input() {
     # Show configuration summary
     # Professional configuration summary
     echo ""
-    echo -e "${BLUE}                     █ Configuration Summary █${NC}"
+    echo -e "${BLUE}Configuration Summary${NC}"
     echo -e "${YELLOW}────────────────────────────────────────────────────────────────${NC}"
     echo -e "${YELLOW}System User:${NC}     $HMAC_USER"
     echo -e "${YELLOW}Install Dir:${NC}     $INSTALL_DIR"
+    echo -e "${YELLOW}Config Dir:${NC}      $CONFIG_DIR"
     echo -e "${YELLOW}Data Dir:${NC}        $DATA_DIR"
     echo -e "${YELLOW}Server Port:${NC}     $SERVER_PORT"
     echo -e "${YELLOW}Metrics Port:${NC}    $METRICS_PORT"
-    echo -e "${YELLOW}JWT Auth:${NC}        $([[ "$ENABLE_JWT" == "true" ]] && echo "✅ Enabled" || echo "❌ Disabled")"
-    echo -e "${YELLOW}Redis:${NC}           $([[ "$ENABLE_REDIS" == "true" ]] && echo "✅ Enabled ($REDIS_HOST:$REDIS_PORT)" || echo "❌ Disabled")"
-    echo -e "${YELLOW}ClamAV:${NC}          $([[ "$ENABLE_CLAMAV" == "true" ]] && echo "✅ Enabled" || echo "❌ Disabled")"
-    echo -e "${YELLOW}SSL/TLS:${NC}         $([[ "$ENABLE_TLS" == "true" ]] && echo "✅ Enabled" || echo "❌ Disabled")"
+    echo -e "${YELLOW}JWT Auth:${NC}        $([[ "$ENABLE_JWT" == "true" ]] && echo "Enabled" || echo "Disabled")"
+    echo -e "${YELLOW}Redis:${NC}           $([[ "$ENABLE_REDIS" == "true" ]] && echo "Enabled ($REDIS_HOST:$REDIS_PORT)" || echo "Disabled")"
+    echo -e "${YELLOW}ClamAV:${NC}          $([[ "$ENABLE_CLAMAV" == "true" ]] && echo "Enabled" || echo "Disabled")"
+    echo -e "${YELLOW}SSL/TLS:${NC}         $([[ "$ENABLE_TLS" == "true" ]] && echo "Enabled" || echo "Disabled")"
     echo -e "${YELLOW}────────────────────────────────────────────────────────────────${NC}"
     echo ""
     read -p "Continue with installation? (y/N): " CONFIRM_INSTALL
@@ -409,7 +414,7 @@ create_directories() {
     echo -e "${YELLOW}Creating directories...${NC}"
     
     mkdir -p "$INSTALL_DIR"
-    mkdir -p "$DEFAULT_CONFIG_DIR"
+    mkdir -p "$CONFIG_DIR"
     mkdir -p "$DATA_DIR/uploads"
     mkdir -p "$DATA_DIR/deduplication"
     mkdir -p "$DATA_DIR/runtime"
@@ -445,7 +450,7 @@ build_server() {
 generate_config() {
     echo -e "${YELLOW}Generating configuration file...${NC}"
     
-    cat > "$DEFAULT_CONFIG_DIR/config.toml" << EOF
+    cat > "$CONFIG_DIR/config.toml" << EOF
 # HMAC File Server Configuration
 # Generated by installer on $(date)
 
@@ -464,18 +469,18 @@ pidfilepath = "$DATA_DIR/runtime/hmac-file-server.pid"
 EOF
 
     if [[ $ENABLE_TLS == "true" ]]; then
-        cat >> "$DEFAULT_CONFIG_DIR/config.toml" << EOF
+        cat >> "$CONFIG_DIR/config.toml" << EOF
 sslenabled = true
 sslcert = "$SSL_CERT"
 sslkey = "$SSL_KEY"
 EOF
     else
-        cat >> "$DEFAULT_CONFIG_DIR/config.toml" << EOF
+        cat >> "$CONFIG_DIR/config.toml" << EOF
 sslenabled = false
 EOF
     fi
 
-    cat >> "$DEFAULT_CONFIG_DIR/config.toml" << EOF
+    cat >> "$CONFIG_DIR/config.toml" << EOF
 
 [security]
 secret = "$HMAC_SECRET"
@@ -483,14 +488,14 @@ enablejwt = $ENABLE_JWT
 EOF
 
     if [[ $ENABLE_JWT == "true" ]]; then
-        cat >> "$DEFAULT_CONFIG_DIR/config.toml" << EOF
+        cat >> "$CONFIG_DIR/config.toml" << EOF
 jwtsecret = "$JWT_SECRET"
 jwtalgorithm = "$JWT_ALGORITHM"
 jwtexpiration = "$JWT_EXPIRATION"
 EOF
     fi
 
-    cat >> "$DEFAULT_CONFIG_DIR/config.toml" << EOF
+    cat >> "$CONFIG_DIR/config.toml" << EOF
 
 [uploads]
 allowedextensions = [".txt", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".zip", ".tar", ".gz", ".7z", ".mp4", ".webm", ".ogg", ".mp3", ".wav", ".flac", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp"]
@@ -525,7 +530,7 @@ shutdown = "30s"
 EOF
 
     if [[ $ENABLE_CLAMAV == "true" ]]; then
-        cat >> "$DEFAULT_CONFIG_DIR/config.toml" << EOF
+        cat >> "$CONFIG_DIR/config.toml" << EOF
 
 [clamav]
 enabled = true
@@ -533,7 +538,7 @@ ${CLAMAV_CONFIG}
 timeout = "30s"
 EOF
     else
-        cat >> "$DEFAULT_CONFIG_DIR/config.toml" << EOF
+        cat >> "$CONFIG_DIR/config.toml" << EOF
 
 [clamav]
 enabled = false
@@ -541,7 +546,7 @@ EOF
     fi
 
     if [[ $ENABLE_REDIS == "true" ]]; then
-        cat >> "$DEFAULT_CONFIG_DIR/config.toml" << EOF
+        cat >> "$CONFIG_DIR/config.toml" << EOF
 
 [redis]
 enabled = true
@@ -552,7 +557,7 @@ password = "$REDIS_PASSWORD"
 timeout = "5s"
 EOF
     else
-        cat >> "$DEFAULT_CONFIG_DIR/config.toml" << EOF
+        cat >> "$CONFIG_DIR/config.toml" << EOF
 
 [redis]
 enabled = false
@@ -560,10 +565,10 @@ EOF
     fi
 
     # Set ownership and permissions
-    chown "$HMAC_USER:$HMAC_USER" "$DEFAULT_CONFIG_DIR/config.toml"
-    chmod 640 "$DEFAULT_CONFIG_DIR/config.toml"
+    chown "$HMAC_USER:$HMAC_USER" "$CONFIG_DIR/config.toml"
+    chmod 640 "$CONFIG_DIR/config.toml"
     
-    echo -e "${GREEN}Configuration file created: $DEFAULT_CONFIG_DIR/config.toml${NC}"
+    echo -e "${GREEN}Configuration file created: $CONFIG_DIR/config.toml${NC}"
 }
 
 # Create systemd service
@@ -592,7 +597,7 @@ EOF
 Type=simple
 User=$HMAC_USER
 Group=$HMAC_USER
-ExecStart=$INSTALL_DIR/hmac-file-server -config $DEFAULT_CONFIG_DIR/config.toml
+ExecStart=$INSTALL_DIR/hmac-file-server -config $CONFIG_DIR/config.toml
 ExecReload=/bin/kill -SIGHUP \$MAINPID
 WorkingDirectory=$INSTALL_DIR
 Restart=always
@@ -647,33 +652,33 @@ install_dependencies() {
             
             # Check if ClamAV daemon is running and detect socket/port
             if systemctl is-active --quiet clamav-daemon; then
-                echo "  ✓ ClamAV daemon is running"
+                echo "  ClamAV daemon is running"
                 
                 # Check for Unix socket (preferred)
                 if [[ -S "/var/run/clamav/clamd.ctl" ]]; then
-                    echo "  ✓ Unix socket detected: /var/run/clamav/clamd.ctl"
+                    echo "  Unix socket detected: /var/run/clamav/clamd.ctl"
                     CLAMAV_CONFIG="socket = \"/var/run/clamav/clamd.ctl\""
                 elif [[ -S "/run/clamav/clamd.ctl" ]]; then
-                    echo "  ✓ Unix socket detected: /run/clamav/clamd.ctl"
+                    echo "  Unix socket detected: /run/clamav/clamd.ctl"
                     CLAMAV_CONFIG="socket = \"/run/clamav/clamd.ctl\""
                 elif [[ -S "/tmp/clamd" ]]; then
-                    echo "  ✓ Unix socket detected: /tmp/clamd"
+                    echo "  Unix socket detected: /tmp/clamd"
                     CLAMAV_CONFIG="socket = \"/tmp/clamd\""
                 # Check for TCP port
                 elif netstat -ln | grep -q ":3310"; then
-                    echo "  ✓ TCP port detected: 127.0.0.1:3310"
+                    echo "  TCP port detected: 127.0.0.1:3310"
                     CLAMAV_CONFIG="address = \"127.0.0.1:3310\""
                 else
-                    echo "  ⚠ ClamAV socket/port not detected, using default Unix socket"
+                    echo "  ClamAV socket/port not detected, using default Unix socket"
                     CLAMAV_CONFIG="socket = \"/var/run/clamav/clamd.ctl\""
                 fi
             else
-                echo "  ⚠ ClamAV daemon not running, using default configuration"
+                echo "  ClamAV daemon not running, using default configuration"
                 CLAMAV_CONFIG="socket = \"/var/run/clamav/clamd.ctl\""
                 
                 # Try to start the daemon
-                echo "  🔄 Attempting to start ClamAV daemon..."
-                systemctl start clamav-daemon || echo "  ⚠ Failed to start ClamAV daemon"
+                echo "  Attempting to start ClamAV daemon..."
+                systemctl start clamav-daemon || echo "  Failed to start ClamAV daemon"
             fi
         fi
     elif command -v yum &> /dev/null; then
@@ -756,8 +761,8 @@ main() {
     echo -e "${BLUE}Installation Summary:${NC}"
     echo "User: $HMAC_USER"
     echo "Install Directory: $INSTALL_DIR"
+    echo "Config Directory: $CONFIG_DIR"
     echo "Data Directory: $DATA_DIR"
-    echo "Config Directory: $DEFAULT_CONFIG_DIR"
     echo "Server Port: $SERVER_PORT"
     echo "Metrics Port: $METRICS_PORT"
     echo "JWT Enabled: $ENABLE_JWT"
@@ -796,9 +801,9 @@ main() {
         # Wait a moment and check status
         sleep 3
         if systemctl is-active --quiet hmac-file-server.service; then
-            echo -e "${GREEN}✅ Service started successfully${NC}"
+            echo -e "${GREEN}Service started successfully${NC}"
         else
-            echo -e "${RED}❌ Service failed to start. Check logs with: journalctl -u hmac-file-server.service${NC}"
+            echo -e "${RED}Service failed to start. Check logs with: journalctl -u hmac-file-server.service${NC}"
         fi
     fi
     
@@ -808,18 +813,18 @@ main() {
 # Function to print completion information
 print_completion_info() {
     echo ""
-    echo -e "${GREEN}                     █ Installation Complete! █${NC}"
+    echo -e "${GREEN}                     Installation Complete!${NC}"
     echo -e "${GREEN}────────────────────────────────────────────────────────────────${NC}"
     echo -e "${GREEN}         HMAC File Server 3.2 Successfully Deployed!        ${NC}"
     echo -e "${GREEN}────────────────────────────────────────────────────────────────${NC}"
     echo ""
-    echo -e "${BLUE}🚀 Service Information:${NC}"
+    echo -e "${BLUE}Service Information:${NC}"
     echo -e "  Status: ${YELLOW}sudo systemctl status hmac-file-server${NC}"
     echo -e "  Logs:   ${YELLOW}sudo journalctl -u hmac-file-server -f${NC}"
-    echo -e "  Config: ${YELLOW}sudo nano $DEFAULT_CONFIG_DIR/config.toml${NC}"
+    echo -e "  Config: ${YELLOW}sudo nano $CONFIG_DIR/config.toml${NC}"
     echo -e "  Reload: ${YELLOW}sudo systemctl reload hmac-file-server${NC}"
     echo ""
-    echo -e "${BLUE}🌐 Service Endpoints:${NC}"
+    echo -e "${BLUE}Service Endpoints:${NC}"
     if [[ $ENABLE_TLS == "true" ]]; then
         echo -e "  Server:  ${YELLOW}https://$(hostname -I | awk '{print $1}'):$SERVER_PORT${NC}"
     else
@@ -827,19 +832,19 @@ print_completion_info() {
     fi
     echo -e "  Metrics: ${YELLOW}http://$(hostname -I | awk '{print $1}'):$METRICS_PORT/metrics${NC}"
     echo ""
-    echo -e "${BLUE}📁 File Locations:${NC}"
+    echo -e "${BLUE}File Locations:${NC}"
     echo -e "  Binary:     ${YELLOW}$INSTALL_DIR/hmac-file-server${NC}"
-    echo -e "  Config:     ${YELLOW}$DEFAULT_CONFIG_DIR/config.toml${NC}"
+    echo -e "  Config:     ${YELLOW}$CONFIG_DIR/config.toml${NC}"
     echo -e "  Uploads:    ${YELLOW}$DATA_DIR/uploads${NC}"
     echo -e "  Logs:       ${YELLOW}$DEFAULT_LOG_DIR/hmac-file-server.log${NC}"
     echo ""
-    echo -e "${BLUE}⚡ Quick Commands:${NC}"
+    echo -e "${BLUE}Quick Commands:${NC}"
     echo -e "  Start:   ${YELLOW}sudo systemctl start hmac-file-server${NC}"
     echo -e "  Stop:    ${YELLOW}sudo systemctl stop hmac-file-server${NC}"
     echo -e "  Restart: ${YELLOW}sudo systemctl restart hmac-file-server${NC}"
     echo -e "  Status:  ${YELLOW}sudo systemctl status hmac-file-server${NC}"
     echo ""
-    echo -e "${BLUE}🔧 Next Steps for XMPP Integration:${NC}"
+    echo -e "${BLUE}Next Steps for XMPP Integration:${NC}"
     echo -e "1. ${YELLOW}Configure firewall${NC} to allow ports $SERVER_PORT (server) and $METRICS_PORT (metrics)"
     echo -e "2. Configure your reverse proxy (nginx/apache) with SSL"
     echo -e "3. Update your Prosody/Ejabberd configuration:"
@@ -847,7 +852,7 @@ print_completion_info() {
     echo -e "4. Set up monitoring and log rotation"
     echo -e "5. Test file uploads with your XMPP client"
     echo ""
-    echo -e "${BLUE}📚 Documentation & Support:${NC}"
+    echo -e "${BLUE}Documentation & Support:${NC}"
     echo -e "  README: https://github.com/PlusOne/hmac-file-server/blob/main/README.MD"
     echo -e "  Wiki:   https://github.com/PlusOne/hmac-file-server/blob/main/WIKI.MD"
     echo -e "  Issues: https://github.com/PlusOne/hmac-file-server/issues"
@@ -898,16 +903,16 @@ custom_data_selection() {
     if [[ -d "$UPLOAD_DIR" ]]; then
         FILE_COUNT=$(find "$UPLOAD_DIR" -type f 2>/dev/null | wc -l)
         DIR_SIZE=$(du -sh "$UPLOAD_DIR" 2>/dev/null | cut -f1)
-        echo -e "${GREEN}📤 Upload Directory: ${UPLOAD_DIR}${NC} (Files: $FILE_COUNT, Size: $DIR_SIZE)"
+        echo -e "${GREEN}Upload Directory: ${UPLOAD_DIR}${NC} (Files: $FILE_COUNT, Size: $DIR_SIZE)"
         read -p "Preserve upload directory? (y/N): " PRESERVE_UPLOADS
         if [[ $PRESERVE_UPLOADS =~ ^[Yy]$ ]]; then
             CUSTOM_PRESERVE_UPLOADS="yes"
-            echo "  ✓ Will preserve uploads"
+            echo "  Will preserve uploads"
         else
-            echo "  ✗ Will delete uploads"
+            echo "  Will delete uploads"
         fi
     else
-        echo -e "${YELLOW}📤 Upload Directory: Not found${NC}"
+        echo -e "${YELLOW}Upload Directory: Not found${NC}"
     fi
     
     echo ""
@@ -916,16 +921,16 @@ custom_data_selection() {
     if [[ -d "$DEDUP_DIR" ]]; then
         FILE_COUNT=$(find "$DEDUP_DIR" -type f 2>/dev/null | wc -l)
         DIR_SIZE=$(du -sh "$DEDUP_DIR" 2>/dev/null | cut -f1)
-        echo -e "${GREEN}🔗 Deduplication Directory: ${DEDUP_DIR}${NC} (Files: $FILE_COUNT, Size: $DIR_SIZE)"
+        echo -e "${GREEN}Deduplication Directory: ${DEDUP_DIR}${NC} (Files: $FILE_COUNT, Size: $DIR_SIZE)"
         read -p "Preserve deduplication directory? (y/N): " PRESERVE_DEDUP
         if [[ $PRESERVE_DEDUP =~ ^[Yy]$ ]]; then
             CUSTOM_PRESERVE_DEDUP="yes"
-            echo "  ✓ Will preserve deduplication data"
+            echo "  Will preserve deduplication data"
         else
-            echo "  ✗ Will delete deduplication data"
+            echo "  Will delete deduplication data"
         fi
     else
-        echo -e "${YELLOW}🔗 Deduplication Directory: Not found${NC}"
+        echo -e "${YELLOW}Deduplication Directory: Not found${NC}"
     fi
     
     echo ""
@@ -934,16 +939,16 @@ custom_data_selection() {
     if [[ -d "$LOG_DIR" ]]; then
         FILE_COUNT=$(find "$LOG_DIR" -type f 2>/dev/null | wc -l)
         DIR_SIZE=$(du -sh "$LOG_DIR" 2>/dev/null | cut -f1)
-        echo -e "${GREEN}📄 Log Directory: ${LOG_DIR}${NC} (Files: $FILE_COUNT, Size: $DIR_SIZE)"
+        echo -e "${GREEN}Log Directory: ${LOG_DIR}${NC} (Files: $FILE_COUNT, Size: $DIR_SIZE)"
         read -p "Preserve log directory? (y/N): " PRESERVE_LOGS
         if [[ $PRESERVE_LOGS =~ ^[Yy]$ ]]; then
             CUSTOM_PRESERVE_LOGS="yes"
-            echo "  ✓ Will preserve logs"
+            echo "  Will preserve logs"
         else
-            echo "  ✗ Will delete logs"
+            echo "  Will delete logs"
         fi
     else
-        echo -e "${YELLOW}📄 Log Directory: Not found${NC}"
+        echo -e "${YELLOW}Log Directory: Not found${NC}"
     fi
     
     # Store custom selection for later processing
@@ -951,9 +956,9 @@ custom_data_selection() {
     
     echo ""
     echo -e "${BLUE}Custom selection complete:${NC}"
-    [[ "$CUSTOM_PRESERVE_UPLOADS" == "yes" ]] && echo "  📤 Uploads: Preserve" || echo "  📤 Uploads: Delete"
-    [[ "$CUSTOM_PRESERVE_DEDUP" == "yes" ]] && echo "  🔗 Deduplication: Preserve" || echo "  🔗 Deduplication: Delete"
-    [[ "$CUSTOM_PRESERVE_LOGS" == "yes" ]] && echo "  📄 Logs: Preserve" || echo "  📄 Logs: Delete"
+    [[ "$CUSTOM_PRESERVE_UPLOADS" == "yes" ]] && echo "  Uploads: Preserve" || echo "  Uploads: Delete"
+    [[ "$CUSTOM_PRESERVE_DEDUP" == "yes" ]] && echo "  Deduplication: Preserve" || echo "  Deduplication: Delete"
+    [[ "$CUSTOM_PRESERVE_LOGS" == "yes" ]] && echo "  Logs: Preserve" || echo "  Logs: Delete"
     echo ""
 }
 
@@ -1022,7 +1027,7 @@ uninstall() {
     fi
     
     echo ""
-    echo -e "${BLUE}📁 Data Preservation Options:${NC}"
+    echo -e "${BLUE}Data Preservation Options:${NC}"
     echo -e "${BLUE}────────────────────────────────────────────────────────────────${NC}"
     echo ""
     echo "The following data directories may contain important files:"
@@ -1048,39 +1053,39 @@ uninstall() {
     if [[ -d "$UPLOAD_DIR" ]]; then
         FILE_COUNT=$(find "$UPLOAD_DIR" -type f 2>/dev/null | wc -l)
         DIR_SIZE=$(du -sh "$UPLOAD_DIR" 2>/dev/null | cut -f1)
-        echo -e "${GREEN}  📤 Upload Directory: ${UPLOAD_DIR}${NC}"
+        echo -e "${GREEN}  Upload Directory: ${UPLOAD_DIR}${NC}"
         echo -e "     Files: $FILE_COUNT, Size: $DIR_SIZE"
     else
-        echo -e "${YELLOW}  📤 Upload Directory: Not found or empty${NC}"
+        echo -e "${YELLOW}  Upload Directory: Not found or empty${NC}"
     fi
     
     # Show deduplication directory status
     if [[ -d "$DEDUP_DIR" ]]; then
         FILE_COUNT=$(find "$DEDUP_DIR" -type f 2>/dev/null | wc -l)
         DIR_SIZE=$(du -sh "$DEDUP_DIR" 2>/dev/null | cut -f1)
-        echo -e "${GREEN}  🔗 Deduplication Directory: ${DEDUP_DIR}${NC}"
+        echo -e "${GREEN}  Deduplication Directory: ${DEDUP_DIR}${NC}"
         echo -e "     Files: $FILE_COUNT, Size: $DIR_SIZE"
     else
-        echo -e "${YELLOW}  🔗 Deduplication Directory: Not found or empty${NC}"
+        echo -e "${YELLOW}  Deduplication Directory: Not found or empty${NC}"
     fi
     
     # Show log directory status
     if [[ -d "$LOG_DIR" ]]; then
         FILE_COUNT=$(find "$LOG_DIR" -type f 2>/dev/null | wc -l)
         DIR_SIZE=$(du -sh "$LOG_DIR" 2>/dev/null | cut -f1)
-        echo -e "${GREEN}  📄 Log Directory: ${LOG_DIR}${NC}"
+        echo -e "${GREEN}  Log Directory: ${LOG_DIR}${NC}"
         echo -e "     Files: $FILE_COUNT, Size: $DIR_SIZE"
     else
-        echo -e "${YELLOW}  📄 Log Directory: Not found or empty${NC}"
+        echo -e "${YELLOW}  Log Directory: Not found or empty${NC}"
     fi
     
     echo ""
     echo -e "${BLUE}Choose data handling option:${NC}"
-    echo "  1) 🗑️  Delete all data (complete removal)"
-    echo "  2) 💾 Preserve upload and deduplication data only"
-    echo "  3) 📋 Preserve all data (uploads, deduplication, and logs)"
-    echo "  4) 🎯 Custom selection (choose what to preserve)"
-    echo "  5) ❌ Cancel uninstallation"
+    echo "  1) Delete all data (complete removal)"
+    echo "  2) Preserve upload and deduplication data only"
+    echo "  3) Preserve all data (uploads, deduplication, and logs)"
+    echo "  4) Custom selection (choose what to preserve)"
+    echo "  5) Cancel uninstallation"
     echo ""
     
     while true; do
@@ -1119,7 +1124,7 @@ uninstall() {
     # Final confirmation for complete deletion
     if [[ "$PRESERVE_DATA" == "none" ]]; then
         echo ""
-        echo -e "${RED}⚠️  FINAL WARNING: This will permanently delete ALL data!${NC}"
+        echo -e "${RED}FINAL WARNING: This will permanently delete ALL data!${NC}"
         echo -e "${RED}   This includes all uploaded files, deduplication data, and logs.${NC}"
         echo -e "${RED}   This action cannot be undone!${NC}"
         echo ""
@@ -1131,7 +1136,7 @@ uninstall() {
     fi
     
     echo ""
-    echo -e "${YELLOW}🔄 Starting uninstallation process...${NC}"
+    echo -e "${YELLOW}Starting uninstallation process...${NC}"
     echo ""
     
     echo -e "${YELLOW}Stopping and disabling service...${NC}"
@@ -1245,13 +1250,13 @@ uninstall() {
     
     echo ""
     if [[ "$PRESERVE_DATA" != "none" ]]; then
-        echo -e "${GREEN}✅ HMAC File Server uninstalled successfully with data preservation${NC}"
+        echo -e "${GREEN}HMAC File Server uninstalled successfully with data preservation${NC}"
         if [[ -d "$BACKUP_DIR" ]]; then
-            echo -e "${BLUE}📁 Preserved data location: $BACKUP_DIR${NC}"
+            echo -e "${BLUE}Preserved data location: $BACKUP_DIR${NC}"
             echo -e "${BLUE}   You can safely delete this directory if you no longer need the data.${NC}"
         fi
     else
-        echo -e "${GREEN}✅ HMAC File Server uninstalled completely${NC}"
+        echo -e "${GREEN}HMAC File Server uninstalled completely${NC}"
         echo -e "${BLUE}All files, services, and user accounts have been removed.${NC}"
     fi
     echo ""
