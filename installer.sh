@@ -52,11 +52,15 @@ show_help() {
     echo "  HMAC_SECRET='your-super-secret-hmac-key-here-32chars' sudo -E $0"
     echo ""
     echo "This installer will:"
-    echo "  • Install Go 1.24 (if not present)"
+    echo "  • Install Go 1.24 (if not present, native installation only)"
     echo "  • Create system user and directories"
-    echo "  • Build and install HMAC File Server"
-    echo "  • Configure systemd service"
-    echo "  • Install Redis and/or ClamAV (optional)"
+    echo "  • Build and install HMAC File Server (native) or create Docker deployment"
+    echo "  • Configure systemd service (native) or docker-compose setup (Docker)"
+    echo "  • Install Redis and/or ClamAV (optional, native installation only)"
+    echo ""
+    echo "Installation options:"
+    echo "  • Native: Traditional systemd service installation"
+    echo "  • Docker: Container-based deployment with docker-compose"
     echo ""
     echo "For XMPP operators: This installer is optimized for easy integration"
     echo "with Prosody, Ejabberd, and other XMPP servers."
@@ -166,6 +170,35 @@ check_go() {
 
 # User input function
 get_user_input() {
+    echo -e "${BLUE}Installation Type Selection${NC}"
+    echo "Choose your preferred installation method:"
+    echo ""
+    echo "  1) Native installation (systemd service)"
+    echo "  2) Docker deployment (docker-compose)"
+    echo ""
+    
+    while true; do
+        read -p "Installation type [1]: " INSTALL_TYPE
+        INSTALL_TYPE=${INSTALL_TYPE:-1}
+        
+        case $INSTALL_TYPE in
+            1)
+                echo -e "${GREEN}Selected: Native installation${NC}"
+                DEPLOYMENT_TYPE="native"
+                break
+                ;;
+            2)
+                echo -e "${GREEN}Selected: Docker deployment${NC}"
+                DEPLOYMENT_TYPE="docker"
+                break
+                ;;
+            *)
+                echo -e "${RED}Please enter 1 or 2${NC}"
+                ;;
+        esac
+    done
+    
+    echo ""
     echo -e "${BLUE}Configuration Setup${NC}"
     echo "Please provide the following information (or press Enter for defaults):"
     echo ""
@@ -174,17 +207,31 @@ get_user_input() {
     read -p "System user for HMAC File Server [$DEFAULT_USER]: " HMAC_USER
     HMAC_USER=${HMAC_USER:-$DEFAULT_USER}
     
-    # Installation directory
-    read -p "Installation directory [$DEFAULT_INSTALL_DIR]: " INSTALL_DIR
-    INSTALL_DIR=${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}
-    
-    # Configuration directory
-    read -p "Configuration directory [$DEFAULT_CONFIG_DIR]: " CONFIG_DIR
-    CONFIG_DIR=${CONFIG_DIR:-$DEFAULT_CONFIG_DIR}
-    
-    # Data directory
-    read -p "Data directory (uploads) [$DEFAULT_DATA_DIR]: " DATA_DIR
-    DATA_DIR=${DATA_DIR:-$DEFAULT_DATA_DIR}
+    if [[ "$DEPLOYMENT_TYPE" == "native" ]]; then
+        # Installation directory
+        read -p "Installation directory [$DEFAULT_INSTALL_DIR]: " INSTALL_DIR
+        INSTALL_DIR=${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}
+        
+        # Configuration directory
+        read -p "Configuration directory [$DEFAULT_CONFIG_DIR]: " CONFIG_DIR
+        CONFIG_DIR=${CONFIG_DIR:-$DEFAULT_CONFIG_DIR}
+        
+        # Data directory
+        read -p "Data directory (uploads) [$DEFAULT_DATA_DIR]: " DATA_DIR
+        DATA_DIR=${DATA_DIR:-$DEFAULT_DATA_DIR}
+    else
+        # Docker deployment paths
+        read -p "Docker deployment directory [./hmac-file-server-docker]: " DOCKER_DIR
+        DOCKER_DIR=${DOCKER_DIR:-"./hmac-file-server-docker"}
+        
+        # Convert to absolute path
+        DOCKER_DIR=$(realpath "$DOCKER_DIR" 2>/dev/null || echo "$DOCKER_DIR")
+        
+        # Set Docker-specific paths
+        INSTALL_DIR="$DOCKER_DIR"
+        CONFIG_DIR="$DOCKER_DIR/config"
+        DATA_DIR="$DOCKER_DIR/data"
+    fi
     
     # Server port
     read -p "Server port [$DEFAULT_PORT]: " SERVER_PORT
@@ -413,22 +460,38 @@ create_user() {
 create_directories() {
     echo -e "${YELLOW}Creating directories...${NC}"
     
-    mkdir -p "$INSTALL_DIR"
-    mkdir -p "$CONFIG_DIR"
-    mkdir -p "$DATA_DIR/uploads"
-    mkdir -p "$DATA_DIR/deduplication"
-    mkdir -p "$DATA_DIR/runtime"
-    mkdir -p "$DEFAULT_LOG_DIR"
-    
-    # Set ownership
-    chown -R "$HMAC_USER:$HMAC_USER" "$INSTALL_DIR"
-    chown -R "$HMAC_USER:$HMAC_USER" "$DATA_DIR"
-    chown -R "$HMAC_USER:$HMAC_USER" "$DEFAULT_LOG_DIR"
-    
-    # Set permissions
-    chmod 755 "$INSTALL_DIR"
-    chmod 755 "$DATA_DIR"
-    chmod 750 "$DEFAULT_LOG_DIR"
+    if [[ "$DEPLOYMENT_TYPE" == "docker" ]]; then
+        # Docker-specific directory structure
+        mkdir -p "$DOCKER_DIR"/{config,data/{uploads,deduplication,logs,temp}}
+        
+        # Set ownership if running as root
+        if [[ $EUID -eq 0 ]]; then
+            chown -R "$HMAC_USER:$HMAC_USER" "$DOCKER_DIR" 2>/dev/null || true
+        fi
+        
+        # Set permissions
+        chmod 755 "$DOCKER_DIR"
+        chmod 755 "$DOCKER_DIR"/{config,data}
+        chmod 755 "$DOCKER_DIR"/data/{uploads,deduplication,logs,temp}
+    else
+        # Native installation directory structure
+        mkdir -p "$INSTALL_DIR"
+        mkdir -p "$CONFIG_DIR"
+        mkdir -p "$DATA_DIR/uploads"
+        mkdir -p "$DATA_DIR/deduplication"
+        mkdir -p "$DATA_DIR/runtime"
+        mkdir -p "$DEFAULT_LOG_DIR"
+        
+        # Set ownership
+        chown -R "$HMAC_USER:$HMAC_USER" "$INSTALL_DIR"
+        chown -R "$HMAC_USER:$HMAC_USER" "$DATA_DIR"
+        chown -R "$HMAC_USER:$HMAC_USER" "$DEFAULT_LOG_DIR"
+        
+        # Set permissions
+        chmod 755 "$INSTALL_DIR"
+        chmod 755 "$DATA_DIR"
+        chmod 750 "$DEFAULT_LOG_DIR"
+    fi
 }
 
 # Build HMAC File Server
@@ -569,6 +632,307 @@ EOF
     chmod 640 "$CONFIG_DIR/config.toml"
     
     echo -e "${GREEN}Configuration file created: $CONFIG_DIR/config.toml${NC}"
+}
+
+# Create Docker deployment
+create_docker_deployment() {
+    echo -e "${YELLOW}Creating Docker deployment...${NC}"
+    
+    # Create directory structure
+    mkdir -p "$DOCKER_DIR"/{config,data/{uploads,deduplication,logs,temp}}
+    
+    # Copy and modify docker-compose.yml
+    cat > "$DOCKER_DIR/docker-compose.yml" << EOF
+version: '3.8'
+
+services:
+  hmac-file-server:
+    container_name: hmac-file-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "$SERVER_PORT:$SERVER_PORT"
+      - "$METRICS_PORT:$METRICS_PORT"
+    volumes:
+      - ./config:/etc/hmac-file-server:ro
+      - ./data/uploads:/var/lib/hmac-file-server/uploads
+      - ./data/deduplication:/var/lib/hmac-file-server/deduplication
+      - ./data/logs:/var/log/hmac-file-server
+      - ./data/temp:/tmp/hmac-file-server
+    environment:
+      - CONFIG_PATH=/etc/hmac-file-server/config.toml
+    restart: unless-stopped
+    user: "$HMAC_USER"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$SERVER_PORT/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+EOF
+
+    if [[ $ENABLE_REDIS == "true" ]]; then
+        cat >> "$DOCKER_DIR/docker-compose.yml" << EOF
+
+  redis:
+    image: redis:7-alpine
+    container_name: hmac-redis
+    ports:
+      - "$REDIS_PORT:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --requirepass "$REDIS_PASSWORD"
+EOF
+    fi
+
+    if [[ $ENABLE_CLAMAV == "true" ]]; then
+        cat >> "$DOCKER_DIR/docker-compose.yml" << EOF
+
+  clamav:
+    image: clamav/clamav:latest
+    container_name: hmac-clamav
+    volumes:
+      - clamav_data:/var/lib/clamav
+    restart: unless-stopped
+    environment:
+      - CLAMAV_NO_FRESHCLAMD=false
+EOF
+    fi
+
+    # Add volumes section if needed
+    if [[ $ENABLE_REDIS == "true" || $ENABLE_CLAMAV == "true" ]]; then
+        cat >> "$DOCKER_DIR/docker-compose.yml" << EOF
+
+volumes:
+EOF
+        [[ $ENABLE_REDIS == "true" ]] && echo "  redis_data:" >> "$DOCKER_DIR/docker-compose.yml"
+        [[ $ENABLE_CLAMAV == "true" ]] && echo "  clamav_data:" >> "$DOCKER_DIR/docker-compose.yml"
+    fi
+
+    # Create Dockerfile
+    cat > "$DOCKER_DIR/Dockerfile" << EOF
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+COPY . .
+
+RUN apk add --no-cache git ca-certificates tzdata && \\
+    go mod download && \\
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o hmac-file-server cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go
+
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates curl && \\
+    addgroup -g 1000 hmac && \\
+    adduser -D -s /bin/sh -u 1000 -G hmac hmac
+
+WORKDIR /opt/hmac-file-server
+
+COPY --from=builder /app/hmac-file-server .
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+
+RUN chown hmac:hmac /opt/hmac-file-server/hmac-file-server && \\
+    chmod +x /opt/hmac-file-server/hmac-file-server
+
+USER hmac
+
+EXPOSE $SERVER_PORT $METRICS_PORT
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
+    CMD curl -f http://localhost:$SERVER_PORT/health || exit 1
+
+CMD ["./hmac-file-server", "-config", "/etc/hmac-file-server/config.toml"]
+EOF
+
+    # Copy source files for building
+    echo -e "${YELLOW}Copying source files for Docker build...${NC}"
+    cp -r "$(dirname "$0")"/{cmd,go.mod,go.sum} "$DOCKER_DIR/"
+    
+    # Create start script
+    cat > "$DOCKER_DIR/start.sh" << 'EOF'
+#!/bin/bash
+
+# HMAC File Server Docker Start Script
+
+set -e
+
+echo "Starting HMAC File Server Docker deployment..."
+
+# Check if Docker is installed
+if ! command -v docker &> /dev/null; then
+    echo "Error: Docker is not installed. Please install Docker first."
+    exit 1
+fi
+
+# Check if Docker Compose is installed
+if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+    echo "Error: Docker Compose is not installed. Please install Docker Compose first."
+    exit 1
+fi
+
+# Build and start services
+echo "Building and starting services..."
+if command -v docker-compose &> /dev/null; then
+    docker-compose up --build -d
+else
+    docker compose up --build -d
+fi
+
+echo "HMAC File Server is starting up..."
+echo "You can check the status with: docker-compose logs -f"
+echo "Or: docker compose logs -f"
+EOF
+
+    # Create stop script
+    cat > "$DOCKER_DIR/stop.sh" << 'EOF'
+#!/bin/bash
+
+# HMAC File Server Docker Stop Script
+
+echo "Stopping HMAC File Server Docker deployment..."
+
+if command -v docker-compose &> /dev/null; then
+    docker-compose down
+else
+    docker compose down
+fi
+
+echo "HMAC File Server stopped."
+EOF
+
+    # Make scripts executable
+    chmod +x "$DOCKER_DIR/start.sh" "$DOCKER_DIR/stop.sh"
+    
+    # Set ownership
+    chown -R "$HMAC_USER:$HMAC_USER" "$DOCKER_DIR" 2>/dev/null || true
+    
+    echo -e "${GREEN}Docker deployment created successfully${NC}"
+    echo -e "${GREEN}Location: $DOCKER_DIR${NC}"
+}
+
+# Generate Docker-compatible configuration
+generate_docker_config() {
+    echo -e "${YELLOW}Generating Docker configuration file...${NC}"
+    
+    cat > "$CONFIG_DIR/config.toml" << EOF
+# HMAC File Server Configuration for Docker
+# Generated by installer on $(date)
+
+[server]
+bind_ip = "0.0.0.0"
+listenport = "$SERVER_PORT"
+unixsocket = false
+storagepath = "/var/lib/hmac-file-server/uploads"
+metricsenabled = true
+metricsport = "$METRICS_PORT"
+deduplicationenabled = true
+deduplicationpath = "/var/lib/hmac-file-server/deduplication"
+filenaming = "HMAC"
+force_protocol = "auto"
+pidfilepath = "/tmp/hmac-file-server/hmac-file-server.pid"
+EOF
+
+    if [[ $ENABLE_TLS == "true" ]]; then
+        cat >> "$CONFIG_DIR/config.toml" << EOF
+sslenabled = true
+sslcert = "$SSL_CERT"
+sslkey = "$SSL_KEY"
+EOF
+    else
+        cat >> "$CONFIG_DIR/config.toml" << EOF
+sslenabled = false
+EOF
+    fi
+
+    cat >> "$CONFIG_DIR/config.toml" << EOF
+
+[security]
+secret = "$HMAC_SECRET"
+enablejwt = $ENABLE_JWT
+EOF
+
+    if [[ $ENABLE_JWT == "true" ]]; then
+        cat >> "$CONFIG_DIR/config.toml" << EOF
+jwtsecret = "$JWT_SECRET"
+jwtalgorithm = "$JWT_ALGORITHM"
+jwtexpiration = "$JWT_EXPIRATION"
+EOF
+    fi
+
+    cat >> "$CONFIG_DIR/config.toml" << EOF
+
+[uploads]
+allowedextensions = [".txt", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".zip", ".tar", ".gz", ".7z", ".mp4", ".webm", ".ogg", ".mp3", ".wav", ".flac", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp"]
+maxfilesize = "100MB"
+chunkeduploadsenabled = true
+chunksize = "10MB"
+ttlenabled = false
+ttl = "168h"
+
+[downloads]
+chunkeddownloadsenabled = true
+chunksize = "10MB"
+
+[logging]
+level = "INFO"
+file = "/var/log/hmac-file-server/hmac-file-server.log"
+max_size = 100
+max_backups = 3
+max_age = 30
+compress = true
+
+[workers]
+numworkers = 10
+uploadqueuesize = 1000
+autoscaling = true
+
+[timeouts]
+readtimeout = "30s"
+writetimeout = "30s"
+idletimeout = "120s"
+shutdown = "30s"
+EOF
+
+    if [[ $ENABLE_CLAMAV == "true" ]]; then
+        cat >> "$CONFIG_DIR/config.toml" << EOF
+
+[clamav]
+enabled = true
+address = "hmac-clamav:3310"
+timeout = "30s"
+EOF
+    else
+        cat >> "$CONFIG_DIR/config.toml" << EOF
+
+[clamav]
+enabled = false
+EOF
+    fi
+
+    if [[ $ENABLE_REDIS == "true" ]]; then
+        cat >> "$CONFIG_DIR/config.toml" << EOF
+
+[redis]
+enabled = true
+host = "hmac-redis"
+port = 6379
+database = $REDIS_DB
+password = "$REDIS_PASSWORD"
+timeout = "5s"
+EOF
+    else
+        cat >> "$CONFIG_DIR/config.toml" << EOF
+
+[redis]
+enabled = false
+EOF
+    fi
+
+    # Set ownership and permissions for Docker config
+    chmod 644 "$CONFIG_DIR/config.toml"
+    echo -e "${GREEN}Docker configuration file created: $CONFIG_DIR/config.toml${NC}"
 }
 
 # Create systemd service
@@ -780,34 +1144,61 @@ main() {
     echo ""
     echo -e "${BLUE}Installing...${NC}"
     
-    # Installation steps
-    check_go
-    create_user
-    create_directories
-    install_dependencies
-    build_server
-    generate_config
-    create_systemd_service
-    
-    # Ask if user wants to start the service now
-    echo ""
-    read -p "Start HMAC File Server service now? (Y/n): " START_SERVICE
-    START_SERVICE=${START_SERVICE:-Y}
-    
-    if [[ $START_SERVICE =~ ^[Yy]$ ]]; then
-        echo -e "${YELLOW}Starting HMAC File Server service...${NC}"
-        systemctl start hmac-file-server.service
+    if [[ "$DEPLOYMENT_TYPE" == "docker" ]]; then
+        # Docker deployment
+        echo -e "${YELLOW}Setting up Docker deployment...${NC}"
+        create_directories
+        generate_docker_config
+        create_docker_deployment
         
-        # Wait a moment and check status
-        sleep 3
-        if systemctl is-active --quiet hmac-file-server.service; then
-            echo -e "${GREEN}Service started successfully${NC}"
-        else
-            echo -e "${RED}Service failed to start. Check logs with: journalctl -u hmac-file-server.service${NC}"
+        echo ""
+        echo -e "${GREEN}Docker deployment setup complete!${NC}"
+        echo ""
+        echo -e "${BLUE}To start your HMAC File Server:${NC}"
+        echo -e "1. ${YELLOW}cd $DOCKER_DIR${NC}"
+        echo -e "2. ${YELLOW}./start.sh${NC} (or manually: docker-compose up -d)"
+        echo ""
+        echo -e "${BLUE}To stop your HMAC File Server:${NC}"
+        echo -e "1. ${YELLOW}cd $DOCKER_DIR${NC}"
+        echo -e "2. ${YELLOW}./stop.sh${NC} (or manually: docker-compose down)"
+        echo ""
+        echo -e "${BLUE}Configuration file:${NC} ${YELLOW}$CONFIG_DIR/config.toml${NC}"
+        echo -e "${BLUE}Data directories:${NC}"
+        echo -e "  Uploads: ${YELLOW}$DATA_DIR/uploads${NC}"
+        echo -e "  Deduplication: ${YELLOW}$DATA_DIR/deduplication${NC}"
+        echo -e "  Logs: ${YELLOW}$DATA_DIR/logs${NC}"
+        echo ""
+        
+    else
+        # Native installation
+        check_go
+        create_user
+        create_directories
+        install_dependencies
+        build_server
+        generate_config
+        create_systemd_service
+        
+        # Ask if user wants to start the service now
+        echo ""
+        read -p "Start HMAC File Server service now? (Y/n): " START_SERVICE
+        START_SERVICE=${START_SERVICE:-Y}
+        
+        if [[ $START_SERVICE =~ ^[Yy]$ ]]; then
+            echo -e "${YELLOW}Starting HMAC File Server service...${NC}"
+            systemctl start hmac-file-server.service
+            
+            # Wait a moment and check status
+            sleep 3
+            if systemctl is-active --quiet hmac-file-server.service; then
+                echo -e "${GREEN}Service started successfully${NC}"
+            else
+                echo -e "${RED}Service failed to start. Check logs with: journalctl -u hmac-file-server.service${NC}"
+            fi
         fi
+        
+        print_completion_info
     fi
-    
-    print_completion_info
 }
 
 # Function to print completion information
