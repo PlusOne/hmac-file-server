@@ -3,7 +3,7 @@
 ## Overview
 The **HMAC File Server** ensures secure file uploads and downloads using HMAC authentication and JWT tokens. It incorporates comprehensive security features, file versioning, deduplication, ISO container support, virus scanning, and Unix socket support for enhanced flexibility. Redis integration provides efficient caching and session management. Prometheus metrics and graceful shutdown mechanisms ensure reliable and efficient file handling.
 
-Special thanks to **Thomas Leister** for inspiration drawn from [prosody-filer](https://github.com/ThomasLeister/prosody-filer).
+Special thanks to **Thomas Leister** for inspiration drawn from [prosody-filer](https://git.uuxo.net/uuxo/prosody-filer).
 
 ## Features
 - **Multiple Authentication Methods**: HMAC-based authentication and JWT token support
@@ -40,7 +40,7 @@ Special thanks to **Thomas Leister** for inspiration drawn from [prosody-filer](
 The easiest way to install HMAC File Server is using the automated installer:
 
 ```bash
-git clone https://github.com/PlusOne/hmac-file-server.git
+git clone https://git.uuxo.net/uuxo/hmac-file-server.git
 cd hmac-file-server
 sudo ./installer.sh
 ```
@@ -76,7 +76,7 @@ For detailed installation instructions, see [INSTALL.MD](INSTALL.MD).
 #### Steps
 1. Clone the repository:
    ```bash
-   git clone https://github.com/PlusOne/hmac-file-server.git
+   git clone https://git.uuxo.net/uuxo/hmac-file-server.git
    cd hmac-file-server
    ```
 

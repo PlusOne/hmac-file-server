@@ -811,7 +811,7 @@ To install the HMAC File Server, follow these steps:
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/PlusOne/hmac-file-server.git
+    git clone https://git.uuxo.net/uuxo/hmac-file-server.git
     cd hmac-file-server
     ```
 
@@ -1047,7 +1047,7 @@ You can run the HMAC File Server using Docker and Docker Compose for easy deploy
 The easiest way to deploy with Docker is using the automated installer:
 
 ```bash
-git clone https://github.com/PlusOne/hmac-file-server.git
+git clone https://git.uuxo.net/uuxo/hmac-file-server.git
 cd hmac-file-server
 sudo ./installer.sh
 ```

@@ -23,7 +23,7 @@ The installer provides two deployment methods:
 
 1. **Download or clone the repository:**
    ```bash
-   git clone https://github.com/PlusOne/hmac-file-server.git
+   git clone https://git.uuxo.net/uuxo/hmac-file-server.git
    cd hmac-file-server
    ```
 
@@ -332,7 +332,7 @@ Key metrics to monitor:
 
 - **Documentation**: See `README.MD` and `WIKI.MD`
 - **Protocol Details**: See `PROTOCOL_SPECIFICATIONS.MD`
-- **Issues**: GitHub issue tracker
+- **Issues**: https://git.uuxo.net/uuxo/hmac-file-server/issues
 - **Configuration**: All options documented in `WIKI.MD`
 
 ### Example Production Setup
