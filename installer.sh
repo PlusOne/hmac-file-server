@@ -52,15 +52,15 @@ show_help() {
     echo "  HMAC_SECRET='your-super-secret-hmac-key-here-32chars' sudo -E $0"
     echo ""
     echo "This installer will:"
-    echo "  • Install Go 1.24 (if not present, native installation only)"
-    echo "  • Create system user and directories"
-    echo "  • Build and install HMAC File Server (native) or create Docker deployment"
-    echo "  • Configure systemd service (native) or docker-compose setup (Docker)"
-    echo "  • Install Redis and/or ClamAV (optional, native installation only)"
+    echo "  - Install Go 1.24 (if not present, native installation only)"
+    echo "  - Create system user and directories"
+    echo "  - Build and install HMAC File Server (native) or create Docker deployment"
+    echo "  - Configure systemd service (native) or docker-compose setup (Docker)"
+    echo "  - Install Redis and/or ClamAV (optional, native installation only)"
     echo ""
     echo "Installation options:"
-    echo "  • Native: Traditional systemd service installation"
-    echo "  • Docker: Container-based deployment with docker-compose"
+    echo "  - Native: Traditional systemd service installation"
+    echo "  - Docker: Container-based deployment with docker-compose"
     echo ""
     echo "For XMPP operators: This installer is optimized for easy integration"
     echo "with Prosody, Ejabberd, and other XMPP servers."
@@ -81,14 +81,14 @@ echo -e "${BLUE}  / __ \\/ __ \`__ \\/ __ \`/ ___/_____/ /_/ / / _ \\______/ ___
 echo -e "${BLUE} / / / / / / / / / /_/ / /__/_____/ __/ / /  __/_____(__  )  __/ /   | |/ /  __/ /    ${NC}"
 echo -e "${BLUE}/_/ /_/_/ /_/ /_/\\__,_/\\___/     /_/ /_/_/\\___/     /____/\\___/_/    |___/\\___/_/     ${NC}"
 echo ""
-echo -e "${BLUE}                     █ HMAC File Server 3.2 Installer █${NC}"
+echo -e "${BLUE}                     HMAC File Server 3.2 Installer${NC}"
 echo -e "${BLUE}                           Professional XMPP Integration${NC}"
 echo ""
-echo -e "${YELLOW}────────────────────────────────────────────────────────────────────────────────${NC}"
+echo -e "${YELLOW}--------------------------------------------------------------------------------${NC}"
 echo -e "${GREEN} Secure File Uploads & Downloads     JWT & HMAC Authentication${NC}"
 echo -e "${GREEN} Prometheus Metrics Integration      ClamAV Virus Scanning${NC}"  
 echo -e "${GREEN} Redis Cache & Session Management    Chunked Upload/Download Support${NC}"
-echo -e "${YELLOW}────────────────────────────────────────────────────────────────────────────────${NC}"
+echo -e "${YELLOW}--------------------------------------------------------------------------------${NC}"
 echo ""
 
 # Check if running as root
@@ -426,7 +426,7 @@ get_user_input() {
     # Professional configuration summary
     echo ""
     echo -e "${BLUE}Configuration Summary${NC}"
-    echo -e "${YELLOW}────────────────────────────────────────────────────────────────${NC}"
+    echo -e "${YELLOW}----------------------------------------------------------------${NC}"
     echo -e "${YELLOW}System User:${NC}     $HMAC_USER"
     echo -e "${YELLOW}Install Dir:${NC}     $INSTALL_DIR"
     echo -e "${YELLOW}Config Dir:${NC}      $CONFIG_DIR"
@@ -437,7 +437,7 @@ get_user_input() {
     echo -e "${YELLOW}Redis:${NC}           $([[ "$ENABLE_REDIS" == "true" ]] && echo "Enabled ($REDIS_HOST:$REDIS_PORT)" || echo "Disabled")"
     echo -e "${YELLOW}ClamAV:${NC}          $([[ "$ENABLE_CLAMAV" == "true" ]] && echo "Enabled" || echo "Disabled")"
     echo -e "${YELLOW}SSL/TLS:${NC}         $([[ "$ENABLE_TLS" == "true" ]] && echo "Enabled" || echo "Disabled")"
-    echo -e "${YELLOW}────────────────────────────────────────────────────────────────${NC}"
+    echo -e "${YELLOW}----------------------------------------------------------------${NC}"
     echo ""
     read -p "Continue with installation? (y/N): " CONFIRM_INSTALL
     if [[ ! $CONFIRM_INSTALL =~ ^[Yy]$ ]]; then
@@ -1205,9 +1205,9 @@ main() {
 print_completion_info() {
     echo ""
     echo -e "${GREEN}                     Installation Complete!${NC}"
-    echo -e "${GREEN}────────────────────────────────────────────────────────────────${NC}"
+    echo -e "${GREEN}----------------------------------------------------------------${NC}"
     echo -e "${GREEN}         HMAC File Server 3.2 Successfully Deployed!        ${NC}"
-    echo -e "${GREEN}────────────────────────────────────────────────────────────────${NC}"
+    echo -e "${GREEN}----------------------------------------------------------------${NC}"
     echo ""
     echo -e "${BLUE}Service Information:${NC}"
     echo -e "  Status: ${YELLOW}sudo systemctl status hmac-file-server${NC}"
@@ -1248,9 +1248,9 @@ print_completion_info() {
     echo -e "  Wiki:   https://github.com/PlusOne/hmac-file-server/blob/main/WIKI.MD"
     echo -e "  Issues: https://github.com/PlusOne/hmac-file-server/issues"
     echo ""
-    echo -e "${GREEN}────────────────────────────────────────────────────────────────${NC}"
+    echo -e "${GREEN}----------------------------------------------------------------${NC}"
     echo -e "${GREEN}    Thank you for choosing HMAC File Server for your XMPP setup! ${NC}"
-    echo -e "${GREEN}────────────────────────────────────────────────────────────────${NC}"
+    echo -e "${GREEN}----------------------------------------------------------------${NC}"
 }
 
 # Helper function to safely preserve a directory
@@ -1263,19 +1263,19 @@ preserve_directory() {
         mkdir -p "$parent_dir"
         
         if mv "$source_dir" "$backup_path" 2>/dev/null; then
-            echo "  ✓ Preserved: $source_dir → $backup_path"
+            echo "  Preserved: $source_dir → $backup_path"
         else
             # Fallback to copy if move fails
             if cp -r "$source_dir" "$backup_path" 2>/dev/null; then
-                echo "  ✓ Copied: $source_dir → $backup_path"
+                echo "  Copied: $source_dir → $backup_path"
                 rm -rf "$source_dir"
-                echo "  ✓ Removed original: $source_dir"
+                echo "  Removed original: $source_dir"
             else
-                echo "  ⚠ Failed to preserve: $source_dir"
+                echo "  Failed to preserve: $source_dir"
             fi
         fi
     else
-        echo "  ⚠ Directory not found: $source_dir"
+        echo "  Directory not found: $source_dir"
     fi
 }
 
@@ -1359,7 +1359,7 @@ handle_custom_preservation() {
     if [[ "$CUSTOM_PRESERVE_UPLOADS" == "yes" || "$CUSTOM_PRESERVE_DEDUP" == "yes" || "$CUSTOM_PRESERVE_LOGS" == "yes" ]]; then
         BACKUP_DIR="/var/backups/hmac-file-server-$(date +%Y%m%d-%H%M%S)"
         mkdir -p "$BACKUP_DIR"
-        echo "  ✓ Created backup directory: $BACKUP_DIR"
+        echo "  Created backup directory: $BACKUP_DIR"
     fi
     
     # Handle uploads
@@ -1367,7 +1367,7 @@ handle_custom_preservation() {
         preserve_directory "$UPLOAD_DIR" "$BACKUP_DIR/uploads"
     elif [[ -d "$UPLOAD_DIR" ]]; then
         rm -rf "$UPLOAD_DIR"
-        echo "  ✓ Removed uploads: $UPLOAD_DIR"
+        echo "  Removed uploads: $UPLOAD_DIR"
     fi
     
     # Handle deduplication
@@ -1375,7 +1375,7 @@ handle_custom_preservation() {
         preserve_directory "$DEDUP_DIR" "$BACKUP_DIR/deduplication"
     elif [[ -d "$DEDUP_DIR" ]]; then
         rm -rf "$DEDUP_DIR"
-        echo "  ✓ Removed deduplication: $DEDUP_DIR"
+        echo "  Removed deduplication: $DEDUP_DIR"
     fi
     
     # Handle logs
@@ -1383,7 +1383,7 @@ handle_custom_preservation() {
         preserve_directory "$LOG_DIR" "$BACKUP_DIR/logs"
     elif [[ -d "$LOG_DIR" ]]; then
         rm -rf "$LOG_DIR"
-        echo "  ✓ Removed logs: $LOG_DIR"
+        echo "  Removed logs: $LOG_DIR"
     fi
     
     # Remove the main data directory if it's separate and empty
@@ -1394,9 +1394,9 @@ handle_custom_preservation() {
             remaining_files=$(find "$DEFAULT_DATA_DIR" -type f 2>/dev/null | wc -l)
             if [[ $remaining_files -eq 0 ]]; then
                 rm -rf "$DEFAULT_DATA_DIR"
-                echo "  ✓ Removed empty data directory: $DEFAULT_DATA_DIR"
+                echo "  Removed empty data directory: $DEFAULT_DATA_DIR"
             else
-                echo "  ⚠ Data directory contains additional files: $DEFAULT_DATA_DIR"
+                echo "  Data directory contains additional files: $DEFAULT_DATA_DIR"
             fi
         fi
     fi
@@ -1405,10 +1405,10 @@ handle_custom_preservation() {
 # Uninstaller function (can be called with ./installer.sh --uninstall)
 uninstall() {
     echo ""
-    echo -e "${RED}                     █ HMAC File Server Uninstaller █${NC}"
-    echo -e "${RED}────────────────────────────────────────────────────────────────${NC}"
+    echo -e "${RED}                     HMAC File Server Uninstaller${NC}"
+    echo -e "${RED}----------------------------------------------------------------${NC}"
     echo -e "${RED}              Warning: This will remove the server installation!   ${NC}"
-    echo -e "${RED}────────────────────────────────────────────────────────────────${NC}"
+    echo -e "${RED}----------------------------------------------------------------${NC}"
     echo ""
     
     read -p "Are you sure you want to uninstall HMAC File Server? (y/N): " CONFIRM_UNINSTALL
@@ -1419,7 +1419,7 @@ uninstall() {
     
     echo ""
     echo -e "${BLUE}Data Preservation Options:${NC}"
-    echo -e "${BLUE}────────────────────────────────────────────────────────────────${NC}"
+    echo -e "${BLUE}----------------------------------------------------------------${NC}"
     echo ""
     echo "The following data directories may contain important files:"
     
@@ -1533,44 +1533,44 @@ uninstall() {
     echo -e "${YELLOW}Stopping and disabling service...${NC}"
     if systemctl is-active --quiet hmac-file-server.service; then
         systemctl stop hmac-file-server.service || true
-        echo "  ✓ Service stopped"
+        echo "  Service stopped"
     else
-        echo "  ⚠ Service was not running"
+        echo "  Service was not running"
     fi
     
     if systemctl is-enabled --quiet hmac-file-server.service 2>/dev/null; then
         systemctl disable hmac-file-server.service || true
-        echo "  ✓ Service disabled"
+        echo "  Service disabled"
     else
-        echo "  ⚠ Service was not enabled"
+        echo "  Service was not enabled"
     fi
     
     if [[ -f /etc/systemd/system/hmac-file-server.service ]]; then
         rm -f /etc/systemd/system/hmac-file-server.service
-        echo "  ✓ Service file removed"
+        echo "  Service file removed"
     else
-        echo "  ⚠ Service file not found"
+        echo "  Service file not found"
     fi
     
     systemctl daemon-reload
-    echo "  ✓ Systemd reloaded"
+    echo "  Systemd reloaded"
     
     echo -e "${YELLOW}Removing installation and configuration...${NC}"
     
     # Always remove installation directory
     if [[ -d "$DEFAULT_INSTALL_DIR" ]]; then
         rm -rf "$DEFAULT_INSTALL_DIR"
-        echo "  ✓ Removed installation directory: $DEFAULT_INSTALL_DIR"
+        echo "  Removed installation directory: $DEFAULT_INSTALL_DIR"
     else
-        echo "  ⚠ Installation directory not found: $DEFAULT_INSTALL_DIR"
+        echo "  Installation directory not found: $DEFAULT_INSTALL_DIR"
     fi
     
     # Always remove configuration directory
     if [[ -d "$DEFAULT_CONFIG_DIR" ]]; then
         rm -rf "$DEFAULT_CONFIG_DIR"
-        echo "  ✓ Removed configuration directory: $DEFAULT_CONFIG_DIR"
+        echo "  Removed configuration directory: $DEFAULT_CONFIG_DIR"
     else
-        echo "  ⚠ Configuration directory not found: $DEFAULT_CONFIG_DIR"
+        echo "  Configuration directory not found: $DEFAULT_CONFIG_DIR"
     fi
     
     # Handle data directories based on user choice
@@ -1582,7 +1582,7 @@ uninstall() {
             for dir in "$UPLOAD_DIR" "$DEDUP_DIR" "$LOG_DIR" "$DEFAULT_DATA_DIR"; do
                 if [[ -d "$dir" ]]; then
                     rm -rf "$dir"
-                    echo "  ✓ Removed: $dir"
+                    echo "  Removed: $dir"
                 fi
             done
             ;;
@@ -1590,7 +1590,7 @@ uninstall() {
             # Preserve uploads and deduplication, remove logs
             if [[ -d "$LOG_DIR" ]]; then
                 rm -rf "$LOG_DIR"
-                echo "  ✓ Removed logs: $LOG_DIR"
+                echo "  Removed logs: $LOG_DIR"
             fi
             # Move preserved data to a safe location
             BACKUP_DIR="/var/backups/hmac-file-server-$(date +%Y%m%d-%H%M%S)"
@@ -1600,7 +1600,7 @@ uninstall() {
             # Remove original data directory structure but keep preserved data
             if [[ -d "$DEFAULT_DATA_DIR" && "$DEFAULT_DATA_DIR" != "$UPLOAD_DIR" && "$DEFAULT_DATA_DIR" != "$DEDUP_DIR" ]]; then
                 rm -rf "$DEFAULT_DATA_DIR"
-                echo "  ✓ Removed data directory (preserved content moved to $BACKUP_DIR)"
+                echo "  Removed data directory (preserved content moved to $BACKUP_DIR)"
             fi
             ;;
         "all")
@@ -1613,7 +1613,7 @@ uninstall() {
             # Remove original data directory structure but keep preserved data
             if [[ -d "$DEFAULT_DATA_DIR" ]]; then
                 rm -rf "$DEFAULT_DATA_DIR"
-                echo "  ✓ Removed data directory (all content preserved in $BACKUP_DIR)"
+                echo "  Removed data directory (all content preserved in $BACKUP_DIR)"
             fi
             ;;
         "custom")
@@ -1625,9 +1625,9 @@ uninstall() {
     echo -e "${YELLOW}Removing system user...${NC}"
     if id "$DEFAULT_USER" &>/dev/null; then
         userdel "$DEFAULT_USER" || true
-        echo "  ✓ User $DEFAULT_USER removed"
+        echo "  User $DEFAULT_USER removed"
     else
-        echo "  ⚠ User $DEFAULT_USER not found"
+        echo "  User $DEFAULT_USER not found"
     fi
     
     # Remove any remaining binary in common locations
@@ -1635,7 +1635,7 @@ uninstall() {
     for location in "/usr/local/bin/hmac-file-server" "/usr/bin/hmac-file-server"; do
         if [[ -f "$location" ]]; then
             rm -f "$location"
-            echo "  ✓ Removed $location"
+            echo "  Removed $location"
         fi
     done
     
