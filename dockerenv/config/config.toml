@@ -37,7 +37,7 @@ writetimeout = "3600s"
 idletimeout = "3600s"
 
 [security]
-secret = "hmac-file-server-is-the-win"
+secret = "CHANGE-THIS-TO-YOUR-SECRET-KEY-MINIMUM-32-CHARACTERS"
 
 [versioning]
 enableversioning = false

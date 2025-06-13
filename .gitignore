@@ -1,0 +1,189 @@
+# Binaries and executables
+hmac-file-server
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE and Editor files
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA / JetBrains IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.vcxproj.filters
+*.vcxproj.user
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+Session.vim
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Atom
+.atom/
+
+# Eclipse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+# Android Studio
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Code::Blocks
+*.depend
+*.layout
+*.cbp
+
+# CLion
+cmake-build-*/
+
+# Kate
+*.kate-swp
+.kateconfig
+
+# Geany
+*.geany
+
+# Fleet
+.fleet/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Configuration files with secrets (keep examples)
+config.toml
+!config-example*.toml
+
+# Data directories
+data/
+uploads/
+deduplication/
+
+# Installation test files
+test_*.sh
+*_test_*.sh
+
+# Development and testing artifacts
+coverage.html
+coverage.out
+profile.out
+
+# Docker volumes and build context
+dockerenv/data/uploads/*
+dockerenv/data/logs/*
+dockerenv/data/duplicates/*
+dockerenv/data/temp/*
+!dockerenv/data/*/*.txt
+
+# Build artifacts
+build/
+dist/
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# Local environment files
+.env
+.env.local
+
+# Documentation that shouldn't be public
+DOCUMENTATION_VERIFICATION_REPORT.md
+ENHANCEMENTS_COMPLETED.md
