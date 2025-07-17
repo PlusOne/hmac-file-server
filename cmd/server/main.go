@@ -397,6 +397,11 @@ func createAndMountISO(size, mountpoint, charset string) error {
 }
 
 func initializeNetworkProtocol(forceProtocol string) (*net.Dialer, error) {
+	// Handle empty/default value
+	if forceProtocol == "" {
+		forceProtocol = "auto"
+	}
+	
 	switch forceProtocol {
 	case "ipv4":
 		return &net.Dialer{
