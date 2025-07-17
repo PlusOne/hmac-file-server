@@ -1,35 +1,27 @@
 # Build Guide - HMAC File Server with Network Resilience
 
-## Quick Build
+## ✅ Quick Build (Working)
 
-### 1. Standard Build (existing functionality only)
+### 1. Standard Build with Network Resilience
 ```bash
-# Build with existing features
+# Build with all features (including network resilience)
 ./buildgo.sh
 ```
 
-### 2. Build with Network Resilience Features
-```bash
-# First ensure all network resilience files are present
-ls cmd/server/upload_session.go
-ls cmd/server/network_resilience.go  
-ls cmd/server/chunked_upload_handler.go
-ls cmd/server/integration.go
-
-# Build with enhanced features
-./buildgo.sh
+**Output:** 
+```
+[BUILD] Building HMAC File Server v3.2 with Network Resilience...
+[INFO] Found network resilience: upload_session.go
+[INFO] Found network resilience: network_resilience.go
+[INFO] Found network resilience: chunked_upload_handler.go
+[INFO] Found network resilience: integration.go
+[BUILD] Build successful! Binary created: ./hmac-file-server
+[INFO] Binary size: 16M
 ```
 
-### 3. Manual Build (if you prefer)
+### 2. Manual Build (Alternative)
 ```bash
-# Core build (backward compatible)
-go build -o hmac-file-server \
-  cmd/server/main.go \
-  cmd/server/helpers.go \
-  cmd/server/config_validator.go \
-  cmd/server/config_test_scenarios.go
-
-# With network resilience features
+# Build manually with all network resilience features
 go build -o hmac-file-server \
   cmd/server/main.go \
   cmd/server/helpers.go \
