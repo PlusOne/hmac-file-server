@@ -602,6 +602,12 @@ func setupRouter() *http.ServeMux {
 	})
 
 	log.Info("HTTP router configured successfully with full protocol support (v, v2, token, v3)")
+	
+	// Enhance router with network resilience features (non-intrusive)
+	if conf.Uploads.ChunkedUploadsEnabled {
+		EnhanceExistingRouter(mux)
+	}
+	
 	return mux
 }
 

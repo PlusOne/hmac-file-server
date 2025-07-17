@@ -140,7 +140,8 @@ type UploadsConfig struct {
 	ChunkedUploadsEnabled   bool     `toml:"chunkeduploadsenabled" mapstructure:"chunkeduploadsenabled"`
 	ChunkSize               string   `toml:"chunksize" mapstructure:"chunksize"`
 	ResumableUploadsEnabled bool     `toml:"resumableuploadsenabled" mapstructure:"resumableuploadsenabled"`
-	MaxResumableAge         string   `toml:"max_resumable_age" mapstructure:"max_resumable_age"`
+	SessionTimeout          string   `toml:"sessiontimeout" mapstructure:"sessiontimeout"`
+	MaxRetries              int      `toml:"maxretries" mapstructure:"maxretries"`
 }
 
 type DownloadsConfig struct {
@@ -759,6 +760,9 @@ func main() {
 		versionString = conf.Build.Version
 	}
 	log.Infof("Running version: %s", versionString)
+
+	// Initialize network resilience features (non-intrusive)
+	InitializeEnhancements()
 
 	log.Infof("Starting HMAC file server %s...", versionString)
 	if conf.Server.UnixSocket {
