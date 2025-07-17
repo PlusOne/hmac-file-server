@@ -698,6 +698,9 @@ func main() {
 
 	router := setupRouter() // Assuming setupRouter is defined (likely in this file or router.go
 
+	// Initialize enhancements and enhance the router
+	InitializeEnhancements(router)
+
 	go handleFileCleanup(&conf) // Directly call handleFileCleanup
 
 	readTimeout, err := time.ParseDuration(conf.Timeouts.Read) // Corrected field name
@@ -765,9 +768,6 @@ func main() {
 		versionString = conf.Build.Version
 	}
 	log.Infof("Running version: %s", versionString)
-
-	// Initialize network resilience features (non-intrusive)
-	InitializeEnhancements()
 
 	log.Infof("Starting HMAC file server %s...", versionString)
 	if conf.Server.UnixSocket {

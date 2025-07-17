@@ -30,6 +30,25 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// BASIC HMAC VALIDATION - same as original handleUpload
+	if conf.Security.EnableJWT {
+		_, err := validateJWTFromRequest(r, conf.Security.JWTSecret)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("JWT Authentication failed: %v", err), http.StatusUnauthorized)
+			uploadErrorsTotal.Inc()
+			return
+		}
+		log.Debugf("JWT authentication successful for chunked upload: %s", r.URL.Path)
+	} else {
+		err := validateHMAC(r, conf.Security.Secret)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("HMAC Authentication failed: %v", err), http.StatusUnauthorized)
+			uploadErrorsTotal.Inc()
+			return
+		}
+		log.Debugf("HMAC authentication successful for chunked upload: %s", r.URL.Path)
+	}
+
 	// Extract headers for chunked upload
 	sessionID := r.Header.Get("X-Upload-Session-ID")
 	chunkNumberStr := r.Header.Get("X-Chunk-Number")
@@ -122,8 +141,10 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 	defer chunkFile.Close()
 
 	// Copy chunk data with progress tracking
+	log.Printf("DEBUG: Processing chunk %d for session %s (content-length: %d)", chunkNumber, sessionID, r.ContentLength)
 	written, err := copyChunkWithResilience(chunkFile, r.Body, r.ContentLength, sessionID, chunkNumber)
 	if err != nil {
+		log.Printf("ERROR: Failed to save chunk %d for session %s: %v", chunkNumber, sessionID, err)
 		http.Error(w, fmt.Sprintf("Error saving chunk: %v", err), http.StatusInternalServerError)
 		uploadErrorsTotal.Inc()
 		os.Remove(chunkPath) // Clean up failed chunk
@@ -138,15 +159,32 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get updated session for completion check
+	session, _ = uploadSessionStore.GetSession(sessionID)
+	progress := float64(session.UploadedBytes) / float64(session.TotalSize)
+	
+	// Debug logging for large files
+	if session.TotalSize > 50*1024*1024 { // Log for files > 50MB
+		log.Debugf("Chunk %d uploaded for %s: %d/%d bytes (%.1f%%)", 
+			chunkNumber, session.Filename, session.UploadedBytes, session.TotalSize, progress*100)
+	}
+
 	// Check if upload is complete
-	if uploadSessionStore.IsSessionComplete(sessionID) {
+	isComplete := uploadSessionStore.IsSessionComplete(sessionID)
+	log.Printf("DEBUG: Session %s completion check: %v (uploaded: %d, total: %d, progress: %.1f%%)", 
+		sessionID, isComplete, session.UploadedBytes, session.TotalSize, progress*100)
+	
+	if isComplete {
+		log.Printf("DEBUG: Starting file assembly for session %s", sessionID)
 		// Assemble final file
 		finalPath, err := uploadSessionStore.AssembleFile(sessionID)
 		if err != nil {
+			log.Printf("ERROR: File assembly failed for session %s: %v", sessionID, err)
 			http.Error(w, fmt.Sprintf("Error assembling file: %v", err), http.StatusInternalServerError)
 			uploadErrorsTotal.Inc()
 			return
 		}
+		log.Printf("DEBUG: File assembly completed for session %s: %s", sessionID, finalPath)
 
 		// Handle deduplication if enabled (reuse existing logic)
 		if conf.Server.DeduplicationEnabled {

@@ -8,6 +8,21 @@ import (
 	"time"
 )
 
+// Global flag to prevent duplicate route registration
+var routesEnhanced bool
+
+// InitializeEnhancements initializes all new features and enhances the router
+func InitializeEnhancements(router *http.ServeMux) {
+	// Initialize upload resilience system
+	InitializeUploadResilience()
+	
+	// Enhance the existing router with new endpoints (only once)
+	if !routesEnhanced {
+		EnhanceExistingRouter(router)
+		routesEnhanced = true
+	}
+}
+
 // InitializeUploadResilience initializes the upload resilience system
 func InitializeUploadResilience() {
 	// Initialize upload session store
@@ -22,16 +37,13 @@ func InitializeUploadResilience() {
 
 // EnhanceExistingRouter adds new routes without modifying existing setupRouter function
 func EnhanceExistingRouter(mux *http.ServeMux) {
-	// Add chunked upload endpoints
-	mux.HandleFunc("/upload/chunked", ResilientHTTPHandler(handleChunkedUpload, networkManager))
-	mux.HandleFunc("/upload/status", handleUploadStatus)
+	// BASIC FUNCTION: Add chunked upload endpoints directly without wrappers
+	mux.HandleFunc("/chunked-upload", handleChunkedUpload)
+	mux.HandleFunc("/upload-status", handleUploadStatus)
 	
-	// Wrap existing upload handlers with resilience (optional)
-	if conf.Uploads.ChunkedUploadsEnabled {
-		log.Info("Enhanced upload endpoints added:")
-		log.Info("  POST/PUT /upload/chunked - Chunked/resumable uploads")
-		log.Info("  GET /upload/status - Upload status check")
-	}
+	log.Info("Enhanced upload endpoints added:")
+	log.Info("  POST/PUT /chunked-upload - Chunked/resumable uploads")
+	log.Info("  GET /upload-status - Upload status check")
 }
 
 // UpdateConfigurationDefaults suggests better defaults without forcing changes
@@ -115,20 +127,4 @@ func GetResilienceStatus() map[string]interface{} {
 	}
 	
 	return status
-}
-
-// Non-intrusive initialization function to be called from main()
-func InitializeEnhancements() {
-	// Only initialize if chunked uploads are enabled
-	if conf.Uploads.ChunkedUploadsEnabled {
-		InitializeUploadResilience()
-		
-		// Start performance monitoring
-		go MonitorUploadPerformance()
-		
-		// Log configuration recommendations
-		UpdateConfigurationDefaults()
-	} else {
-		log.Info("Chunked uploads disabled. Enable 'chunkeduploadsenabled = true' for network resilience features")
-	}
 }

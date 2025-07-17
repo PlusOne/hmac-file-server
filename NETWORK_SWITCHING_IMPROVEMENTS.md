@@ -55,9 +55,9 @@ The network resilience features have been successfully implemented and are ready
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/upload/chunked` | POST | Start new chunked upload session |
-| `/upload/chunked` | PUT | Upload individual chunks |
-| `/upload/status` | GET | Check upload progress |
+| `/chunked-upload` | POST | Start new chunked upload session |
+| `/chunked-upload` | PUT | Upload individual chunks |
+| `/upload-status` | GET | Check upload progress |
 | `/upload` | POST | Traditional uploads (unchanged) |
 
 ## 📱 Network Switching Benefits
@@ -89,17 +89,17 @@ curl -X POST \
   -H "X-Filename: large_video.mp4" \
   -H "X-Total-Size: 104857600" \
   -H "X-Signature: HMAC" \
-  http://localhost:8080/upload/chunked
+  http://localhost:8080/chunked-upload
 
 # 2. Upload chunks (automatically handles network switches)
 curl -X PUT \
   -H "X-Upload-Session-ID: session_123" \
   -H "X-Chunk-Number: 0" \
   --data-binary @chunk_0.bin \
-  http://localhost:8080/upload/chunked
+  http://localhost:8080/chunked-upload
 
 # 3. Check progress
-curl "http://localhost:8080/upload/status?session_id=session_123"
+curl "http://localhost:8080/upload-status?session_id=session_123"
 ```
 
 ## ⚙️ Configuration
