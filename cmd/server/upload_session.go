@@ -132,7 +132,26 @@ func (s *UploadSessionStore) IsSessionComplete(sessionID string) bool {
 		return false
 	}
 	
-	return session.UploadedBytes >= session.TotalSize
+	// Check if we have enough bytes
+	if session.UploadedBytes < session.TotalSize {
+		return false
+	}
+	
+	// Verify all required chunks are present and completed
+	totalChunks := int((session.TotalSize + session.ChunkSize - 1) / session.ChunkSize)
+	for i := 0; i < totalChunks; i++ {
+		chunkInfo, exists := session.Chunks[i]
+		if !exists || !chunkInfo.Completed {
+			return false
+		}
+		// Verify chunk file actually exists
+		chunkPath := filepath.Join(session.TempDir, fmt.Sprintf("chunk_%d", i))
+		if _, err := os.Stat(chunkPath); os.IsNotExist(err) {
+			return false
+		}
+	}
+	
+	return true
 }
 
 // AssembleFile combines all chunks into final file (calls existing upload logic)
@@ -154,20 +173,48 @@ func (s *UploadSessionStore) AssembleFile(sessionID string) (string, error) {
 	}
 	defer finalFile.Close()
 	
-	// Combine chunks in order
+	// Combine chunks in order with better error handling and progress tracking
 	totalChunks := int((session.TotalSize + session.ChunkSize - 1) / session.ChunkSize)
+	var totalCopied int64
+	
 	for i := 0; i < totalChunks; i++ {
 		chunkPath := filepath.Join(session.TempDir, fmt.Sprintf("chunk_%d", i))
-		chunkFile, err := os.Open(chunkPath)
+		
+		// Verify chunk exists before opening
+		chunkInfo, err := os.Stat(chunkPath)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("chunk %d missing: %v", i, err)
 		}
 		
-		_, err = copyFileContent(finalFile, chunkFile)
-		chunkFile.Close()
+		chunkFile, err := os.Open(chunkPath)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("error opening chunk %d: %v", i, err)
 		}
+		
+		// Copy chunk with better error handling
+		copied, err := copyFileContentWithProgress(finalFile, chunkFile, chunkInfo.Size())
+		chunkFile.Close()
+		
+		if err != nil {
+			return "", fmt.Errorf("error copying chunk %d: %v", i, err)
+		}
+		
+		totalCopied += copied
+		
+		// Optional: Log progress for large files
+		if session.TotalSize > 100*1024*1024 { // Log for files > 100MB
+			progress := float64(totalCopied) / float64(session.TotalSize) * 100
+			if i%10 == 0 || i == totalChunks-1 { // Log every 10 chunks or at the end
+				log.Debugf("Assembly progress for %s: %.1f%% (%d/%d chunks)", 
+					session.Filename, progress, i+1, totalChunks)
+			}
+		}
+	}
+	
+	// Verify final file size
+	if totalCopied != session.TotalSize {
+		os.Remove(finalPath) // Clean up incomplete file
+		return "", fmt.Errorf("file size mismatch: expected %d, got %d", session.TotalSize, totalCopied)
 	}
 	
 	// Cleanup temp files
@@ -304,5 +351,38 @@ func copyFileContent(dst, src *os.File) (int64, error) {
 			return written, err
 		}
 	}
+	return written, nil
+}
+
+// copyFileContentWithProgress copies file content with progress tracking and better error handling
+func copyFileContentWithProgress(dst, src *os.File, expectedSize int64) (int64, error) {
+	// Use the existing buffer pool for efficiency
+	bufPtr := bufferPool.Get().(*[]byte)
+	defer bufferPool.Put(bufPtr)
+	buf := *bufPtr
+	
+	var written int64
+	for {
+		n, err := src.Read(buf)
+		if n > 0 {
+			w, werr := dst.Write(buf[:n])
+			written += int64(w)
+			if werr != nil {
+				return written, fmt.Errorf("write error after %d bytes: %v", written, werr)
+			}
+		}
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			return written, fmt.Errorf("read error after %d bytes: %v", written, err)
+		}
+	}
+	
+	// Verify we copied the expected amount
+	if expectedSize > 0 && written != expectedSize {
+		return written, fmt.Errorf("chunk size mismatch: expected %d, copied %d", expectedSize, written)
+	}
+	
 	return written, nil
 }
