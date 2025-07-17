@@ -29,8 +29,29 @@ if ! command -v go &> /dev/null; then
 fi
 
 # Build the application
-print_status "Building HMAC File Server v3.2..."
-go build -o hmac-file-server cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go
+print_status "Building HMAC File Server v3.2 with Network Resilience..."
+
+# Check if new network resilience files exist
+NEW_FILES=""
+if [ -f "cmd/server/upload_session.go" ]; then
+    NEW_FILES="$NEW_FILES cmd/server/upload_session.go"
+    print_info "Found network resilience: upload_session.go"
+fi
+if [ -f "cmd/server/network_resilience.go" ]; then
+    NEW_FILES="$NEW_FILES cmd/server/network_resilience.go"
+    print_info "Found network resilience: network_resilience.go"
+fi
+if [ -f "cmd/server/chunked_upload_handler.go" ]; then
+    NEW_FILES="$NEW_FILES cmd/server/chunked_upload_handler.go"
+    print_info "Found network resilience: chunked_upload_handler.go"
+fi
+if [ -f "cmd/server/integration.go" ]; then
+    NEW_FILES="$NEW_FILES cmd/server/integration.go"
+    print_info "Found network resilience: integration.go"
+fi
+
+# Build with core files and any available network resilience files
+go build -o hmac-file-server cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go $NEW_FILES
 
 if [ $? -eq 0 ]; then
     print_status "Build successful! Binary created: ./hmac-file-server"
