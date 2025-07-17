@@ -251,7 +251,7 @@ func RetryableUploadWrapper(originalHandler http.HandlerFunc, maxRetries int) ht
 			if attempt > 0 {
 				// Exponential backoff with jitter
 				delay := time.Duration(attempt*attempt) * time.Second
-				jitter := time.Duration(float64(delay) * 0.1 * (2*time.Now().UnixNano()%2 - 1))
+				jitter := time.Duration(float64(delay.Nanoseconds()) * 0.1 * float64((time.Now().UnixNano()%2)*2-1))
 				time.Sleep(delay + jitter)
 				
 				log.Infof("Retrying upload attempt %d/%d", attempt+1, maxRetries+1)

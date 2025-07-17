@@ -301,10 +301,10 @@ func validateUploadsConfig(uploads *UploadsConfig, result *ConfigValidationResul
 		}
 	}
 
-	// Validate resumable age
-	if uploads.MaxResumableAge != "" {
-		if _, err := time.ParseDuration(uploads.MaxResumableAge); err != nil {
-			result.AddError("uploads.max_resumable_age", uploads.MaxResumableAge, "invalid resumable age format")
+	// Validate session timeout (renamed from max_resumable_age)
+	if uploads.SessionTimeout != "" {
+		if _, err := time.ParseDuration(uploads.SessionTimeout); err != nil {
+			result.AddError("uploads.session_timeout", uploads.SessionTimeout, "invalid session timeout format")
 		}
 	}
 }

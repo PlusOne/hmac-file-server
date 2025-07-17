@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -32,8 +33,6 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 	// Extract headers for chunked upload
 	sessionID := r.Header.Get("X-Upload-Session-ID")
 	chunkNumberStr := r.Header.Get("X-Chunk-Number")
-	totalChunksStr := r.Header.Get("X-Total-Chunks")
-	contentRange := r.Header.Get("Content-Range")
 	filename := r.Header.Get("X-Filename")
 
 	// Handle session creation for new uploads
