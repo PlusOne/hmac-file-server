@@ -1,4 +1,4 @@
-# HMAC File Server 3.2 – Tremora del Terra
+# HMAC File Server 3.2 - Tremora del Terra
 
 [![Version](https://img.shields.io/badge/version-3.2-blue.svg)](https://github.com/PlusOne/hmac-file-server)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -19,7 +19,7 @@ A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) 
 
 ### Enhanced Performance
 - **Fixed Deduplication**: Existing files return success instead of "file not found"
-- **Queue Optimization**: Doubled capacity (50→100), faster scaling (80%→40% threshold)
+- **Queue Optimization**: Doubled capacity (50 to 100), faster scaling (80% to 40% threshold)
 - **Extended Timeouts**: 4800s defaults for large file reliability
 - **Session Persistence**: 60-minute timeouts for enterprise transfers
 
@@ -61,23 +61,23 @@ chmod +x hmac-file-server-linux-amd64
 
 ## Table of Contents
 
-- [Release Information](#-release-information)
-- [Configuration Generation](#-configuration-generation)
-- [Configuration Documentation](#-configuration-documentation)
-- [Build Options](#-build-options)
-- [Docker Compose Examples](#-docker-compose-examples)
-- [Nginx Reverse Proxy](#-nginx-reverse-proxy)
-- [Apache2 Reverse Proxy](#-apache2-reverse-proxy)
-- [Prosody XMPP Integration](#-prosody-xmpp-integration)
-- [Ejabberd XMPP Integration](#-ejabberd-xmpp-integration)
-- [XEP-0363 Implementation](#-xep-0363-implementation)
-- [API Versions (V1, V2, V3)](#-api-versions)
+- [Release Information](#release-information)
+- [Configuration Generation](#configuration-generation)
+- [Configuration Documentation](#configuration-documentation)
+- [Build Options](#build-options)
+- [Docker Compose Examples](#docker-compose-examples)
+- [Nginx Reverse Proxy](#nginx-reverse-proxy)
+- [Apache2 Reverse Proxy](#apache2-reverse-proxy)
+- [Prosody XMPP Integration](#prosody-xmpp-integration)
+- [Ejabberd XMPP Integration](#ejabberd-xmpp-integration)
+- [XEP-0363 Implementation](#xep-0363-implementation)
+- [API Versions (V1, V2, V3)](#api-versions)
 
 ---
 
 ## Release Information
 
-### HMAC File Server 3.2 – Tremora del Terra
+### HMAC File Server 3.2 - Tremora del Terra
 
 **Release Date**: July 18, 2025  
 **Codename**: Tremora del Terra (powerful, balanced, ready to shake the ground)
@@ -1541,4 +1541,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*HMAC File Server 3.2 "Tremora del Terra" – Where enterprise power meets user simplicity*
+*HMAC File Server 3.2 "Tremora del Terra" - Where enterprise power meets user simplicity*
