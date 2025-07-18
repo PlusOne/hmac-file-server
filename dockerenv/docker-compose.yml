@@ -5,7 +5,7 @@ services:
     container_name: hmac-file-server
     image: hmac-file-server:latest
     ports:
-      - "8080:8080"
+      - "8081:8080"
     volumes:
       - ./config:/etc/hmac-file-server
       - ./data/uploads:/opt/hmac-file-server/data/uploads

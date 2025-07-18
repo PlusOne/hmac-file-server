@@ -6,7 +6,7 @@ RUN apk add --no-cache git
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o hmac-file-server cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go
+RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o hmac-file-server ./cmd/server/
 
 # Stage 2: Runtime
 FROM alpine:latest
