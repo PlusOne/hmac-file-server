@@ -216,7 +216,7 @@ restart_grace_period = "60s"               # Grace period after restart
 
 [uploads]
 # File upload configuration
-allowed_extensions = [".zip", ".rar"]      # Permitted upload file extensions
+allowed_extensions = [".zip", ".rar", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".txt", ".mp4", ".mov", ".ogg", ".mp3", ".doc", ".docx"]      # Permitted upload file extensions (XMPP-compatible)
 chunked_uploads_enabled = true             # Enable chunked/resumable uploads
 chunk_size = "10MB"                        # Upload chunk size
 resumable_uploads_enabled = true           # Enable upload resumption
@@ -234,7 +234,7 @@ max_upload_retries = 3                     # Maximum retry attempts
 
 [downloads]
 # File download configuration
-allowed_extensions = [".txt", ".pdf"]      # Permitted download file extensions
+allowed_extensions = [".txt", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".mov", ".ogg", ".mp3", ".doc", ".docx"]      # Permitted download file extensions (XMPP-compatible)
 chunked_downloads_enabled = true           # Enable chunked downloads
 chunk_size = "10MB"                        # Download chunk size
 resumable_downloads_enabled = true         # Enable download resumption
