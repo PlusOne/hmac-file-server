@@ -19,6 +19,14 @@ force_protocol = "" # Options: "http", "https" - if set, redirects to this proto
 enable_dynamic_workers = true # Enable dynamic worker scaling
 worker_scale_up_thresh = 50   # Queue length to scale up workers
 worker_scale_down_thresh = 10 # Queue length to scale down workers
+# Cluster-aware settings for client restart resilience
+graceful_shutdown_timeout = "300s"    # Allow time for client reconnections
+connection_drain_timeout = "120s"     # Drain existing connections gracefully
+max_idle_conns_per_host = 5           # Limit persistent connections per client
+idle_conn_timeout = "90s"             # Close idle connections regularly
+disable_keep_alives = false           # Keep HTTP keep-alives for performance
+client_timeout = "300s"               # Timeout for slow clients
+restart_grace_period = "60s"          # Grace period after restart for clients to reconnect
 
 [uploads]
 allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]
@@ -26,6 +34,13 @@ chunked_uploads_enabled = true
 chunk_size = "10MB"
 resumable_uploads_enabled = true
 max_resumable_age = "48h"
+# Cluster resilience for uploads
+session_persistence = true               # Persist upload sessions across restarts
+session_recovery_timeout = "300s"       # Time to wait for session recovery
+client_reconnect_window = "120s"        # Window for clients to reconnect after server restart
+upload_slot_ttl = "3600s"              # Upload slot validity time
+retry_failed_uploads = true             # Automatically retry failed uploads
+max_upload_retries = 3                  # Maximum retry attempts
 
 [downloads]
 resumable_downloads_enabled = true
