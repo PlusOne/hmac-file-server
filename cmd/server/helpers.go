@@ -142,9 +142,47 @@ func computeSHA256(ctx context.Context, filePath string) (string, error) {
 }
 
 func handleDeduplication(ctx context.Context, absFilename string) error {
+	// Check if deduplication is enabled
+	confMutex.RLock()
+	dedupEnabled := conf.Server.DeduplicationEnabled && conf.Deduplication.Enabled
+	confMutex.RUnlock()
+	
+	if !dedupEnabled {
+		log.Debugf("Deduplication disabled, skipping for file: %s", absFilename)
+		return nil
+	}
+	
+	// Check file size and skip deduplication for very large files (performance optimization)
+	fileInfo, err := os.Stat(absFilename)
+	if err != nil {
+		log.Warnf("Failed to get file size for deduplication: %v", err)
+		return nil // Don't fail upload, just skip deduplication
+	}
+	
+	// Parse maxsize from config, default to 500MB if not set
+	confMutex.RLock()
+	maxDedupSizeStr := conf.Deduplication.MaxSize
+	confMutex.RUnlock()
+	
+	maxDedupSize := int64(500 * 1024 * 1024) // Default 500MB
+	if maxDedupSizeStr != "" {
+		if parsedSize, parseErr := parseSize(maxDedupSizeStr); parseErr == nil {
+			maxDedupSize = parsedSize
+		}
+	}
+	
+	if fileInfo.Size() > maxDedupSize {
+		log.Infof("File %s (%d bytes) exceeds deduplication size limit (%d bytes), skipping deduplication", 
+			absFilename, fileInfo.Size(), maxDedupSize)
+		return nil
+	}
+	
+	log.Infof("Starting deduplication for file %s (%d bytes)", absFilename, fileInfo.Size())
+
 	checksum, err := computeSHA256(ctx, absFilename)
 	if err != nil {
-		return err
+		log.Warnf("Failed to compute hash for deduplication: %v", err)
+		return nil // Don't fail upload, just skip deduplication
 	}
 
 	dedupDir := conf.Deduplication.Directory
@@ -154,19 +192,37 @@ func handleDeduplication(ctx context.Context, absFilename string) error {
 
 	dedupPath := filepath.Join(dedupDir, checksum)
 	if err := os.MkdirAll(dedupPath, os.ModePerm); err != nil {
-		return err
+		log.Warnf("Failed to create deduplication directory: %v", err)
+		return nil // Don't fail upload
 	}
 
 	existingPath := filepath.Join(dedupPath, filepath.Base(absFilename))
 	if _, err := os.Stat(existingPath); err == nil {
-		return os.Link(existingPath, absFilename)
+		log.Infof("File %s is a duplicate, creating hard link", absFilename)
+		if linkErr := os.Link(existingPath, absFilename); linkErr != nil {
+			log.Warnf("Failed to create hard link for duplicate: %v", linkErr)
+			return nil // Don't fail upload
+		}
+		filesDeduplicatedTotal.Inc()
+		return nil
 	}
 
 	if err := os.Rename(absFilename, existingPath); err != nil {
-		return err
+		log.Warnf("Failed to move file for deduplication: %v", err)
+		return nil // Don't fail upload
 	}
 
-	return os.Link(existingPath, absFilename)
+	if err := os.Link(existingPath, absFilename); err != nil {
+		log.Warnf("Failed to create link after deduplication: %v", err) 
+		// Try to restore original file
+		if restoreErr := os.Rename(existingPath, absFilename); restoreErr != nil {
+			log.Errorf("Failed to restore file after deduplication error: %v", restoreErr)
+		}
+		return nil // Don't fail upload
+	}
+	
+	log.Infof("Successfully deduplicated file %s", absFilename)
+	return nil
 }
 
 func handleISOContainer(absFilename string) error {

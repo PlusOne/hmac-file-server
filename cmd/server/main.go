@@ -171,6 +171,7 @@ type LoggingConfig struct {
 type DeduplicationConfig struct {
 	Enabled   bool   `mapstructure:"enabled"`
 	Directory string `mapstructure:"directory"`
+	MaxSize   string `mapstructure:"maxsize"`
 }
 
 type ISOConfig struct {
@@ -1113,7 +1114,7 @@ func setDefaults() {
 	viper.SetDefault("server.deduplication_enabled", true)
 	viper.SetDefault("server.min_free_bytes", "1GB")
 	viper.SetDefault("server.file_naming", "original")
-	viper.SetDefault("server.force_protocol", "")
+	viper.SetDefault("server.force_protocol", "auto")
 	viper.SetDefault("server.enable_dynamic_workers", true)
 	viper.SetDefault("server.worker_scale_up_thresh", 50)
 	viper.SetDefault("server.worker_scale_down_thresh", 10)

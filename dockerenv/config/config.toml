@@ -11,7 +11,7 @@ max_file_age = "720h" # 30 days
 pre_cache = true
 pre_cache_workers = 4
 pre_cache_interval = "1h"
-global_extensions = [".txt", ".dat", ".iso"] # If set, overrides upload/download extensions
+global_extensions = [".txt", ".dat", ".iso", ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mpeg"] # If set, overrides upload/download extensions
 deduplication_enabled = true
 min_free_bytes = "1GB" # Minimum free space required for uploads
 file_naming = "original" # Options: "original", "HMAC"
@@ -51,6 +51,7 @@ compress = true
 [deduplication]
 enabled = true
 directory = "./deduplication"
+maxsize = "1GB"
 
 [iso]
 enabled = true
