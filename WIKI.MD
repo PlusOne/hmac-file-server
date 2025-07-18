@@ -48,56 +48,65 @@ The HMAC File Server is configured using a `config.toml` file. Below are the det
 
 ```toml
 # Server configuration
-listenport = "8080"  # TCP port for incoming requests
-unixsocket = false   # Use Unix domain socket instead of TCP
-storagepath = "/path/to/hmac-file-server/data/"  # Directory to store uploaded files
-loglevel = "debug"   # Logging level: "debug", "info", "warn", "error"
-logfile = "/path/to/hmac-file-server.log"  # Path to log file; leave empty to use stdout
-metricsenabled = true   # Enable Prometheus metrics
-metricsport = "9090"    # Port for Prometheus metrics
-deduplicationenabled = true
-minfreebytes = "5GB"     # Minimum free disk space required
-filettl = "2Y"           # Time-to-live for files
-filettlenabled = false   # Enable TTL checks and cleanup
-autoadjustworkers = true # Automatically adjust worker threads based on load
-networkevents = false    # Enable detailed network event logging
-pidfilepath = "./hmac-file-server.pid" # Path to PID file
-precaching = true        # Pre-cache file structures on startup
-
-# New option to force network protocol
-forceprotocol = "auto"  # Options: "ipv4", "ipv6", "auto"
+listen_address = ":8080"  # Listen address and port for incoming requests
+storage_path = "/srv/hmac-file-server/uploads"  # Directory to store uploaded files
+metrics_enabled = true   # Enable Prometheus metrics
+metrics_path = "/metrics"    # Path for Prometheus metrics endpoint
+pid_file = "/var/run/hmac-file-server.pid" # Path to PID file
+max_upload_size = "10GB" # Maximum file upload size
+max_header_bytes = 1048576 # Maximum header size (1MB)
+cleanup_interval = "24h" # Interval for cleanup operations
+max_file_age = "720h"    # Maximum age for files (30 days)
+pre_cache = true         # Pre-cache file structures on startup
+pre_cache_workers = 4    # Number of workers for pre-caching
+pre_cache_interval = "1h" # Interval for pre-cache operations
+global_extensions = [".txt", ".dat", ".iso", ".mp4", ".mkv", ".avi", ".mov"] # Global allowed extensions
+deduplication_enabled = true # Enable file deduplication
+min_free_bytes = "1GB"   # Minimum free disk space required
+file_naming = "original" # File naming strategy: "original", "HMAC"
+force_protocol = ""      # Force protocol: "http", "https" or empty for auto
+enable_dynamic_workers = true # Enable dynamic worker scaling
+worker_scale_up_thresh = 50   # Queue length to scale up workers
+worker_scale_down_thresh = 10 # Queue length to scale down workers
 ```
 
 #### Configuration Options
 
-- **listenport**:  
+- **listen_address**:  
   - *Type*: `String`  
-  - *Description*: Specifies the TCP port on which the server listens for incoming requests.  
-  - *Default*: `"8080"`
+  - *Description*: Specifies the address and port on which the server listens for incoming requests.  
+  - *Default*: `":8080"`
   
-- **unixsocket**:  
-  - *Type*: `Boolean`  
-  - *Description*: Determines whether to use a Unix domain socket instead of a TCP port for communication.  
-  - *Default*: `false`
-  
-- **storagepath**:  
+- **storage_path**:  
   - *Type*: `String`  
   - *Description*: Defines the directory path where uploaded files are stored. Ensure this path exists and has appropriate permissions.  
-  - *Default*: `"/path/to/hmac-file-server/data/"`
+  - *Default*: `"/srv/hmac-file-server/uploads"`
   
-- **loglevel**:  
-  - *Type*: `String`  
-  - *Description*: Sets the verbosity level of logs.  
-  - *Options*: `"debug"`, `"info"`, `"warn"`, `"error"`  
-  - *Default*: `"debug"`
-  
-- **logfile**:  
-  - *Type*: `String`  
-  - *Description*: Specifies the file path for logging. If left empty, logs are output to `stdout`.  
-  - *Default*: `"/path/to/hmac-file-server.log"`
-  
-- **metricsenabled**:  
+- **metrics_enabled**:  
   - *Type*: `Boolean`  
+  - *Description*: Enables or disables Prometheus metrics collection.  
+  - *Default*: `true`
+  
+- **max_upload_size**:  
+  - *Type*: `String`  
+  - *Description*: Maximum allowed file upload size. Supports B, KB, MB, GB, TB units.  
+  - *Default*: `"10GB"`
+  
+- **deduplication_enabled**:  
+  - *Type*: `Boolean`  
+  - *Description*: Enables file deduplication to save storage space by using hard links for identical files.  
+  - *Default*: `true`
+  
+- **enable_dynamic_workers**:  
+  - *Type*: `Boolean`  
+  - *Description*: Enables automatic scaling of worker threads based on upload queue length.  
+  - *Default*: `true`
+  
+- **file_naming**:  
+  - *Type*: `String`  
+  - *Description*: Strategy for naming uploaded files.  
+  - *Options*: `"original"` (preserve original names), `"HMAC"` (use HMAC-based names)  
+  - *Default*: `"original"`  
   - *Description*: Enables or disables the Prometheus metrics endpoint.  
   - *Default*: `true`
   
@@ -110,50 +119,6 @@ forceprotocol = "auto"  # Options: "ipv4", "ipv6", "auto"
   - *Type*: `Boolean`  
   - *Description*: Enables or disables file deduplication to optimize storage usage.  
   - *Default*: `true`
-  
-- **minfreebytes**:  
-  - *Type*: `String`  
-  - *Description*: Specifies the minimum free disk space required for the server to operate effectively.  
-  - *Default*: `"5GB"`
-  
-- **filettl**:  
-  - *Type*: `String`  
-  - *Description*: Sets the default Time-to-Live (TTL) for files, determining how long files are retained before deletion.  
-  - *Format*: Duration (e.g., `"2Y"` for two years)  
-  - *Default*: `"2Y"`
-  
-- **filettlenabled**:  
-  - *Type*: `Boolean`  
-  - *Description*: Enables or disables TTL checks and automatic file cleanup based on the `filettl` value.  
-  - *Default*: `false`
-  
-- **autoadjustworkers**:  
-  - *Type*: `Boolean`  
-  - *Description*: Automatically adjusts the number of worker threads based on server load and system resources.  
-  - *Default*: `true`
-  
-- **networkevents**:  
-  - *Type*: `Boolean`  
-  - *Description*: Enables detailed logging of network events, which can be useful for debugging but may increase log verbosity.  
-  - *Default*: `false`
-  
-- **pidfilepath**:  
-  - *Type*: `String`  
-  - *Description*: Specifies the file path where the server writes its Process ID (PID) file. This is useful for managing the server process.  
-  - *Default*: `"./hmac-file-server.pid"`
-  
-- **precaching**:  
-  - *Type*: `Boolean`  
-  - *Description*: Enables pre-caching of file structures on startup to improve access speed and performance.  
-  - *Default*: `true`
-
-- **forceprotocol**:  
-  - *Type*: `String`  
-  - *Description*: Specifies the network protocol to use for server communication.  
-    - `"ipv4"`: Forces the server to use IPv4.  
-    - `"ipv6"`: Forces the server to use IPv6.  
-    - `"auto"`: Uses the system's default behavior (dual-stack).  
-  - *Default*: `"auto"`
 
 ---
 
@@ -163,20 +128,26 @@ forceprotocol = "auto"  # Options: "ipv4", "ipv6", "auto"
 # Deduplication settings
 [deduplication]
 enabled = true
-directory = "/path/to/hmac-file-server/deduplication/"  # Path to deduplication metadata store
+directory = "/opt/hmac-file-server/data/dedup"  # Path to deduplication storage
+maxsize = "1GB"  # Maximum file size for deduplication
 ```
 
 #### Configuration Options
 
 - **enabled**:  
   - *Type*: `Boolean`  
-  - *Description*: Enables or disables the deduplication feature, which helps in eliminating duplicate files to save storage space.  
+  - *Description*: Enables or disables the deduplication feature, which uses hard links to eliminate duplicate files and save storage space.  
   - *Default*: `true`
   
 - **directory**:  
   - *Type*: `String`  
-  - *Description*: Specifies the directory path where deduplication metadata is stored. Ensure this directory exists and has appropriate permissions.  
-  - *Default*: `"/path/to/hmac-file-server/deduplication/"`
+  - *Description*: Specifies the directory path where deduplicated files are stored. Files are organized by their SHA256 hash.  
+  - *Default*: `"/opt/hmac-file-server/data/dedup"`
+  
+- **maxsize**:  
+  - *Type*: `String`  
+  - *Description*: Maximum file size eligible for deduplication. Larger files are not deduplicated to avoid performance impact.  
+  - *Default*: `"1GB"`
 
 ---
 
@@ -222,30 +193,32 @@ charset = "utf-8"  # Filesystem character set encoding
 ```toml
 # Timeout settings
 [timeouts]
-readtimeout = "3600s"    # Maximum time to read a request
-writetimeout = "3600s"   # Maximum time to write a response
-idletimeout = "3600s"    # Maximum keep-alive time for idle connections
+readtimeout = "4800s"    # Maximum time to read a request (80 minutes for large files)
+writetimeout = "4800s"   # Maximum time to write a response (80 minutes for large files)
+idletimeout = "4800s"    # Maximum keep-alive time for idle connections
 ```
 
 #### Configuration Options
 
 - **readtimeout**:  
   - *Type*: `String`  
-  - *Description*: Sets the maximum duration for reading the entire request, including the body.  
-  - *Format*: Duration (e.g., `"3600s"` for one hour)  
-  - *Default*: `"3600s"`
+  - *Description*: Sets the maximum duration for reading the entire request, including the body. Extended timeout for large file uploads.  
+  - *Format*: Duration (e.g., `"4800s"` for 80 minutes)  
+  - *Default*: `"4800s"`
   
 - **writetimeout**:  
   - *Type*: `String`  
-  - *Description*: Defines the maximum duration before timing out writes of the response.  
-  - *Format*: Duration (e.g., `"3600s"` for one hour)  
-  - *Default*: `"3600s"`
+  - *Description*: Defines the maximum duration before timing out writes of the response. Extended timeout for large file downloads.  
+  - *Format*: Duration (e.g., `"4800s"` for 80 minutes)  
+  - *Default*: `"4800s"`
   
 - **idletimeout**:  
   - *Type*: `String`  
   - *Description*: Specifies the maximum amount of time to wait for the next request when keep-alives are enabled.  
-  - *Format*: Duration (e.g., `"3600s"` for one hour)  
-  - *Default*: `"3600s"`
+  - *Format*: Duration (e.g., `"4800s"` for 80 minutes)  
+  - *Default*: `"4800s"`
+
+**Note**: These extended timeout values are specifically configured for handling large file uploads and downloads (GB-sized files). Ensure your reverse proxy configuration has matching timeout values.
 
 ---
 
@@ -321,8 +294,8 @@ maxversions = 1  # Number of file versions to retain
 ```toml
 # Logging settings
 [logging]
-level = "debug"
-file = "/path/to/hmac-file-server.log"
+level = "info"
+file = "/var/log/hmac-file-server.log"
 max_size = 100    # Maximum log file size in MB
 max_backups = 7   # Number of backup log files to keep
 max_age = 30      # Maximum age of log files in days
@@ -335,12 +308,12 @@ compress = true   # Compress old log files
   - *Type*: `String`  
   - *Description*: Sets the verbosity level of logs.  
   - *Options*: `"debug"`, `"info"`, `"warn"`, `"error"`  
-  - *Default*: `"debug"`
+  - *Default*: `"info"`
 
 - **file**:  
   - *Type*: `String`  
   - *Description*: Specifies the file path for logging. If left empty, logs are output to `stdout`.  
-  - *Default*: `"/path/to/hmac-file-server.log"`
+  - *Default*: `"/var/log/hmac-file-server.log"`
 
 - **max_size**:  
   - *Type*: `Integer`  
@@ -369,43 +342,41 @@ compress = true   # Compress old log files
 ```toml
 # Upload settings
 [uploads]
-resumableuploadsenabled = false
-chunkeduploadsenabled = true
-chunksize = "32MB"  # Chunk size for uploads
-allowedextensions = [
-    ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif",
-    ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
-]
+allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]
+chunked_uploads_enabled = true
+chunk_size = "10MB"  # Chunk size for uploads
+resumable_uploads_enabled = true
+max_resumable_age = "48h"  # Maximum age for resumable uploads
 ```
 
 #### Configuration Options
 
-- **resumableuploadsenabled**:  
-  - *Type*: `Boolean`  
-  - *Description*: Enables or disables support for resumable (chunked) file uploads.  
-  - *Default*: `false`
-  
-- **chunkeduploadsenabled**:  
-  - *Type*: `Boolean`  
-  - *Description*: Specifically enables or disables chunked uploads.  
-  - *Default*: `true`
-  
-- **chunksize**:  
-  - *Type*: `String`  
-  - *Description*: Defines the size of each chunk in chunked uploads.  
-  - *Format*: Size (e.g., `"32MB"`)  
-  - *Default*: `"32MB"`
-  
-- **allowedextensions**:  
+- **allowed_extensions**:  
   - *Type*: `Array of Strings`  
   - *Description*: Lists the file extensions permitted for upload.  
-  - *Default*:
-    ```toml
-    allowedextensions = [
-        ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif",
-        ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
-    ]
-    ```
+  - *Default*: `[".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]`
+
+- **chunked_uploads_enabled**:  
+  - *Type*: `Boolean`  
+  - *Description*: Enables or disables chunked file uploads for better performance with large files.  
+  - *Default*: `true`
+  
+- **chunk_size**:  
+  - *Type*: `String`  
+  - *Description*: Defines the size of each chunk in chunked uploads.  
+  - *Format*: Size (e.g., `"10MB"`)  
+  - *Default*: `"10MB"`
+  
+- **resumable_uploads_enabled**:  
+  - *Type*: `Boolean`  
+  - *Description*: Enables or disables support for resumable uploads that can be continued after interruption.  
+  - *Default*: `true`
+  
+- **max_resumable_age**:  
+  - *Type*: `String`  
+  - *Description*: Maximum time a resumable upload session remains valid.  
+  - *Format*: Duration (e.g., `"48h"`)  
+  - *Default*: `"48h"`
 
 ---
 
@@ -414,30 +385,34 @@ allowedextensions = [
 ```toml
 # Downloads settings
 [downloads]
-resumabledownloadsenabled = false
-chunkeddownloadsenabled = true
-chunksize = "32MB"
+resumable_downloads_enabled = true
+chunked_downloads_enabled = true
+chunk_size = "8192"  # Chunk size for downloads
+allowed_extensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
 ```
 
 #### Configuration Options
 
-- **resumabledownloadsenabled**:  
+- **resumable_downloads_enabled**:  
   - *Type*: `Boolean`  
-  - *Description*: Enables or disables support for resumable (chunked) downloads.  
-  - *Default*: `false`
-  
-- **chunkeddownloadsenabled**:  
-  - *Type*: `Boolean`  
-  - *Description*: Specifically enables or disables chunked downloads.  
+  - *Description*: Enables or disables support for resumable downloads.  
   - *Default*: `true`
   
-- **chunksize**:  
+- **chunked_downloads_enabled**:  
+  - *Type*: `Boolean`  
+  - *Description*: Enables or disables chunked downloads for better performance.  
+  - *Default*: `true`
+  
+- **chunk_size**:  
   - *Type*: `String`  
   - *Description*: Defines the size of each chunk in chunked downloads.  
-  - *Format*: Size (e.g., `"32MB"`)  
-  - *Default*: `"32MB"`
+  - *Format*: Size (e.g., `"8192"` bytes)  
+  - *Default*: `"8192"`
 
-> **Note**: Downloads inherit allowed extensions from the uploads configuration. There is no separate `allowedextensions` setting for downloads.
+- **allowed_extensions**:  
+  - *Type*: `Array of Strings`  
+  - *Description*: Lists the file extensions permitted for download.  
+  - *Default*: `[".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]`
 
 ---
 
@@ -447,12 +422,12 @@ chunksize = "32MB"
 # ClamAV settings
 [clamav]
 clamavenabled = true
-clamavsocket = "/path/to/clamav/clamd.ctl"  # Path to ClamAV socket
-numscanworkers = 4  # Number of concurrent scan workers
-scanfileextensions = [
-    ".exe", ".dll", ".bin", ".com", ".bat",
-    ".sh", ".php", ".js"
-]
+clamavsocket = "/var/run/clamav/clamd.ctl"  # Path to ClamAV socket
+numscanworkers = 2  # Number of concurrent scan workers
+# Only scan potentially dangerous file types, skip large media files
+scanfileextensions = [".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".exe", ".zip", ".rar", ".7z", ".tar", ".gz"]
+# Skip scanning files larger than 200MB (ClamAV limit)
+maxscansize = "200MB"
 ```
 
 #### Configuration Options
@@ -465,23 +440,22 @@ scanfileextensions = [
 - **clamavsocket**:  
   - *Type*: `String`  
   - *Description*: Specifies the file path to the ClamAV socket (`.ctl` file). Ensure ClamAV is installed and the socket path is correct.  
-  - *Default*: `"/path/to/clamav/clamd.ctl"`
+  - *Default*: `"/var/run/clamav/clamd.ctl"`
   
 - **numscanworkers**:  
   - *Type*: `Integer`  
   - *Description*: Sets the number of concurrent workers dedicated to scanning files with ClamAV.  
-  - *Default*: `4`
+  - *Default*: `2`
   
 - **scanfileextensions**:  
   - *Type*: `Array of Strings`  
-  - *Description*: Lists the file extensions that should be scanned for viruses.  
-  - *Default*:
-    ```toml
-    scanfileextensions = [
-        ".exe", ".dll", ".bin", ".com", ".bat",
-        ".sh", ".php", ".js"
-    ]
-    ```
+  - *Description*: Lists the file extensions that should be scanned for viruses. Excludes large media files for performance.  
+  - *Default*: `[".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".exe", ".zip", ".rar", ".7z", ".tar", ".gz"]`
+
+- **maxscansize**:  
+  - *Type*: `String`  
+  - *Description*: Maximum file size for virus scanning. Files larger than this are skipped to avoid ClamAV limits.  
+  - *Default*: `"200MB"`
 
 ---
 
@@ -532,21 +506,23 @@ redishealthcheckinterval = "120s"  # Interval for Redis health checks
 ```toml
 # Workers settings
 [workers]
-numworkers = 10              # Number of worker threads
-uploadqueuesize = 5000       # Size of upload queue
+numworkers = 4               # Number of worker threads
+uploadqueuesize = 50         # Size of upload queue
 ```
 
 #### Configuration Options
 
 - **numworkers**:  
   - *Type*: `Integer`  
-  - *Description*: Specifies the number of worker threads to handle file operations.  
-  - *Default*: `10`
+  - *Description*: Specifies the base number of worker threads to handle file operations. Works with dynamic worker scaling.  
+  - *Default*: `4`
 
 - **uploadqueuesize**:  
   - *Type*: `Integer`  
-  - *Description*: Sets the size of the upload queue buffer.  
-  - *Default*: `5000`
+  - *Description*: Sets the size of the upload queue buffer. Used with dynamic scaling thresholds.  
+  - *Default*: `50`
+
+**Note**: When `enable_dynamic_workers = true` in the server section, the worker count automatically scales between 4-8 workers based on queue length (scale up at 50, scale down at 10).
 
 ---
 
@@ -696,98 +672,89 @@ The enhanced command-line validation system provides comprehensive coverage with
 
 ## Example Configuration
 
-Below is an example `config.toml` file with default settings:
+Below is an example `config.toml` file with current settings:
 
 ```toml
 # Example HMAC File Server configuration
 
-# Server configuration
-listenport = "8080"
-bind_ip = "0.0.0.0"
-unixsocket = false
-storagepath = "/path/to/hmac-file-server/data/"
-metricsenabled = true
-metricsport = "9090"
-deduplicationenabled = true
-minfreebytes = "5GB"
-filettl = "2Y"
-filettlenabled = false
-autoadjustworkers = true
-networkevents = false
-pidfilepath = "./hmac-file-server.pid"
-precaching = true
-filenaming = "HMAC"
-forceprotocol = "auto"
+[server]
+listen_address = ":8080"
+storage_path = "/srv/hmac-file-server/uploads"
+metrics_enabled = true
+metrics_path = "/metrics"
+pid_file = "/var/run/hmac-file-server.pid"
+max_upload_size = "10GB"
+max_header_bytes = 1048576
+cleanup_interval = "24h"
+max_file_age = "720h"
+pre_cache = true
+pre_cache_workers = 4
+pre_cache_interval = "1h"
+global_extensions = [".txt", ".dat", ".iso", ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mpeg"]
+deduplication_enabled = true
+min_free_bytes = "1GB"
+file_naming = "original"
+force_protocol = ""
+enable_dynamic_workers = true
+worker_scale_up_thresh = 50
+worker_scale_down_thresh = 10
 
-# Logging settings
+[uploads]
+allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]
+chunked_uploads_enabled = true
+chunk_size = "10MB"
+resumable_uploads_enabled = true
+max_resumable_age = "48h"
+
+[downloads]
+resumable_downloads_enabled = true
+chunked_downloads_enabled = true
+chunk_size = "8192"
+allowed_extensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
+
+[security]
+secret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+enablejwt = false
+jwtsecret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+jwtalgorithm = "HS256"
+jwtexpiration = "24h"
+
 [logging]
-level = "debug"
-file = "/path/to/hmac-file-server.log"
+level = "info"
+file = "/var/log/hmac-file-server.log"
 max_size = 100
 max_backups = 7
 max_age = 30
 compress = true
 
-# Deduplication settings
 [deduplication]
 enabled = true
-directory = "/path/to/hmac-file-server/deduplication/"
+directory = "/opt/hmac-file-server/data/dedup"
+maxsize = "1GB"
 
-# ISO settings
 [iso]
-enabled = false
-size = "1TB"
-mountpoint = "/path/to/hmac-file-server/iso/"
+enabled = true
+size = "1GB"
+mountpoint = "/mnt/iso"
 charset = "utf-8"
+containerfile = "/mnt/iso/container.iso"
 
-# Timeout settings
 [timeouts]
-readtimeout = "3600s"
-writetimeout = "3600s"
-idletimeout = "3600s"
+readtimeout = "4800s"
+writetimeout = "4800s"
+idletimeout = "4800s"
 
-# Security settings
-[security]
-secret = "your-secure-secret-key"
-enablejwt = false
-jwtsecret = "your-jwt-secret"
-jwtalgorithm = "HS256"
-jwtexpiration = "24h"
-
-# Versioning settings
 [versioning]
 enableversioning = false
 maxversions = 1
 
-# Upload settings
-[uploads]
-resumableuploadsenabled = false
-chunkeduploadsenabled = true
-chunksize = "32MB"
-allowedextensions = [
-    ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif",
-    ".bmp", ".tiff", ".svg", ".webp", ".wav", ".mp4",
-    ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm",
-    ".mpeg", ".mpg", ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
-]
-
-# Download settings
-[downloads]
-resumabledownloadsenabled = false
-chunkeddownloadsenabled = true
-chunksize = "32MB"
-
-# ClamAV settings
 [clamav]
 clamavenabled = true
-clamavsocket = "/path/to/clamav/clamd.ctl"
-numscanworkers = 4
-scanfileextensions = [
-    ".exe", ".dll", ".bin", ".com", ".bat",
-    ".sh", ".php", ".js"
-]
+clamavsocket = "/var/run/clamav/clamd.ctl"
+numscanworkers = 2
+scanfileextensions = [".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".exe", ".zip", ".rar", ".7z", ".tar", ".gz"]
+maxscansize = "200MB"
 
-# Redis settings
 [redis]
 redisenabled = true
 redisdbindex = 0
@@ -795,11 +762,50 @@ redisaddr = "localhost:6379"
 redispassword = ""
 redishealthcheckinterval = "120s"
 
-# Workers settings
 [workers]
-numworkers = 10
-uploadqueuesize = 5000
+numworkers = 4
+uploadqueuesize = 50
+
+[file]
+# Add file-specific configurations here
+
+[build]
+version = "3.2"
 ```
+
+---
+
+## Configuration Best Practices
+
+### Performance Optimizations
+
+**Large File Handling**: The server is configured for efficient large file uploads:
+- Extended timeouts (`4800s`) prevent disconnections during GB-sized transfers
+- Dynamic worker scaling (`enable_dynamic_workers = true`) adjusts capacity automatically
+- Chunked uploads (`chunk_size = "10MB"`) improve reliability for large files
+
+**Storage Efficiency**: 
+- Deduplication (`enabled = true`, `maxsize = "1GB"`) uses hard links to save space
+- Selective virus scanning (`scanfileextensions`) skips large media files for performance
+- Automatic cleanup (`cleanup_interval = "24h"`) maintains disk space
+
+**Network Configuration**:
+- Reverse proxy timeouts must match server settings (`proxy_read_timeout 4800`)
+- Upload size limits should accommodate `max_upload_size = "10GB"`
+- Queue settings (`uploadqueuesize = 50`) balance memory usage and throughput
+
+### Security Considerations
+
+- Use strong HMAC secrets (64+ characters)
+- Limit file extensions based on your use case
+- Enable ClamAV for dangerous file types only
+- Monitor logs for authentication failures
+
+### Monitoring
+
+- Prometheus metrics available at `/metrics` endpoint
+- Log rotation configured to prevent disk space issues
+- Worker scaling and queue metrics help identify bottlenecks
 
 ---
 
@@ -926,7 +932,7 @@ To set up a reverse proxy for the HMAC File Server, you can use either Apache2 o
 
 For production deployments, consider the following reverse proxy best practices:
 
-- **Timeouts**: Set reasonable timeouts (e.g., `proxy_read_timeout 300;` in Nginx) to avoid hanging connections.
+- **Timeouts**: Set extended timeouts (e.g., `proxy_read_timeout 4800;` in Nginx) for large file handling.
 - **Buffer Sizes**: Increase buffer sizes for large file uploads/downloads if needed (e.g., `client_max_body_size 2G;` in Nginx).
 - **Headers**: Always set security headers (`X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`).
 - **Forwarded Headers**: Ensure `X-Forwarded-For` and `X-Forwarded-Proto` are set for correct client IP and protocol logging.
@@ -1139,77 +1145,77 @@ A sample `config.toml` for Docker deployments:
 
 ```toml
 [server]
-listenport = "8080"
-unixsocket = false
-storagepath = "/opt/hmac-file-server/data/uploads"
-metricsenabled = true
-metricsport = "9090"
-deduplicationenabled = true
-minfreebytes = "5GB"
-filettl = "2y"
-filettlenabled = false
-autoadjustworkers = true
-networkevents = false
-pidfilepath = "./hmac-file-server.pid"
-precaching = false
+listen_address = ":8080"
+storage_path = "/srv/hmac-file-server/uploads"
+metrics_enabled = true
+metrics_path = "/metrics"
+pid_file = "/var/run/hmac-file-server.pid"
+max_upload_size = "10GB"
+deduplication_enabled = true
+min_free_bytes = "1GB"
+file_naming = "original"
+enable_dynamic_workers = true
+worker_scale_up_thresh = 50
+worker_scale_down_thresh = 10
 
-[deduplication]
-enabled = true
-directory = "/opt/hmac-file-server/data/duplicates"
+[uploads]
+allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]
+chunked_uploads_enabled = true
+chunk_size = "10MB"
+resumable_uploads_enabled = true
+max_resumable_age = "48h"
+
+[downloads]
+resumable_downloads_enabled = true
+chunked_downloads_enabled = true
+chunk_size = "8192"
+allowed_extensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
+
+[security]
+secret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+enablejwt = false
+jwtsecret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+jwtalgorithm = "HS256"
+jwtexpiration = "24h"
 
 [logging]
-level = "debug"
-file = "./hmac-file-server.log"
+level = "info"
+file = "/var/log/hmac-file-server.log"
 max_size = 100
 max_backups = 7
 max_age = 30
 compress = true
 
+[deduplication]
+enabled = true
+directory = "./deduplication"
+maxsize = "1GB"
+
 [iso]
-enabled = false
-size = "1TB"
-mountpoint = "/mnt/nfs_vol01/hmac-file-server/iso/"
+enabled = true
+size = "1GB"
+mountpoint = "/mnt/iso"
 charset = "utf-8"
+containerfile = "/mnt/iso/container.iso"
 
 [timeouts]
-readtimeout = "3600s"
-writetimeout = "3600s"
-idletimeout = "3600s"
-
-[security]
-secret = "hmac-file-server-is-the-win"
+readtimeout = "4800s"
+writetimeout = "4800s"
+idletimeout = "4800s"
 
 [versioning]
 enableversioning = false
 maxversions = 1
 
-[uploads]
-resumableuploadsenabled = false
-chunkeduploadsenabled = true
-chunksize = "32MB"
-allowedextensions = [
-  ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
-  ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg",
-  ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
-]
-
-[downloads]
-chunkeddownloadsenabled = false
-chunksize = "32MB"
-allowedextensions = [
-  ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
-  ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg",
-  ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
-]
-
 [clamav]
-clamavenabled = false
+clamavenabled = true
 clamavsocket = "/var/run/clamav/clamd.ctl"
-numscanworkers = 4
-scanfileextensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"]
+numscanworkers = 2
+scanfileextensions = [".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".exe", ".zip", ".rar", ".7z", ".tar", ".gz"]
+maxscansize = "200MB"
 
 [redis]
-redisenabled = false
+redisenabled = true
 redisdbindex = 0
 redisaddr = "localhost:6379"
 redispassword = ""
@@ -1217,10 +1223,13 @@ redishealthcheckinterval = "120s"
 
 [workers]
 numworkers = 4
-uploadqueuesize = 5000
+uploadqueuesize = 50
 
 [file]
-filerevision = 1
+# Add file-specific configurations here
+
+[build]
+version = "3.2"
 ```
 
 ### Quickstart with Docker Compose

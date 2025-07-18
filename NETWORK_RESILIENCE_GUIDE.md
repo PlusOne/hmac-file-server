@@ -36,16 +36,28 @@ Add these settings to your `config.toml`:
 
 ```toml
 [uploads]
-chunkeduploadsenabled = true      # Enable chunked uploads
-resumableuploadsenabled = true    # Enable resumable functionality  
-chunksize = "5MB"                 # Chunk size (smaller for mobile)
-sessiontimeout = "24h"            # Session persistence time
-maxretries = 5                    # Retry attempts
+chunked_uploads_enabled = true   # Enable chunked uploads
+resumable_uploads_enabled = true # Enable resumable functionality  
+chunk_size = "10MB"              # Chunk size (optimized for performance)
+max_resumable_age = "48h"        # Session persistence time
 
 [timeouts]
-readtimeout = "300s"              # 5 minutes (vs 30s default)
-writetimeout = "300s"             # 5 minutes (vs 30s default)
-idletimeout = "600s"              # 10 minutes (vs 120s default)
+readtimeout = "4800s"            # 80 minutes (extended for large files)
+writetimeout = "4800s"           # 80 minutes (extended for large files)
+idletimeout = "4800s"            # 80 minutes (extended for large files)
+
+[server]
+enable_dynamic_workers = true    # Enable dynamic worker scaling
+worker_scale_up_thresh = 50      # Scale up when queue reaches 50
+worker_scale_down_thresh = 10    # Scale down when queue drops to 10
+
+[workers]
+numworkers = 4                   # Base number of workers
+uploadqueuesize = 50             # Upload queue size
+
+[deduplication]
+enabled = true                   # Enable file deduplication
+maxsize = "1GB"                  # Deduplicate files under 1GB only
 
 [server]
 networkevents = true              # Enable network monitoring

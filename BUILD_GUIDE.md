@@ -95,24 +95,30 @@ GOOS=darwin GOARCH=amd64 go build -o hmac-file-server-macos cmd/server/*.go
 Create or update your `config.toml`:
 ```toml
 [server]
-bind_ip = "0.0.0.0"
-listenport = "8080"
-networkevents = true              # Enable network monitoring
+listen_address = ":8080"
+enable_dynamic_workers = true    # Enable dynamic scaling
+worker_scale_up_thresh = 50      # Scale up threshold
+worker_scale_down_thresh = 10    # Scale down threshold
+deduplication_enabled = true     # Enable deduplication
+max_upload_size = "10GB"         # Support large files
 
 [uploads]
-chunkeduploadsenabled = true      # Enable chunked uploads
-resumableuploadsenabled = true    # Enable resumable uploads
-chunksize = "5MB"                 # Optimal for mobile
-sessiontimeout = "24h"            # Session persistence
-maxretries = 5                    # Retry attempts
+chunked_uploads_enabled = true   # Enable chunked uploads
+resumable_uploads_enabled = true # Enable resumable uploads
+chunk_size = "10MB"              # Optimal chunk size
+max_resumable_age = "48h"        # Session persistence
 
 [timeouts]
-readtimeout = "300s"              # 5 minutes
-writetimeout = "300s"             # 5 minutes  
-idletimeout = "600s"              # 10 minutes
+readtimeout = "4800s"            # 80 minutes for large files
+writetimeout = "4800s"           # 80 minutes for large files  
+idletimeout = "4800s"            # 80 minutes for large files
+
+[deduplication]
+enabled = true
+maxsize = "1GB"                  # Deduplicate files under 1GB
 
 [security]
-secret = "your-super-secret-hmac-key-minimum-32-characters"
+secret = "your-super-secret-hmac-key-minimum-64-characters-recommended"
 ```
 
 ## Testing the Build

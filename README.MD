@@ -23,13 +23,14 @@ Special thanks to **Thomas Leister** for inspiration drawn from [prosody-filer](
 3. [Authentication](#authentication)
 4. [API Endpoints](#api-endpoints)
 5. [Usage Examples](#usage-examples)
-6. [Setup](#setup)
+6. [Testing](#testing)
+7. [Setup](#setup)
    - [Reverse Proxy](#reverse-proxy)
    - [Systemd Service](#systemd-service)
-7. [Building](#building)
-8. [Docker Support](#docker-support)
-9. [Changelog](#changelog)
-10. [License](#license)
+8. [Building](#building)
+9. [Docker Support](#docker-support)
+10. [Changelog](#changelog)
+11. [License](#license)
 
 ---
 
@@ -354,6 +355,43 @@ curl -I http://localhost:8080/example.jpg
 ```bash
 curl http://localhost:8080/health
 ```
+
+---
+
+## Testing
+
+The HMAC File Server includes a comprehensive test suite located in the `tests/` directory.
+
+### Quick Testing
+
+```bash
+cd tests
+
+# Test XEP-0363 protocol compatibility
+./test_final_xmpp.sh
+
+# Test deduplication functionality  
+./test_deduplication.sh
+
+# Test upload queue performance
+./test_upload_queue.sh
+```
+
+### Test Categories
+
+**Protocol Testing**: Validate XEP-0363 v1, v2, v3, and token protocols
+**Performance Testing**: Upload queue, concurrent uploads, large file handling
+**Feature Testing**: Deduplication, resumable uploads, chunked transfers
+**Monitoring**: Real-time server status and upload activity
+
+### Test Data
+
+- Small files (1MB) for basic functionality
+- Medium files (50MB) for performance testing  
+- Large files (4GB) for stress testing extended timeouts
+- Chunked data for upload segmentation testing
+
+For detailed testing documentation, see [`tests/README.md`](tests/README.md).
 
 ---
 

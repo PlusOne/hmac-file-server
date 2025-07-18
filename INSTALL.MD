@@ -341,30 +341,36 @@ For a production XMPP server with 1000+ users:
 
 ```toml
 [server]
-listenport = "8080"
-metricsenabled = true
-deduplicationenabled = true
+listen_address = ":8080"
+metrics_enabled = true
+deduplication_enabled = true
+max_upload_size = "50MB"
+enable_dynamic_workers = true
+worker_scale_up_thresh = 50
+worker_scale_down_thresh = 10
 
 [security]
 enablejwt = true
-# Strong secrets here
+secret = "your-strong-64-character-secret-here"
+jwtsecret = "your-jwt-secret-here"
 
 [uploads]
-maxfilesize = "50MB"
-ttlenabled = true
-ttl = "720h"  # 30 days
+allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz"]
+chunked_uploads_enabled = true
+resumable_uploads_enabled = true
+
+[timeouts]
+readtimeout = "4800s"
+writetimeout = "4800s"
+idletimeout = "4800s"
 
 [workers]
-max = 200
-autoscaling = true
+numworkers = 4
+uploadqueuesize = 50
 
-[redis]
+[deduplication]
 enabled = true
-host = "localhost"
-port = 6379
-
-[clamav]
-enabled = true
+maxsize = "1GB"
 ```
 
 This setup provides robust file sharing with deduplication, automatic cleanup, virus scanning, and scalable worker management.
