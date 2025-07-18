@@ -152,42 +152,104 @@ The server uses a comprehensive `config.toml` file with the following main secti
 
 ### Key Configuration Sections
 
-- **[server]**: Basic server settings (port, storage, metrics)
+- **[server]**: Basic server settings (port, storage, metrics, dynamic workers)
 - **[security]**: HMAC secrets, JWT configuration
-- **[uploads/downloads]**: File handling settings, allowed extensions
+- **[uploads/downloads]**: File handling settings, allowed extensions, chunked transfers
 - **[logging]**: Log levels, file rotation settings
-- **[clamav]**: Virus scanning configuration
+- **[deduplication]**: File deduplication settings and storage efficiency
+- **[clamav]**: Virus scanning configuration with selective scanning
 - **[redis]**: Cache and session management
-- **[workers]**: Thread pool and performance tuning
+- **[workers]**: Thread pool and performance tuning with auto-scaling
 - **[iso]**: ISO container mounting (specialized storage)
-- **[timeouts]**: HTTP timeout configurations
+- **[timeouts]**: HTTP timeout configurations for large file handling
+- **[versioning]**: File versioning and history management
 
 ### Example Configuration
 
 ```toml
 [server]
-bind_ip = "0.0.0.0"
-listenport = "8080"
-unixsocket = false
-storagepath = "./uploads"
-metricsenabled = true
-metricsport = "9090"
-deduplicationenabled = true
-filenaming = "HMAC"  # Options: "HMAC", "original", "None"
-forceprotocol = "auto"  # Options: "ipv4", "ipv6", "auto"
+listen_address = ":8080"
+storage_path = "/srv/hmac-file-server/uploads"
+metrics_enabled = true
+metrics_path = "/metrics"
+max_upload_size = "10GB"
+max_header_bytes = 1048576
+cleanup_interval = "24h"
+max_file_age = "720h"
+deduplication_enabled = true
+min_free_bytes = "1GB"
+file_naming = "original"  # Options: "original", "HMAC"
+force_protocol = ""       # Options: "http", "https" - if set, redirects
+enable_dynamic_workers = true
+worker_scale_up_thresh = 50
+worker_scale_down_thresh = 10
 
 [security]
-secret = "your-secure-hmac-secret"
+secret = "your-secure-hmac-secret-64-chars-long"
 enablejwt = false
 jwtsecret = "your-jwt-secret"
 jwtalgorithm = "HS256"
 jwtexpiration = "24h"
 
 [uploads]
-allowedextensions = [".txt", ".pdf", ".jpg", ".png", ".zip"]
-chunkeduploadsenabled = true
-chunksize = "10MB"
+allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]
+chunked_uploads_enabled = true
+chunk_size = "10MB"
+resumable_uploads_enabled = true
+max_resumable_age = "48h"
+
+[downloads]
+resumable_downloads_enabled = true
+chunked_downloads_enabled = true
+chunk_size = "8192"
+allowed_extensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif"]
+
+[deduplication]
+enabled = true
+directory = "/opt/hmac-file-server/data/dedup"
+maxsize = "1GB"
+
+[timeouts]
+readtimeout = "4800s"    # Extended for large file uploads
+writetimeout = "4800s"   # Extended for large file uploads
+idletimeout = "4800s"
+
+[clamav]
+clamavenabled = true
+clamavsocket = "/var/run/clamav/clamd.ctl"
+numscanworkers = 2
+# Only scan potentially dangerous file types
+scanfileextensions = [".txt", ".pdf", ".doc", ".exe", ".zip", ".rar"]
+maxscansize = "200MB"    # ClamAV scanning limit
+
+[redis]
+redisenabled = true
+redisdbindex = 0
+redisaddr = "localhost:6379"
+redispassword = ""
+
+[workers]
+numworkers = 4
+uploadqueuesize = 50
+
+[logging]
+level = "info"
+file = "/var/log/hmac-file-server.log"
+max_size = 100
+max_backups = 7
+max_age = 30
+compress = true
 ```
+
+### Important Configuration Notes
+
+**Large File Support**: The extended timeout values (`readtimeout`/`writetimeout` = 4800s) are crucial for handling large file uploads (GB-sized files). These must be matched in your reverse proxy configuration.
+
+**Deduplication**: When enabled, identical files are stored only once using hard links, significantly saving storage space. The `maxsize` setting limits which files are deduplicated.
+
+**Dynamic Workers**: Auto-scaling workers (`enable_dynamic_workers = true`) automatically adjust server capacity based on upload queue length, improving performance under varying loads.
+
+**Security**: The `scanfileextensions` setting in ClamAV limits virus scanning to potentially dangerous file types, improving performance for large media files.
 
 For complete configuration details, see the [Wiki](./WIKI.MD).
 
@@ -314,9 +376,9 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         
         # Timeout settings for large uploads
-        proxy_read_timeout 300;
+        proxy_read_timeout 4800;
         proxy_connect_timeout 60;
-        proxy_send_timeout 300;
+        proxy_send_timeout 4800;
     }
 }
 ```
@@ -332,7 +394,7 @@ server {
     
     # Large upload support
     LimitRequestBody 10737418240  # 10GB
-    ProxyTimeout 300
+    ProxyTimeout 4800
 </VirtualHost>
 ```
 
