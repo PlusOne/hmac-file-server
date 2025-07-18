@@ -1407,6 +1407,23 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	// Validate file size against max_upload_size if configured
+	if conf.Server.MaxUploadSize != "" {
+		maxSizeBytes, err := parseSize(conf.Server.MaxUploadSize)
+		if err != nil {
+			log.Errorf("Invalid max_upload_size configuration: %v", err)
+			http.Error(w, "Server configuration error", http.StatusInternalServerError)
+			uploadErrorsTotal.Inc()
+			return
+		}
+		if header.Size > maxSizeBytes {
+			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s", 
+				formatBytes(header.Size), conf.Server.MaxUploadSize), http.StatusRequestEntityTooLarge)
+			uploadErrorsTotal.Inc()
+			return
+		}
+	}
+
 	// Validate file extension if configured
 	if len(conf.Uploads.AllowedExtensions) > 0 {
 		ext := strings.ToLower(filepath.Ext(header.Filename))
@@ -1644,6 +1661,23 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Validate file size against max_upload_size if configured
+	if conf.Server.MaxUploadSize != "" {
+		maxSizeBytes, err := parseSize(conf.Server.MaxUploadSize)
+		if err != nil {
+			log.Errorf("Invalid max_upload_size configuration: %v", err)
+			http.Error(w, "Server configuration error", http.StatusInternalServerError)
+			uploadErrorsTotal.Inc()
+			return
+		}
+		if r.ContentLength > maxSizeBytes {
+			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s", 
+				formatBytes(r.ContentLength), conf.Server.MaxUploadSize), http.StatusRequestEntityTooLarge)
+			uploadErrorsTotal.Inc()
+			return
+		}
+	}
+
 	// Generate filename based on configuration
 	var filename string
 	switch conf.Server.FileNaming {
@@ -1762,6 +1796,23 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 		}
 		if !allowed {
 			http.Error(w, fmt.Sprintf("File extension %s not allowed", ext), http.StatusBadRequest)
+			uploadErrorsTotal.Inc()
+			return
+		}
+	}
+
+	// Validate file size against max_upload_size if configured
+	if conf.Server.MaxUploadSize != "" {
+		maxSizeBytes, err := parseSize(conf.Server.MaxUploadSize)
+		if err != nil {
+			log.Errorf("Invalid max_upload_size configuration: %v", err)
+			http.Error(w, "Server configuration error", http.StatusInternalServerError)
+			uploadErrorsTotal.Inc()
+			return
+		}
+		if r.ContentLength > maxSizeBytes {
+			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s", 
+				formatBytes(r.ContentLength), conf.Server.MaxUploadSize), http.StatusRequestEntityTooLarge)
 			uploadErrorsTotal.Inc()
 			return
 		}

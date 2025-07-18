@@ -1,75 +1,81 @@
 [server]
-listenport = "8080"
-unixsocket = false
-storagepath = "/opt/hmac-file-server/data/uploads"
-metricsenabled = true
-metricsport = "9090"
-deduplicationenabled = true
-minfreebytes = "5GB"
-filettl = "2y"
-filettlenabled = false
-autoadjustworkers = true
-networkevents = false
-pidfilepath = "./hmac-file-server.pid"
-precaching = false
+listen_address = ":8080"
+storage_path = "/srv/hmac-file-server/uploads"
+metrics_enabled = true
+metrics_path = "/metrics"
+pid_file = "/var/run/hmac-file-server.pid"
+max_upload_size = "10GB" # Supports B, KB, MB, GB, TB
+max_header_bytes = 1048576 # 1MB
+cleanup_interval = "24h"
+max_file_age = "720h" # 30 days
+pre_cache = true
+pre_cache_workers = 4
+pre_cache_interval = "1h"
+global_extensions = [".txt", ".dat", ".iso"] # If set, overrides upload/download extensions
+deduplication_enabled = true
+min_free_bytes = "1GB" # Minimum free space required for uploads
+file_naming = "original" # Options: "original", "HMAC"
+force_protocol = "" # Options: "http", "https" - if set, redirects to this protocol
+enable_dynamic_workers = true # Enable dynamic worker scaling
+worker_scale_up_thresh = 50   # Queue length to scale up workers
+worker_scale_down_thresh = 10 # Queue length to scale down workers
 
-[deduplication]
-enabled = true
-directory = "/opt/hmac-file-server/data/duplicates"
+[uploads]
+allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]
+chunked_uploads_enabled = true
+chunk_size = "10MB"
+resumable_uploads_enabled = true
+max_resumable_age = "48h"
+
+[downloads]
+resumable_downloads_enabled = true
+chunked_downloads_enabled = true
+chunk_size = "8192"
+allowed_extensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
+
+[security]
+secret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+enablejwt = false
+jwtsecret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+jwtalgorithm = "HS256"
+jwtexpiration = "24h"
 
 [logging]
-level = "debug"
-file = "./hmac-file-server.log"
+level = "info"
+file = "/var/log/hmac-file-server.log"
 max_size = 100
 max_backups = 7
 max_age = 30
 compress = true
 
+[deduplication]
+enabled = true
+directory = "./deduplication"
+
 [iso]
-enabled = false
-size = "1TB"
-mountpoint = "/mnt/nfs_vol01/hmac-file-server/iso/"
+enabled = true
+size = "1GB"
+mountpoint = "/mnt/iso"
 charset = "utf-8"
+containerfile = "/mnt/iso/container.iso"
 
 [timeouts]
-readtimeout = "3600s"
-writetimeout = "3600s"
-idletimeout = "3600s"
-
-[security]
-secret = "CHANGE-THIS-TO-YOUR-SECRET-KEY-MINIMUM-32-CHARACTERS"
+readtimeout = "4800s"
+writetimeout = "4800s"
+idletimeout = "4800s"
 
 [versioning]
 enableversioning = false
 maxversions = 1
 
-[uploads]
-resumableuploadsenabled = false
-chunkeduploadsenabled = true
-chunksize = "32MB"
-allowedextensions = [
-  ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
-  ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg",
-  ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
-]
-
-[downloads]
-chunkeddownloadsenabled = false
-chunksize = "32MB"
-allowedextensions = [
-  ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp",
-  ".wav", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".mpeg", ".mpg",
-  ".m4v", ".3gp", ".3g2", ".mp3", ".ogg"
-]
-
 [clamav]
-clamavenabled = false
+clamavenabled = true
 clamavsocket = "/var/run/clamav/clamd.ctl"
-numscanworkers = 4
-scanfileextensions = [".exe", ".dll", ".bin", ".com", ".bat", ".sh", ".php", ".js"]
+numscanworkers = 2
+scanfileextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
 
 [redis]
-redisenabled = false
+redisenabled = true
 redisdbindex = 0
 redisaddr = "localhost:6379"
 redispassword = ""
@@ -77,7 +83,10 @@ redishealthcheckinterval = "120s"
 
 [workers]
 numworkers = 4
-uploadqueuesize = 5000
+uploadqueuesize = 50
 
 [file]
-filerevision = 1
+# Add file-specific configurations here
+
+[build]
+version = "3.2"

@@ -71,6 +71,23 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Validate file size against max_upload_size if configured
+		if conf.Server.MaxUploadSize != "" {
+			maxSizeBytes, err := parseSize(conf.Server.MaxUploadSize)
+			if err != nil {
+				log.Errorf("Invalid max_upload_size configuration: %v", err)
+				http.Error(w, "Server configuration error", http.StatusInternalServerError)
+				uploadErrorsTotal.Inc()
+				return
+			}
+			if totalSize > maxSizeBytes {
+				http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s", 
+					formatBytes(totalSize), conf.Server.MaxUploadSize), http.StatusRequestEntityTooLarge)
+				uploadErrorsTotal.Inc()
+				return
+			}
+		}
+
 		// Authentication (reuse existing logic)
 		if conf.Security.EnableJWT {
 			_, err := validateJWTFromRequest(r, conf.Security.JWTSecret)
