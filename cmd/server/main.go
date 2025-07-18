@@ -1515,6 +1515,32 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	absFilename := filepath.Join(storagePath, filename)
 
+	// Pre-upload deduplication check: if file already exists and deduplication is enabled, return success immediately
+	if conf.Server.DeduplicationEnabled {
+		if existingFileInfo, err := os.Stat(absFilename); err == nil {
+			// File already exists - return success immediately for deduplication hit
+			duration := time.Since(startTime)
+			uploadDuration.Observe(duration.Seconds())
+			uploadsTotal.Inc()
+			uploadSizeBytes.Observe(float64(existingFileInfo.Size()))
+			filesDeduplicatedTotal.Inc()
+			
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			response := map[string]interface{}{
+				"success":  true,
+				"filename": filename,
+				"size":     existingFileInfo.Size(),
+				"message":  "File already exists (deduplication hit)",
+			}
+			json.NewEncoder(w).Encode(response)
+			
+			log.Infof("Deduplication hit: file %s already exists (%s), returning success immediately", 
+				filename, formatBytes(existingFileInfo.Size()))
+			return
+		}
+	}
+
 	// Create the file
 	dst, err := os.Create(absFilename)
 	if err != nil {
@@ -1752,6 +1778,32 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 
 	absFilename := filepath.Join(storagePath, filename)
 
+	// Pre-upload deduplication check: if file already exists and deduplication is enabled, return success immediately
+	if conf.Server.DeduplicationEnabled {
+		if existingFileInfo, err := os.Stat(absFilename); err == nil {
+			// File already exists - return success immediately for deduplication hit
+			duration := time.Since(startTime)
+			uploadDuration.Observe(duration.Seconds())
+			uploadsTotal.Inc()
+			uploadSizeBytes.Observe(float64(existingFileInfo.Size()))
+			filesDeduplicatedTotal.Inc()
+			
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			response := map[string]interface{}{
+				"success":  true,
+				"filename": filename,
+				"size":     existingFileInfo.Size(),
+				"message":  "File already exists (deduplication hit)",
+			}
+			json.NewEncoder(w).Encode(response)
+			
+			log.Infof("Deduplication hit: file %s already exists (%s), returning success immediately", 
+				filename, formatBytes(existingFileInfo.Size()))
+			return
+		}
+	}
+
 	// Create the file
 	dst, err := os.Create(absFilename)
 	if err != nil {
@@ -1905,6 +1957,23 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Error creating directory: %v", err), http.StatusInternalServerError)
 		uploadErrorsTotal.Inc()
 		return
+	}
+
+	// Pre-upload deduplication check: if file already exists and deduplication is enabled, return success immediately
+	if conf.Server.DeduplicationEnabled {
+		if existingFileInfo, err := os.Stat(absFilename); err == nil {
+			// File already exists - return success immediately for deduplication hit
+			duration := time.Since(startTime)
+			uploadDuration.Observe(duration.Seconds())
+			uploadsTotal.Inc()
+			uploadSizeBytes.Observe(float64(existingFileInfo.Size()))
+			filesDeduplicatedTotal.Inc()
+			
+			w.WriteHeader(http.StatusCreated) // 201 Created for legacy compatibility
+			log.Infof("Deduplication hit: file %s already exists (%s), returning success immediately", 
+				filename, formatBytes(existingFileInfo.Size()))
+			return
+		}
 	}
 
 	// Create the file

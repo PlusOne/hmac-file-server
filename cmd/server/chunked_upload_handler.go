@@ -105,6 +105,34 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// Pre-upload deduplication check for chunked uploads
+		if conf.Server.DeduplicationEnabled {
+			finalPath := filepath.Join(conf.Server.StoragePath, filename)
+			if existingFileInfo, err := os.Stat(finalPath); err == nil {
+				// File already exists - return success immediately for deduplication hit
+				duration := time.Since(startTime)
+				uploadDuration.Observe(duration.Seconds())
+				uploadsTotal.Inc()
+				uploadSizeBytes.Observe(float64(existingFileInfo.Size()))
+				filesDeduplicatedTotal.Inc()
+				
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				response := map[string]interface{}{
+					"success":   true,
+					"filename":  filename,
+					"size":      existingFileInfo.Size(),
+					"completed": true,
+					"message":   "File already exists (deduplication hit)",
+				}
+				writeJSONResponse(w, response)
+				
+				log.Infof("Chunked upload deduplication hit: file %s already exists (%s), returning success immediately", 
+					filename, formatBytes(existingFileInfo.Size()))
+				return
+			}
+		}
+
 		// Create new session
 		clientIP := getClientIP(r)
 		session := uploadSessionStore.CreateSession(filename, totalSize, clientIP)
