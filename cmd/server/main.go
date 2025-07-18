@@ -1335,10 +1335,52 @@ func validateV3HMAC(r *http.Request, secret string) error {
 		return fmt.Errorf("invalid expires parameter: %v", err)
 	}
 
-	// Check if signature has expired
+	// Check if signature has expired with extended grace period for large files
 	now := time.Now().Unix()
 	if now > expires {
-		return errors.New("signature has expired")
+		// Calculate dynamic grace period based on file size and client type
+		gracePeriod := int64(3600) // Default 1 hour grace period
+		
+		// Check User-Agent to identify XMPP clients and adjust accordingly
+		userAgent := r.Header.Get("User-Agent")
+		isXMPPClient := strings.Contains(strings.ToLower(userAgent), "gajim") ||
+			strings.Contains(strings.ToLower(userAgent), "dino") ||
+			strings.Contains(strings.ToLower(userAgent), "conversations") ||
+			strings.Contains(strings.ToLower(userAgent), "xmpp")
+			
+		if isXMPPClient {
+			gracePeriod = int64(7200) // 2 hours for XMPP clients
+			log.Infof("Detected XMPP client (%s), using extended grace period", userAgent)
+		}
+		
+		// Check Content-Length header to determine file size
+		if contentLengthStr := r.Header.Get("Content-Length"); contentLengthStr != "" {
+			if contentLength, parseErr := strconv.ParseInt(contentLengthStr, 10, 64); parseErr == nil {
+				// For files > 100MB, add additional grace time
+				if contentLength > 100*1024*1024 {
+					// Add 2 minutes per 100MB for large files
+					additionalTime := (contentLength / (100 * 1024 * 1024)) * 120
+					gracePeriod += additionalTime
+					log.Infof("Extended grace period for large file (%d bytes, %s): %d seconds total", 
+						contentLength, userAgent, gracePeriod)
+				}
+			}
+		}
+		
+		// Apply maximum grace period limit to prevent abuse
+		maxGracePeriod := int64(14400) // 4 hours maximum
+		if gracePeriod > maxGracePeriod {
+			gracePeriod = maxGracePeriod
+		}
+		
+		if now > (expires + gracePeriod) {
+			log.Warnf("Signature expired beyond grace period: now=%d, expires=%d, grace_period=%d, user_agent=%s", 
+				now, expires, gracePeriod, userAgent)
+			return errors.New("signature has expired")
+		} else {
+			log.Infof("Signature within grace period: now=%d, expires=%d, grace_period=%d, user_agent=%s", 
+				now, expires, gracePeriod, userAgent)
+		}
 	}
 
 	// Construct message for HMAC verification
