@@ -103,8 +103,8 @@ func parseTTL(ttlStr string) (time.Duration, error) {
 
 // Configuration structures
 type ServerConfig struct {
-	ListenAddress         string   `toml:"listenport" mapstructure:"listenport"`         // Fixed to match config file field
-	StoragePath           string   `toml:"storagepath" mapstructure:"storagepath"`       // Fixed to match config
+	ListenAddress         string   `toml:"listen_address" mapstructure:"listen_address"`
+	StoragePath           string   `toml:"storage_path" mapstructure:"storage_path"`
 	MetricsEnabled        bool     `toml:"metricsenabled" mapstructure:"metricsenabled"` // Fixed to match config
 	MetricsPath           string   `toml:"metrics_path" mapstructure:"metrics_path"`
 	PidFile               string   `toml:"pid_file" mapstructure:"pid_file"`
@@ -136,18 +136,18 @@ type ServerConfig struct {
 }
 
 type UploadsConfig struct {
-	AllowedExtensions       []string `toml:"allowedextensions" mapstructure:"allowedextensions"`
-	ChunkedUploadsEnabled   bool     `toml:"chunkeduploadsenabled" mapstructure:"chunkeduploadsenabled"`
-	ChunkSize               string   `toml:"chunksize" mapstructure:"chunksize"`
-	ResumableUploadsEnabled bool     `toml:"resumableuploadsenabled" mapstructure:"resumableuploadsenabled"`
+	AllowedExtensions       []string `toml:"allowed_extensions" mapstructure:"allowed_extensions"`
+	ChunkedUploadsEnabled   bool     `toml:"chunked_uploads_enabled" mapstructure:"chunked_uploads_enabled"`
+	ChunkSize               string   `toml:"chunk_size" mapstructure:"chunk_size"`
+	ResumableUploadsEnabled bool     `toml:"resumable_uploads_enabled" mapstructure:"resumable_uploads_enabled"`
 	SessionTimeout          string   `toml:"sessiontimeout" mapstructure:"sessiontimeout"`
 	MaxRetries              int      `toml:"maxretries" mapstructure:"maxretries"`
 }
 
 type DownloadsConfig struct {
-	AllowedExtensions         []string `toml:"allowedextensions" mapstructure:"allowedextensions"`
-	ChunkedDownloadsEnabled   bool     `toml:"chunkeddownloadsenabled" mapstructure:"chunkeddownloadsenabled"`
-	ChunkSize                 string   `toml:"chunksize" mapstructure:"chunksize"`
+	AllowedExtensions         []string `toml:"allowed_extensions" mapstructure:"allowed_extensions"`
+	ChunkedDownloadsEnabled   bool     `toml:"chunked_downloads_enabled" mapstructure:"chunked_downloads_enabled"`
+	ChunkSize                 string   `toml:"chunk_size" mapstructure:"chunk_size"`
 	ResumableDownloadsEnabled bool     `toml:"resumable_downloads_enabled" mapstructure:"resumable_downloads_enabled"`
 }
 
@@ -450,11 +450,10 @@ func initializeNetworkProtocol(forceProtocol string) (*net.Dialer, error) {
 var dualStackClient *http.Client
 
 func main() {
-	setDefaults() // Call setDefaults before parsing flags or reading config
-
 	var configFile string
 	flag.StringVar(&configFile, "config", "./config.toml", "Path to configuration file \"config.toml\".")
 	var genConfig bool
+	var genConfigAdvanced bool
 	var genConfigPath string
 	var validateOnly bool
 	var runConfigTests bool
@@ -467,8 +466,9 @@ func main() {
 	var listValidationChecks bool
 	var showVersion bool
 
-	flag.BoolVar(&genConfig, "genconfig", false, "Print example configuration and exit.")
-	flag.StringVar(&genConfigPath, "genconfig-path", "", "Write example configuration to the given file and exit.")
+	flag.BoolVar(&genConfig, "genconfig", false, "Print minimal configuration example and exit.")
+	flag.BoolVar(&genConfigAdvanced, "genconfig-advanced", false, "Print advanced configuration template and exit.")
+	flag.StringVar(&genConfigPath, "genconfig-path", "", "Write configuration to the given file and exit.")
 	flag.BoolVar(&validateOnly, "validate-config", false, "Validate configuration and exit without starting server.")
 	flag.BoolVar(&runConfigTests, "test-config", false, "Run configuration validation test scenarios and exit.")
 	flag.BoolVar(&validateQuiet, "validate-quiet", false, "Only show errors during validation (suppress warnings and info).")
@@ -492,10 +492,24 @@ func main() {
 	}
 
 	if genConfig {
-		printExampleConfig()
+		fmt.Println("# Option 1: Minimal Configuration (recommended for most users)")
+		fmt.Println(GenerateMinimalConfig())
+		fmt.Println("\n# Option 2: Advanced Configuration Template (for fine-tuning)")
+		fmt.Println("# Use -genconfig-advanced to generate the advanced template")
+		os.Exit(0)
+	}
+	if genConfigAdvanced {
+		fmt.Println(GenerateAdvancedConfigTemplate())
 		os.Exit(0)
 	}
 	if genConfigPath != "" {
+		var content string
+		if genConfigAdvanced {
+			content = GenerateAdvancedConfigTemplate()
+		} else {
+			content = GenerateMinimalConfig()
+		}
+		
 		f, err := os.Create(genConfigPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create file: %v\n", err)
@@ -503,9 +517,9 @@ func main() {
 		}
 		defer f.Close()
 		w := bufio.NewWriter(f)
-		fmt.Fprint(w, getExampleConfigString())
+		fmt.Fprint(w, content)
 		w.Flush()
-		fmt.Printf("Example config written to %s\n", genConfigPath)
+		fmt.Printf("Configuration written to %s\n", genConfigPath)
 		os.Exit(0)
 	}
 	if runConfigTests {
@@ -513,42 +527,21 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Initialize Viper
-	viper.SetConfigType("toml")
-
-	// Set default config path
-	defaultConfigPath := "/etc/hmac-file-server/config.toml"
-
-	// Attempt to load the default config
-	viper.SetConfigFile(defaultConfigPath)
-	if err := viper.ReadInConfig(); err != nil {
-		// If default config not found, fallback to parent directory
-		parentDirConfig := "../config.toml"
-		viper.SetConfigFile(parentDirConfig)
-		if err := viper.ReadInConfig(); err != nil {
-			// If still not found and -config is provided, use it
-			if configFile != "" {
-				viper.SetConfigFile(configFile)
-				if err := viper.ReadInConfig(); err != nil {
-					fmt.Printf("Error loading config file: %v\n", err)
-					os.Exit(1)
-				}
-			} else {
-				fmt.Println("No configuration file found. Please create a config file with the following content:")
-				printExampleConfig()
-				os.Exit(1)
-			}
-		}
-	}
-
-	err := readConfig(configFile, &conf)
+	// Load configuration using simplified approach
+	loadedConfig, err := LoadSimplifiedConfig(configFile)
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v\nPlease ensure your config.toml is present at one of the following paths:\n%v", err, []string{
-			"/etc/hmac-file-server/config.toml",
-			"../config.toml",
-			"./config.toml",
-		})
+		// If no config file exists, offer to create a minimal one
+		if configFile == "./config.toml" || configFile == "" {
+			fmt.Println("No configuration file found. Creating a minimal config.toml...")
+			if err := createMinimalConfig(); err != nil {
+				log.Fatalf("Failed to create minimal config: %v", err)
+			}
+			fmt.Println("Minimal config.toml created. Please review and modify as needed, then restart the server.")
+			os.Exit(0)
+		}
+		log.Fatalf("Failed to load configuration: %v", err)
 	}
+	conf = *loadedConfig
 	log.Info("Configuration loaded successfully.")
 
 	err = validateConfig(&conf)

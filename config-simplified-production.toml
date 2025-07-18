@@ -1,0 +1,13 @@
+# HMAC File Server - Simplified Production Configuration
+# Only the essential settings you need to configure!
+
+[server]
+listen_address = "8080"
+storage_path = "/opt/hmac-file-server/data/uploads"
+
+[security]
+secret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+
+[logging]
+level = "info"
+file = "/opt/hmac-file-server/data/logs/hmac-file-server.log"
