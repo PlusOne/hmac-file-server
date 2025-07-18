@@ -72,7 +72,10 @@ maxversions = 1
 clamavenabled = true
 clamavsocket = "/var/run/clamav/clamd.ctl"
 numscanworkers = 2
-scanfileextensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
+# Only scan potentially dangerous file types, skip large media files
+scanfileextensions = [".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".exe", ".zip", ".rar", ".7z", ".tar", ".gz"]
+# Skip scanning files larger than 200MB (ClamAV limit)
+maxscansize = "200MB"
 
 [redis]
 redisenabled = true

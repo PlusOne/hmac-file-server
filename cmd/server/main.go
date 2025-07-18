@@ -199,6 +199,7 @@ type ClamAVConfig struct {
 	ClamAVSocket       string   `mapstructure:"clamavsocket"`
 	NumScanWorkers     int      `mapstructure:"numscanworkers"`
 	ScanFileExtensions []string `mapstructure:"scanfileextensions"`
+	MaxScanSize        string   `mapstructure:"maxscansize"`
 }
 
 type RedisConfig struct {
@@ -262,6 +263,16 @@ type FileMetadata struct {
 
 // processScan processes a scan task
 func processScan(task ScanTask) error {
+	// Check if ClamAV is enabled before processing
+	confMutex.RLock()
+	clamEnabled := conf.ClamAV.ClamAVEnabled
+	confMutex.RUnlock()
+	
+	if !clamEnabled {
+		log.Infof("ClamAV disabled, skipping scan for file: %s", task.AbsFilename)
+		return nil
+	}
+	
 	log.Infof("Started processing scan for file: %s", task.AbsFilename)
 	semaphore <- struct{}{}
 	defer func() { <-semaphore }()

@@ -416,24 +416,80 @@ func scanFileWithClamAV(filename string) error {
 		return fmt.Errorf("ClamAV client not initialized")
 	}
 
+	// Check file size and skip scanning if too large
+	fileInfo, err := os.Stat(filename)
+	if err != nil {
+		return fmt.Errorf("failed to get file size: %w", err)
+	}
+	
+	// Parse maxscansize from config, default to 200MB if not set
+	confMutex.RLock()
+	maxScanSizeStr := conf.ClamAV.MaxScanSize
+	confMutex.RUnlock()
+	
+	maxScanSize := int64(200 * 1024 * 1024) // Default 200MB
+	if maxScanSizeStr != "" {
+		if parsedSize, parseErr := parseSize(maxScanSizeStr); parseErr == nil {
+			maxScanSize = parsedSize
+		}
+	}
+	
+	if fileInfo.Size() > maxScanSize {
+		log.Infof("File %s (%d bytes) exceeds ClamAV scan limit (%d bytes), skipping scan", 
+			filename, fileInfo.Size(), maxScanSize)
+		return nil
+	}
+	
+	// Also check file extension - only scan configured dangerous types
+	confMutex.RLock()
+	scanExtensions := conf.ClamAV.ScanFileExtensions
+	confMutex.RUnlock()
+	
+	if len(scanExtensions) > 0 {
+		ext := strings.ToLower(filepath.Ext(filename))
+		shouldScan := false
+		for _, scanExt := range scanExtensions {
+			if ext == strings.ToLower(scanExt) {
+				shouldScan = true
+				break
+			}
+		}
+		if !shouldScan {
+			log.Infof("File %s with extension %s not in scan list, skipping ClamAV scan", filename, ext)
+			return nil
+		}
+	}
+
+	log.Infof("Scanning file %s (%d bytes) with ClamAV", filename, fileInfo.Size())
+	
 	result, err := clamClient.ScanFile(filename)
 	if err != nil {
 		return fmt.Errorf("ClamAV scan failed: %w", err)
 	}
 
-	// Handle the result channel
+	// Handle the result channel with timeout based on file size
+	timeout := 10 * time.Second // Base timeout
+	if fileInfo.Size() > 10*1024*1024 { // 10MB+
+		timeout = 30 * time.Second
+	}
+	if fileInfo.Size() > 50*1024*1024 { // 50MB+
+		timeout = 60 * time.Second
+	}
+
 	if result != nil {
 		select {
 		case scanResult := <-result:
 			if scanResult != nil && scanResult.Status != "OK" {
+				log.Errorf("Virus detected in %s: %s", filename, scanResult.Status)
 				return fmt.Errorf("virus detected in %s: %s", filename, scanResult.Status)
 			}
-		case <-time.After(30 * time.Second):
+		case <-time.After(timeout):
+			log.Warnf("ClamAV scan timeout (%v) for file: %s (%d bytes)", timeout, filename, fileInfo.Size())
 			return fmt.Errorf("ClamAV scan timeout for file: %s", filename)
 		}
 	}
 
-	log.Debugf("File %s passed ClamAV scan", filename)
+	log.Infof("File %s passed ClamAV scan successfully", filename)
 	return nil
 }
 
