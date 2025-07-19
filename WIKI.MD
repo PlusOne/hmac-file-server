@@ -27,10 +27,11 @@ This documentation provides detailed information on configuring, setting up, and
     - [3. ejabberd Configuration](#3-ejabberd-configuration)
     - [4. Systemd Service Setup](#4-systemd-service-setup)
 6. [Running with Docker & Docker Compose](#running-with-docker--docker-compose)
-7. [Building for Different Architectures](#building-for-different-architectures)
-8. [Network Resilience & Queue Optimization](#network-resilience--queue-optimization)
-9. [Multi-Architecture Deployment](#multi-architecture-deployment)
-10. [Additional Recommendations](#additional-recommendations)
+7. [Running with Podman](#running-with-podman)
+8. [Building for Different Architectures](#building-for-different-architectures)
+9. [Network Resilience & Queue Optimization](#network-resilience--queue-optimization)
+10. [Multi-Architecture Deployment](#multi-architecture-deployment)
+11. [Additional Recommendations](#additional-recommendations)
 8. [Notes](#notes)
 9. [Using HMAC File Server for CI/CD Build Artifacts](#using-hmac-file-server-for-ci-cd-build-artifacts)
 10. [Monitoring](#monitoring)
@@ -1160,6 +1161,427 @@ services:
 - `/opt/hmac-file-server/data/duplicates`: Deduplication data
 - `/opt/hmac-file-server/data/temp`: Temporary files
 - `/opt/hmac-file-server/data/logs`: Log files
+
+---
+
+## Running with Podman
+
+Podman is a daemonless container engine that's often preferred in enterprise environments for enhanced security and rootless capabilities. HMAC File Server 3.2 provides complete Podman support with optimized deployment scripts.
+
+### Why Choose Podman?
+
+| Feature | Docker | Podman |
+|---------|--------|--------|
+| **Daemon** | Requires Docker daemon | Daemonless architecture |
+| **Root Access** | Requires root for Docker daemon | Can run completely rootless |
+| **Security** | Good, but daemon runs as root | Enhanced security, no privileged daemon |
+| **Systemd Integration** | Via Docker service | Native systemd integration |
+| **Pod Support** | Requires docker-compose or swarm | Native Kubernetes-style pods |
+| **Enterprise Use** | Popular in startups/mid-size | Preferred in enterprise environments |
+| **SELinux** | Basic support | Excellent SELinux integration |
+
+### Quick Start with Podman
+
+```bash
+# Clone repository
+git clone https://github.com/PlusOne/hmac-file-server.git
+cd hmac-file-server/dockerenv/podman
+
+# One-command deployment
+./deploy-podman.sh
+
+# Check status
+./deploy-podman.sh status
+
+# View logs
+./deploy-podman.sh logs
+```
+
+### Manual Directory & Permission Setup
+
+#### **Understanding Container Security Model**
+- **Container User**: `appuser` (UID: 1011, GID: 1011)
+- **Security Principle**: Never run containers as root (UID 0)
+- **Compatibility**: Works across different container runtimes and deployment modes
+
+#### **Step-by-Step Manual Setup**
+
+**Step 1: Create Directory Structure**
+```bash
+# Create organized directory layout
+export HMAC_BASE="/opt/podman/hmac-file-server"
+sudo mkdir -p ${HMAC_BASE}/{config,data,deduplication,logs}
+
+# Create subdirectories for uploads and duplicates
+sudo mkdir -p ${HMAC_BASE}/data/{uploads,temp}
+sudo mkdir -p ${HMAC_BASE}/deduplication/store
+sudo mkdir -p ${HMAC_BASE}/logs/{access,error,debug}
+```
+
+**Step 2: Set Ownership (CRITICAL)**
+```bash
+# For Podman Rootless (recommended)
+podman unshare chown -R 1011:1011 ${HMAC_BASE}
+
+# For Podman Rootful or Docker
+sudo chown -R 1011:1011 ${HMAC_BASE}
+
+# Alternative: Use numeric IDs to avoid user lookup issues
+sudo chown -R 1011:1011 ${HMAC_BASE}
+```
+
+**Step 3: Set Permissions**
+```bash
+# Directory permissions (executable for traversal)
+sudo chmod 755 ${HMAC_BASE}
+sudo chmod 755 ${HMAC_BASE}/{config,data,deduplication,logs}
+sudo chmod 755 ${HMAC_BASE}/data/{uploads,temp}
+sudo chmod 755 ${HMAC_BASE}/deduplication/store
+sudo chmod 755 ${HMAC_BASE}/logs/{access,error,debug}
+
+# Configuration file (read-only)
+sudo chmod 644 ${HMAC_BASE}/config/config.toml
+```
+
+**Step 4: Verify Ownership**
+```bash
+# Check ownership recursively
+ls -laR ${HMAC_BASE}
+
+# Expected output format:
+# drwxr-xr-x 2 1011 1011 4096 Dec 20 10:30 data
+# drwxr-xr-x 2 1011 1011 4096 Dec 20 10:30 deduplication  
+# drwxr-xr-x 2 1011 1011 4096 Dec 20 10:30 logs
+# -rw-r--r-- 1 1011 1011 1234 Dec 20 10:30 config/config.toml
+```
+
+#### **Container Volume Mapping**
+
+| Host Path | Container Mount | Access Mode | SELinux Label | Purpose |
+|-----------|-----------------|-------------|---------------|---------|
+| `${HMAC_BASE}/config/config.toml` | `/app/config.toml` | `ro` | `:Z` | Configuration file |
+| `${HMAC_BASE}/data/` | `/data/` | `rw` | `:Z` | File uploads |
+| `${HMAC_BASE}/deduplication/` | `/deduplication/` | `rw` | `:Z` | Dedup cache |
+| `${HMAC_BASE}/logs/` | `/logs/` | `rw` | `:Z` | Application logs |
+
+#### **Complete Manual Run Command**
+```bash
+# Build container image
+podman build -t localhost/hmac-file-server:latest -f dockerenv/podman/Dockerfile.podman .
+
+# Run with proper volume mounts and SELinux labels
+podman run -d --name hmac-file-server \
+  --security-opt no-new-privileges \
+  --cap-drop=ALL \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=100m \
+  -p 8888:8888 \
+  -p 9090:9090 \
+  -v ${HMAC_BASE}/config/config.toml:/app/config.toml:ro,Z \
+  -v ${HMAC_BASE}/data:/data:rw,Z \
+  -v ${HMAC_BASE}/deduplication:/deduplication:rw,Z \
+  -v ${HMAC_BASE}/logs:/logs:rw,Z \
+  localhost/hmac-file-server:latest -config /app/config.toml
+```
+
+### Troubleshooting Path & Permission Issues
+
+#### **Common Error: Permission Denied**
+```bash
+# Error in logs
+{"level":"error","msg":"failed to create directories: mkdir /data: permission denied"}
+```
+
+**Root Cause**: Incorrect ownership or missing directories
+
+**Solution**:
+```bash
+# Check current ownership
+ls -la ${HMAC_BASE}
+
+# Fix ownership (adjust command based on your setup)
+# For rootless Podman:
+podman unshare chown -R 1011:1011 ${HMAC_BASE}
+
+# For rootful Podman/Docker:
+sudo chown -R 1011:1011 ${HMAC_BASE}
+
+# Verify fix
+sudo -u "#1011" touch ${HMAC_BASE}/data/test-write
+rm ${HMAC_BASE}/data/test-write
+```
+
+#### **Common Error: SELinux Denial**
+```bash
+# Error in logs or journalctl
+SELinux is preventing access to 'write' on the file /data/test.txt
+```
+
+**Root Cause**: SELinux context not set for container volumes
+
+**Solution**:
+```bash
+# Option 1: Use :Z labels (recommended - private volumes)
+-v ${HMAC_BASE}/data:/data:rw,Z
+
+# Option 2: Use :z labels (shared volumes between containers)  
+-v ${HMAC_BASE}/data:/data:rw,z
+
+# Option 3: Set SELinux boolean (system-wide change)
+sudo setsebool -P container_manage_cgroup on
+
+# Option 4: Manual context setting
+sudo semanage fcontext -a -t container_file_t "${HMAC_BASE}(/.*)?"
+sudo restorecon -R ${HMAC_BASE}
+```
+
+#### **Common Error: User Namespace Issues**
+```bash
+# Error starting container
+Error: can't stat ${HMAC_BASE}/data: permission denied
+```
+
+**Root Cause**: User namespace mapping issues in rootless mode
+
+**Solution**:
+```bash
+# Check user namespace configuration
+cat /etc/subuid /etc/subgid | grep $USER
+
+# If missing, add mappings (requires root)
+sudo usermod --add-subuids 1000-65536 $USER
+sudo usermod --add-subgids 1000-65536 $USER
+
+# Restart user services
+systemctl --user restart podman
+
+# Use podman unshare for ownership
+podman unshare chown -R 1011:1011 ${HMAC_BASE}
+```
+
+#### **Verification & Testing Commands**
+
+```bash
+# Test 1: Verify container can access all paths
+podman exec hmac-file-server sh -c '
+  echo "=== Container User ==="
+  id
+  echo "=== Directory Access ==="
+  ls -la /app /data /deduplication /logs
+  echo "=== Write Test ==="
+  touch /data/write-test && echo "✅ Data write: OK" || echo "❌ Data write: FAILED"
+  touch /deduplication/dedup-test && echo "✅ Dedup write: OK" || echo "❌ Dedup write: FAILED"  
+  touch /logs/log-test && echo "✅ Log write: OK" || echo "❌ Log write: FAILED"
+  echo "=== Config Read Test ==="
+  head -3 /app/config.toml && echo "✅ Config read: OK" || echo "❌ Config read: FAILED"
+'
+
+# Test 2: External health check
+curl -f http://localhost:8888/health && echo "✅ HTTP Health: OK" || echo "❌ HTTP Health: FAILED"
+
+# Test 3: Metrics endpoint
+curl -s http://localhost:9090/metrics | grep -E "hmac_|go_|process_" | wc -l
+# Should return > 0 if metrics are working
+
+# Test 4: File upload simulation (requires auth)
+curl -X POST http://localhost:8888/upload \
+  -H "Authorization: Bearer your-token" \
+  -F "file=@test-file.txt" && echo "✅ Upload: OK" || echo "❌ Upload: FAILED"
+```
+
+#### **Advanced: Custom UID/GID Mapping**
+
+If you need different UIDs (e.g., for existing file ownership):
+
+```bash
+# Option 1: Rebuild container with custom UID
+podman build -t localhost/hmac-file-server:custom \
+  --build-arg USER_UID=1500 \
+  --build-arg USER_GID=1500 \
+  -f dockerenv/podman/Dockerfile.podman .
+
+# Option 2: Use --user flag (may have limitations)
+podman run --user 1500:1500 [other options] localhost/hmac-file-server:latest
+
+# Option 3: Host ownership adjustment
+sudo chown -R 1500:1500 ${HMAC_BASE}
+```
+
+#### **Docker vs Podman Ownership Differences**
+
+| Scenario | Docker | Podman Rootless | Podman Rootful |
+|----------|--------|-----------------|----------------|
+| **Host UID** | 1011:1011 | 1011:1011 | 1011:1011 |
+| **Container UID** | 1011:1011 | 1011:1011 | 1011:1011 |
+| **Volume Ownership** | `chown 1011:1011` | `podman unshare chown 1011:1011` | `chown 1011:1011` |
+| **SELinux Labels** | `:Z` or `:z` | `:Z` or `:z` | `:Z` or `:z` |
+
+### Podman Deployment Script Features
+
+The `deploy-podman.sh` script provides complete automation:
+
+- **✅ Interactive deployment** with colored output
+- **✅ Auto-generates secure configuration** with random HMAC/JWT secrets
+- **✅ Security-hardened settings**: `--cap-drop=ALL`, `--read-only`, `--no-new-privileges`
+- **✅ Pod management** for XMPP integration
+- **✅ Health monitoring** and status reporting
+- **✅ Environment variable support** for customization
+
+### Podman Commands Reference
+
+```bash
+# Build image
+podman build -t localhost/hmac-file-server:latest -f dockerenv/podman/Dockerfile.podman .
+
+# Run with basic settings
+podman run -d --name hmac-file-server \
+    -p 8888:8888 \
+    -v ./config.toml:/app/config.toml:ro \
+    -v ./data:/data:rw \
+    localhost/hmac-file-server:latest -config /app/config.toml
+
+# Create and manage pods for XMPP integration
+podman pod create --name xmpp-services -p 8888:8888 -p 9090:9090
+podman run -d --pod xmpp-services --name hmac-file-server localhost/hmac-file-server:latest
+
+# View logs and status
+podman logs hmac-file-server
+podman ps -a
+podman pod ps
+
+# Health check
+podman healthcheck run hmac-file-server
+
+# Stop and cleanup
+podman stop hmac-file-server
+podman rm hmac-file-server
+```
+
+### Podman Systemd Integration
+
+#### User Service (Rootless - Recommended)
+```bash
+# Copy service file
+cp dockerenv/podman/hmac-file-server.service ~/.config/systemd/user/
+
+# Enable and start
+systemctl --user daemon-reload
+systemctl --user enable hmac-file-server.service
+systemctl --user start hmac-file-server.service
+
+# Check status
+systemctl --user status hmac-file-server.service
+```
+
+#### System Service (Root)
+```bash
+# Copy service file
+sudo cp dockerenv/podman/hmac-file-server.service /etc/systemd/system/
+
+# Enable and start
+sudo systemctl daemon-reload
+sudo systemctl enable hmac-file-server.service
+sudo systemctl start hmac-file-server.service
+```
+
+### Podman with XMPP Integration
+
+```bash
+# Complete XMPP + HMAC File Server pod setup
+podman pod create --name xmpp-pod \
+    --publish 5222:5222 \
+    --publish 5269:5269 \
+    --publish 5443:5443 \
+    --publish 8888:8888
+
+# Run Prosody XMPP server
+podman run -d --pod xmpp-pod --name prosody \
+    -v ./prosody/config:/etc/prosody:ro \
+    -v ./prosody/data:/var/lib/prosody:rw \
+    docker.io/prosody/prosody:latest
+
+# Run HMAC File Server
+podman run -d --pod xmpp-pod --name hmac-file-server \
+    -v ./hmac/config.toml:/app/config.toml:ro \
+    -v ./hmac/data:/data:rw \
+    localhost/hmac-file-server:latest -config /app/config.toml
+
+# Check pod status
+podman pod ps
+podman ps --pod
+```
+
+### Deployment Script Commands
+
+```bash
+# Management commands
+./deploy-podman.sh deploy    # Full deployment (default)
+./deploy-podman.sh start     # Start services
+./deploy-podman.sh stop      # Stop all services
+./deploy-podman.sh restart   # Restart services
+./deploy-podman.sh status    # Show service status
+./deploy-podman.sh logs      # Show container logs
+./deploy-podman.sh config    # Show configuration
+./deploy-podman.sh build     # Build container image only
+./deploy-podman.sh pod       # Create pod only
+./deploy-podman.sh clean     # Remove containers and image
+./deploy-podman.sh help      # Show help
+
+# Environment variables
+export APP_DATA="/custom/path/hmac-file-server"
+export LISTEN_PORT="9999"
+export METRICS_PORT="9998"
+./deploy-podman.sh
+```
+
+### Podman Security Features
+
+#### Container Security
+- **Rootless operation**: Runs as non-root user (UID 1011)
+- **Capability dropping**: `--cap-drop=ALL`
+- **No new privileges**: `--security-opt no-new-privileges`
+- **Read-only filesystem**: `--read-only` with tmpfs for /tmp
+- **SELinux labels**: Volume mounts with `:Z` labels
+
+#### Network Security
+- **Pod isolation**: Containers run in isolated pods
+- **Port binding**: Only necessary ports exposed
+- **Health monitoring**: Built-in health checks
+
+### Troubleshooting Podman
+
+#### Common Issues
+
+**Permission Errors:**
+```bash
+# Fix SELinux contexts
+restorecon -R /opt/podman/hmac-file-server
+
+# Check volume permissions
+podman unshare ls -la /opt/podman/hmac-file-server
+```
+
+**Container Won't Start:**
+```bash
+# Check image exists
+podman images | grep hmac-file-server
+
+# Validate configuration
+./deploy-podman.sh config
+
+# Debug with interactive container
+podman run -it --rm localhost/hmac-file-server:latest /bin/sh
+```
+
+**Network Issues:**
+```bash
+# Check pod networking
+podman pod ps
+podman port hmac-file-server
+
+# Test connectivity
+nc -zv localhost 8888
+```
 
 ---
 

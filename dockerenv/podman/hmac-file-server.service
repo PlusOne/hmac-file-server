@@ -1,0 +1,55 @@
+# HMAC File Server - Podman Systemd Service
+# Place this file at: ~/.config/systemd/user/hmac-file-server.service
+# For system-wide: /etc/systemd/system/hmac-file-server.service
+
+[Unit]
+Description=HMAC File Server 3.2 "Tremora del Terra" (Podman)
+Documentation=https://github.com/PlusOne/hmac-file-server
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=%t/containers
+
+[Service]
+Type=notify
+NotifyAccess=all
+Environment=PODMAN_SYSTEMD_UNIT=%n
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=70
+
+# Main container execution
+ExecStart=/usr/bin/podman run \
+    --cidfile=%t/%n.ctr-id \
+    --cgroups=no-conmon \
+    --rm \
+    --sdnotify=conmon \
+    --replace \
+    --name hmac-file-server \
+    --user 1011:1011 \
+    --cap-drop=ALL \
+    --security-opt no-new-privileges \
+    --read-only \
+    --tmpfs /tmp:rw,noexec,nosuid,size=100m \
+    --publish 8888:8888 \
+    --publish 9090:9090 \
+    --volume /opt/podman/hmac-file-server/config/config.toml:/app/config.toml:ro,Z \
+    --volume /opt/podman/hmac-file-server/data:/data:rw,Z \
+    --volume /opt/podman/hmac-file-server/deduplication:/deduplication:rw,Z \
+    --volume /opt/podman/hmac-file-server/logs:/logs:rw,Z \
+    --health-cmd="curl -f http://localhost:8888/health || exit 1" \
+    --health-interval=30s \
+    --health-timeout=10s \
+    --health-retries=3 \
+    --health-start-period=40s \
+    localhost/hmac-file-server:latest -config /app/config.toml
+
+# Stop and cleanup
+ExecStop=/usr/bin/podman stop --ignore --cidfile=%t/%n.ctr-id
+ExecStopPost=/usr/bin/podman rm -f --ignore --cidfile=%t/%n.ctr-id
+
+# Reload configuration
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=default.target
+# For system-wide installation, use: WantedBy=multi-user.target

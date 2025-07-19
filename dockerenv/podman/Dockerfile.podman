@@ -1,0 +1,71 @@
+# Dockerfile.podman - Optimized for Podman deployment
+# HMAC File Server 3.2 "Tremora del Terra" - Podman Edition
+
+FROM docker.io/golang:1.24-alpine AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Copy source code
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Build static binary optimized for containers
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-w -s -extldflags '-static'" \
+    -a -installsuffix cgo \
+    -o hmac-file-server ./cmd/server/
+
+# Production stage - Alpine for better compatibility and security
+FROM alpine:latest
+
+# Install runtime dependencies and create user
+RUN apk add --no-cache \
+    ca-certificates \
+    tzdata \
+    curl \
+    shadow \
+    && adduser -D -s /bin/sh -u 1011 appuser \
+    && rm -rf /var/cache/apk/*
+
+# Create application directories with proper ownership
+RUN mkdir -p /app /data /deduplication /iso /logs /tmp && \
+    chown -R appuser:appuser /app /data /deduplication /iso /logs /tmp && \
+    chmod 755 /app /data /deduplication /iso /logs && \
+    chmod 1777 /tmp
+
+# Copy binary from builder stage
+COPY --from=builder /build/hmac-file-server /app/hmac-file-server
+
+# Set proper permissions on binary
+RUN chmod +x /app/hmac-file-server && \
+    chown appuser:appuser /app/hmac-file-server
+
+# Switch to non-root user for security
+USER appuser
+
+# Set working directory
+WORKDIR /app
+
+# Add labels for better container management
+LABEL org.opencontainers.image.title="HMAC File Server" \
+      org.opencontainers.image.description="Secure file server with XEP-0363 support" \
+      org.opencontainers.image.version="3.2" \
+      org.opencontainers.image.vendor="PlusOne" \
+      org.opencontainers.image.source="https://github.com/PlusOne/hmac-file-server" \
+      org.opencontainers.image.licenses="MIT"
+
+# Health check for container orchestration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8888/health || exit 1
+
+# Expose default port (configurable via config)
+EXPOSE 8888
+
+# Use exec form for proper signal handling
+ENTRYPOINT ["/app/hmac-file-server"]
+CMD ["-config", "/app/config.toml"]
