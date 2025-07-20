@@ -1,0 +1,22 @@
+# Podman Compose Configuration for HMAC File Server
+# Version: 3.2.1 - Podman optimized
+
+services:
+  hmac-file-server:
+    container_name: hmac-file-server
+    image: hmac-file-server:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./config:/etc/hmac-file-server:Z
+      - ./data/uploads:/opt/hmac-file-server/data/uploads:Z
+      - ./data/duplicates:/opt/hmac-file-server/data/duplicates:Z
+      - ./data/temp:/opt/hmac-file-server/data/temp:Z
+      - ./data/logs:/opt/hmac-file-server/data/logs:Z
+    environment:
+      - CONFIG_PATH=/etc/hmac-file-server/config.toml
+    restart: unless-stopped
+    security_opt:
+      - label=disable
+    # Podman specific optimizations
+    userns_mode: "keep-id"

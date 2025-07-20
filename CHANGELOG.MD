@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 ### Added (3.2.1)
 - ✨ **Comprehensive Test Suite**: Consolidated all scattered test scripts into single `/tests/comprehensive_test_suite.sh` with 8 comprehensive test scenarios
 - ✨ **Auto-Detection Testing**: Test suite automatically detects local vs remote server endpoints
+- ✨ **Enhanced Container Builder**: Extended `builddocker.sh` with universal Docker & Podman support, auto-detection, and dedicated Podman compose file
 - ✨ **Project Structure Cleanup**: Removed 10+ redundant files, organized all tests in `/tests/` directory
 - ✨ **Universal Installation Documentation**: Enhanced README.md with complete installation framework and testing information
 

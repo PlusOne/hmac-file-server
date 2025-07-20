@@ -104,6 +104,30 @@ HMAC File Server 3.2 includes a comprehensive installation framework that suppor
 ./test clean    # Clean up test files
 ```
 
+### 🐳 **Enhanced Container Build Script**
+```bash
+# Universal container builder - auto-detects Docker & Podman
+./builddocker.sh
+
+# Use specific container engine
+./builddocker.sh docker          # Force Docker usage
+./builddocker.sh podman          # Force Podman usage
+
+# Build only (no services start)
+./builddocker.sh docker --build-only
+./builddocker.sh podman --build-only
+
+# Show usage help
+./builddocker.sh --help
+```
+
+**Features:**
+- ✅ **Auto-Detection**: Automatically finds available container engines (Docker/Podman)
+- ✅ **Engine Selection**: Interactive menu for multiple engines or force specific engine
+- ✅ **Compose Support**: Uses appropriate compose files (docker-compose.yml / podman-compose.yml)
+- ✅ **Podman Optimized**: SELinux labels, rootless support, security optimizations
+- ✅ **Build & Deploy**: Combined build and optional service startup in one command
+
 **Test Coverage:**
 - ✅ HMAC Authentication & File Upload Validation
 - ✅ XMPP Integration (MP4 uploads for Conversations/Gajim)
