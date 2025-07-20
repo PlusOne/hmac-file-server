@@ -4,6 +4,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.2.1] - Bug Fix Release - 2025-07-20
+
+### Fixed (3.2.1)
+- 🐛 **CRITICAL: Configuration Loading Regression**: Fixed TOML key mismatch where `allowedextensions` in config didn't map to `allowed_extensions` struct tag, causing server to use hardcoded default extensions instead of config file settings
+- 🐛 **XMPP File Upload Failure**: Resolved 400 "File extension .mp4 not allowed" errors for XMPP clients (Conversations, Gajim) - MP4 uploads now work correctly
+- 🐛 **Network Resilience Configuration**: Fixed configuration loading issues introduced with network resilience features that prevented proper extension validation
+- 🐛 **Mobile Network Switching**: Ensured seamless WLAN ↔ IPv6 5G switching functionality works correctly with proper configuration loading
+
+### Added (3.2.1)
+- ✨ **Comprehensive Test Suite**: Consolidated all scattered test scripts into single `/tests/comprehensive_test_suite.sh` with 8 comprehensive test scenarios
+- ✨ **Auto-Detection Testing**: Test suite automatically detects local vs remote server endpoints
+- ✨ **Project Structure Cleanup**: Removed 10+ redundant files, organized all tests in `/tests/` directory
+- ✨ **Universal Installation Documentation**: Enhanced README.md with complete installation framework and testing information
+
+### Changed (3.2.1)
+- 🔄 **Root Directory Organization**: Cleaned up project root by consolidating documentation and removing backup files
+- 🔄 **Test Accessibility**: Added convenient `./test` and `./quick-test` symlinks for easy testing
+- 🔄 **Documentation Consolidation**: Merged installation framework and release notes into main README.md
+
+### Validated (3.2.1)
+- ✅ **XMPP Integration**: MP4 uploads working for Conversations and Gajim clients
+- ✅ **Network Resilience**: 1-second mobile network detection functional
+- ✅ **Large File Support**: 1MB+ file uploads working with proper extensions
+- ✅ **Security Testing**: Invalid HMAC and unsupported extensions correctly rejected
+- ✅ **Multi-Architecture**: SystemD, Docker, and Podman deployments verified
+
 ## [3.2] - Stable Release - 2025-06-13
 
 ### Added (3.2)

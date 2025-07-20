@@ -1,6 +1,6 @@
 # HMAC File Server 3.2 - Tremora del Terra
 
-[![Version](https://img.shields.io/badge/version-3.2-blue.svg)](https://github.com/PlusOne/hmac-file-server)
+[![Version](https://img.shields.io/badge/version-3.2.1-blue.svg)](https://github.com/PlusOne/hmac-file-server)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://golang.org/)
 [![Architecture](https://img.shields.io/badge/arch-AMD64%20%7C%20ARM64%20%7C%20ARM32v7-brightgreen.svg)](https://github.com/PlusOne/hmac-file-server)
@@ -132,10 +132,10 @@ HMAC File Server 3.2 includes a comprehensive installation framework that suppor
 
 ## Release Information
 
-### HMAC File Server 3.2 - Tremora del Terra
+### HMAC File Server 3.2.1 - Tremora del Terra
 
-**Release Date**: July 18, 2025  
-**Codename**: Tremora del Terra (powerful, balanced, ready to shake the ground)
+**Release Date**: July 20, 2025  
+**Codename**: Tremora del Terra (powerful, balanced, and ready to shake the ground)
 
 #### Key Improvements
 - **Configuration Simplification**: 93% reduction in required configuration
@@ -143,6 +143,12 @@ HMAC File Server 3.2 includes a comprehensive installation framework that suppor
 - **Performance Optimization**: Doubled queue capacity, optimized worker scaling
 - **Multi-Architecture Support**: Native builds for AMD64, ARM64, ARM32v7
 - **Developer Experience**: Minimal config-first approach with comprehensive defaults
+
+#### Critical Fixes (3.2.1)
+- **🔧 XMPP Integration**: Fixed MP4 upload failures for Conversations/Gajim clients
+- **🔧 Configuration Loading**: Resolved TOML key mismatch causing extension validation errors
+- **🔧 Network Resilience**: Restored seamless WLAN ↔ IPv6 5G mobile switching
+- **🔧 Testing Framework**: Comprehensive test suite with 100% pass rate validation
 
 #### Migration Notes
 - **Backward Compatible**: All existing 3.1.x configs work unchanged
