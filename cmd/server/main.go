@@ -553,6 +553,7 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 	conf = *loadedConfig
+	configFileGlobal = configFile  // Store for validation helper functions
 	log.Info("Configuration loaded successfully.")
 
 	err = validateConfig(&conf)
@@ -1869,6 +1870,8 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 	activeConnections.Inc()
 	defer activeConnections.Dec()
 
+	log.Infof("🔥 DEBUG: handleLegacyUpload called - method:%s path:%s query:%s", r.Method, r.URL.Path, r.URL.RawQuery)
+
 	log.Debugf("handleLegacyUpload: Processing request to %s with query: %s", r.URL.Path, r.URL.RawQuery)
 
 	// Only allow PUT method for legacy uploads
@@ -1886,29 +1889,40 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Debugf("✅ HMAC validation passed for: %s", r.URL.Path)
+
 	// Extract filename from the URL path
 	fileStorePath := strings.TrimPrefix(r.URL.Path, "/")
 	if fileStorePath == "" {
+		log.Debugf("❌ No filename specified")
 		http.Error(w, "No filename specified", http.StatusBadRequest)
 		uploadErrorsTotal.Inc()
 		return
 	}
 
+	log.Debugf("✅ File path extracted: %s", fileStorePath)
+
 	// Validate file extension if configured
 	if len(conf.Uploads.AllowedExtensions) > 0 {
 		ext := strings.ToLower(filepath.Ext(fileStorePath))
+		log.Infof("� DEBUG: Checking file extension: %s against %d allowed extensions", ext, len(conf.Uploads.AllowedExtensions))
+		log.Infof("� DEBUG: Allowed extensions: %v", conf.Uploads.AllowedExtensions)
 		allowed := false
-		for _, allowedExt := range conf.Uploads.AllowedExtensions {
+		for i, allowedExt := range conf.Uploads.AllowedExtensions {
+			log.Infof("� DEBUG: [%d] Comparing '%s' == '%s'", i, ext, allowedExt)
 			if ext == allowedExt {
 				allowed = true
+				log.Infof("🔥 DEBUG: Extension match found!")
 				break
 			}
 		}
 		if !allowed {
+			log.Infof("🔥 DEBUG: Extension %s not found in allowed list", ext)
 			http.Error(w, fmt.Sprintf("File extension %s not allowed", ext), http.StatusBadRequest)
 			uploadErrorsTotal.Inc()
 			return
 		}
+		log.Infof("🔥 DEBUG: File extension %s is allowed", ext)
 	}
 
 	// Validate file size against max_upload_size if configured

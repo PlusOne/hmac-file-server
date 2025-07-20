@@ -65,6 +65,54 @@ chmod +x hmac-file-server-linux-amd64
 
 ---
 
+## Universal Installation Manager
+
+HMAC File Server 3.2 includes a comprehensive installation framework that supports all deployment methods:
+
+### 🚀 **Automated Installation (All Methods)**
+```bash
+# Interactive menu - choose your deployment method
+./install-manager.sh
+
+# Direct method selection
+./install-manager.sh systemd    # Native SystemD installation
+./install-manager.sh docker     # Docker deployment  
+./install-manager.sh podman     # Podman deployment
+./install-manager.sh debian     # Debian package
+
+# Test all installation methods
+./install-manager.sh --test
+```
+
+### ✅ **Supported Deployment Methods**
+- **✅ SystemD**: Native installation with service integration
+- **✅ Docker**: Full containerized deployment with compose files  
+- **✅ Podman**: Rootless container deployment (tested & verified)
+- **✅ Debian**: Package-based installation with dependency management
+- **✅ Multi-Architecture**: AMD64, ARM64, ARM32v7 support for all methods
+
+### 🧪 **Comprehensive Testing Suite**
+```bash
+# Run all functionality tests
+./test
+
+# Quick validation test
+./quick-test
+
+# Test specific components
+./test setup    # Setup test files only
+./test clean    # Clean up test files
+```
+
+**Test Coverage:**
+- ✅ HMAC Authentication & File Upload Validation
+- ✅ XMPP Integration (MP4 uploads for Conversations/Gajim)
+- ✅ Network Resilience & Mobile Switching Features  
+- ✅ Large File Support & Extension Validation
+- ✅ Security Testing (Invalid HMAC rejection)
+
+---
+
 ## Table of Contents
 
 - [Release Information](#release-information)
@@ -243,6 +291,38 @@ file = "/var/log/hmac-file-server.log"
 ./hmac-file-server -check-performance -config config.toml
 ```
 
+### ⚠️ Configuration Troubleshooting
+
+**Common Issue**: Service fails with `storage path is required` or `permission denied`
+
+```bash
+# ❌ WRONG - Field names without underscores
+[server]
+storagepath = "/opt/hmac-file-server/data/uploads"
+listenport = "8080"
+
+# ✅ CORRECT - Use underscores in TOML field names  
+[server]
+storage_path = "/opt/hmac-file-server/data/uploads"
+listen_address = "8080"
+```
+
+**Quick Fix Commands:**
+```bash
+# Test configuration
+./hmac-file-server --validate-config
+
+# Auto-fix common field names (creates backup)
+./fix-config.sh config.toml
+
+# Manual fix for common field names
+sed -i 's/storagepath/storage_path/g' config.toml
+sed -i 's/listenport/listen_address/g' config.toml
+
+# Check permissions
+ls -la $(dirname "$(grep storage_path config.toml | cut -d'"' -f2)")
+```
+
 ---
 
 ## Configuration Documentation
@@ -256,7 +336,7 @@ listen_address = "8080"                    # Port to listen on (string: "8080", 
 bind_ip = ""                               # IP to bind to (empty = all interfaces)
 
 # Storage and file handling
-storage_path = "./uploads"                 # Directory for uploaded files
+storage_path = "./uploads"                 # Directory for uploaded files (use absolute paths in production)
 max_upload_size = "10GB"                   # Maximum file size (supports B, KB, MB, GB, TB)
 max_header_bytes = 1048576                 # HTTP header size limit (1MB default)
 file_naming = "original"                   # File naming: "original" or "HMAC"

@@ -1,0 +1,7 @@
+[server]
+listen_address = "8080"
+storage_path = "/tmp/test-uploads"
+metrics_enabled = true
+
+[security]
+secret = "test-secret-key"

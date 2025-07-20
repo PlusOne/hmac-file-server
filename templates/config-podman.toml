@@ -1,0 +1,74 @@
+# HMAC File Server 3.2 "Tremora del Terra" Configuration
+# Generated for: Podman deployment
+# Generated on: Sun Jul 20 04:02:30 PM UTC 2025
+
+[server]
+listen_address = "8080"
+storage_path = "/opt/hmac-file-server/data/uploads"
+metrics_enabled = true
+metrics_port = "9090"
+pid_file = "/opt/hmac-file-server/data/hmac-file-server.pid"
+max_upload_size = "10GB"
+deduplication_enabled = true
+min_free_bytes = "1GB"
+file_naming = "original"
+enable_dynamic_workers = true
+
+[security]
+secret = "CHANGE-THIS-SECRET-KEY-MINIMUM-32-CHARACTERS"
+enablejwt = false
+
+[uploads]
+allowedextensions = [".txt", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".zip", ".tar", ".gz", ".7z", ".mp4", ".webm", ".ogg", ".mp3", ".wav", ".flac", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp"]
+maxfilesize = "100MB"
+chunkeduploadsenabled = true
+chunksize = "10MB"
+networkevents = true
+
+# Network Resilience for Enhanced Mobile Support
+[network_resilience]
+enabled = true
+fast_detection = false                  # Standard detection for server deployment
+quality_monitoring = true              # Enable quality monitoring
+predictive_switching = false           # Conservative switching for servers
+mobile_optimizations = false           # Standard thresholds for server environment
+upload_resilience = true               # Resume uploads across network changes
+detection_interval = "5s"              # Standard detection interval
+quality_check_interval = "10s"         # Regular quality monitoring
+network_change_threshold = 3           # Switches required to trigger network change
+interface_stability_time = "30s"       # Server-appropriate stability time
+upload_pause_timeout = "5m"           # Standard upload pause timeout
+upload_retry_timeout = "10m"          # Standard retry timeout
+rtt_warning_threshold = "200ms"        # Server network warning threshold
+rtt_critical_threshold = "1000ms"      # Server network critical threshold
+packet_loss_warning_threshold = 2.0    # 2% packet loss warning
+packet_loss_critical_threshold = 10.0  # 10% packet loss critical
+
+[downloads]
+chunkeddownloadsenabled = true
+chunksize = "10MB"
+
+[logging]
+level = "INFO"
+file = "/opt/hmac-file-server/data/logs/hmac-file-server.log"
+max_size = 100
+max_backups = 3
+max_age = 30
+compress = true
+
+[workers]
+numworkers = 10
+uploadqueuesize = 1000
+autoscaling = true
+
+[timeouts]
+readtimeout = "30s"
+writetimeout = "30s"
+idletimeout = "120s"
+shutdown = "30s"
+
+[clamav]
+enabled = false
+
+[redis]
+enabled = false

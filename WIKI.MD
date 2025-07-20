@@ -593,6 +593,108 @@ uploadqueuesize = 50         # Size of upload queue
 
 ---
 
+## Configuration Troubleshooting
+
+### Common Configuration Issues
+
+#### ❌ **Field Name Errors**
+
+**Problem**: Service fails to start with `storage path is required` or defaults to `./uploads`
+
+```bash
+# ❌ WRONG - Missing underscore
+[server]
+storagepath = "/opt/hmac-file-server/data/uploads"
+
+# ✅ CORRECT - Use underscores in field names
+[server]
+storage_path = "/opt/hmac-file-server/data/uploads"
+```
+
+**Common Field Name Corrections:**
+- `storagepath` → `storage_path`
+- `listenport` → `listen_address`
+- `bindip` → `bind_ip`
+- `pidfilepath` → `pid_file`
+- `metricsenabled` → `metrics_enabled`
+
+#### ❌ **Path & Permission Issues**
+
+**Problem**: `directory is not writable: permission denied`
+
+```bash
+# Check directory ownership
+ls -la /opt/hmac-file-server/data/
+
+# Fix ownership for systemd service
+sudo chown -R hmac-file-server:hmac-file-server /opt/hmac-file-server/data/
+sudo chmod 750 /opt/hmac-file-server/data/uploads
+```
+
+#### ❌ **Network Resilience Not Working**
+
+**Problem**: Network events not detected, uploads don't resume after network changes
+
+```toml
+# ✅ Enable network events in uploads section
+[uploads]
+networkevents = true  # This enables the feature
+
+# ✅ Add network resilience configuration
+[network_resilience]
+enabled = true
+quality_monitoring = true
+upload_resilience = true
+```
+
+#### ❌ **Service Fails with Read-Only File System**
+
+**Problem**: `open uploads/.write_test: read-only file system`
+
+**Cause**: Conflicting local directories or systemd restrictions
+
+```bash
+# Remove conflicting directories
+sudo rm -rf /opt/hmac-file-server/uploads
+
+# Use absolute paths in configuration
+[server]
+storage_path = "/opt/hmac-file-server/data/uploads"  # Absolute path
+```
+
+### 🛠️ **Quick Diagnostic Commands**
+
+```bash
+# 1. Auto-fix common field naming issues (recommended)
+./fix-config.sh config.toml
+
+# 2. Validate configuration syntax
+./hmac-file-server --validate-config
+
+# 3. Check service logs for errors
+journalctl -u hmac-file-server.service -f
+
+# 4. Test configuration manually
+sudo -u hmac-file-server ./hmac-file-server -config config.toml --validate-config
+
+# 5. Check directory permissions
+ls -la /opt/hmac-file-server/data/
+stat /opt/hmac-file-server/data/uploads
+```
+
+### 📋 **Configuration Checklist**
+
+Before starting the service, verify:
+
+- ✅ All field names use underscores (`storage_path`, not `storagepath`)
+- ✅ Absolute paths for all directories
+- ✅ Correct user ownership (`hmac-file-server:hmac-file-server`)
+- ✅ Proper directory permissions (750 for data directories)
+- ✅ No conflicting local directories in working directory
+- ✅ Network events enabled if using network resilience
+
+---
+
 ## Configuration Validation
 
 The HMAC File Server v3.2 includes a comprehensive configuration validation system with specialized command-line flags for different validation scenarios.

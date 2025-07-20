@@ -680,6 +680,16 @@ EOF
     chmod 640 "$CONFIG_DIR/config.toml"
     
     echo -e "${GREEN}Configuration file created: $CONFIG_DIR/config.toml${NC}"
+    
+    # Validate the generated configuration
+    echo -e "${YELLOW}Validating configuration...${NC}"
+    if command -v "$INSTALL_DIR/hmac-file-server" >/dev/null 2>&1; then
+        if sudo -u "$HMAC_USER" "$INSTALL_DIR/hmac-file-server" -config "$CONFIG_DIR/config.toml" --validate-config >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ Configuration validation passed${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Configuration has warnings - check with: sudo -u $HMAC_USER $INSTALL_DIR/hmac-file-server -config $CONFIG_DIR/config.toml --validate-config${NC}"
+        fi
+    fi
 }
 
 # Create Docker deployment

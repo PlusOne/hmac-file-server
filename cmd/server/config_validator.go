@@ -14,6 +14,9 @@ import (
 	"time"
 )
 
+// Global variable to store config file path for validation
+var configFileGlobal string
+
 // ConfigValidationError represents a configuration validation error
 type ConfigValidationError struct {
 	Field   string
@@ -88,6 +91,14 @@ func ValidateConfigComprehensive(c *Config) *ConfigValidationResult {
 		checkDiskSpace(c.Deduplication.Directory, result)
 	}
 
+	// Check for common configuration field naming mistakes
+	// This helps users identify issues like 'storagepath' vs 'storage_path'
+	if configFileGlobal != "" {
+		if configBytes, err := os.ReadFile(configFileGlobal); err == nil {
+			checkCommonConfigurationMistakes(result, configBytes)
+		}
+	}
+
 	return result
 }
 
@@ -111,7 +122,7 @@ func validateServerConfig(server *ServerConfig, result *ConfigValidationResult) 
 
 	// StoragePath validation
 	if server.StoragePath == "" {
-		result.AddError("server.storagepath", server.StoragePath, "storage path is required")
+		result.AddError("server.storagepath", server.StoragePath, "storage path is required - check your config.toml uses 'storage_path' (with underscore) not 'storagepath'")
 	} else {
 		if err := validateDirectoryPath(server.StoragePath, true); err != nil {
 			result.AddError("server.storagepath", server.StoragePath, err.Error())
@@ -1128,4 +1139,30 @@ func countPassedChecks(result *ConfigValidationResult) int {
 	// Rough estimate: total possible checks minus errors and warnings
 	totalPossibleChecks := 50 // Approximate number of validation checks
 	return totalPossibleChecks - len(result.Errors) - len(result.Warnings)
+}
+
+// checkCommonConfigurationMistakes checks for common TOML field naming errors
+func checkCommonConfigurationMistakes(result *ConfigValidationResult, configBytes []byte) {
+	configStr := string(configBytes)
+	
+	// Common field naming mistakes
+	commonMistakes := map[string]string{
+		"storagepath":      "storage_path",
+		"listenport":       "listen_address", 
+		"bindip":           "bind_ip",
+		"pidfilepath":      "pid_file",
+		"metricsenabled":   "metrics_enabled",
+		"metricsport":      "metrics_port",
+		"maxuploadsize":    "max_upload_size",
+		"cleanupinterval":  "cleanup_interval",
+		"dedupenabled":     "deduplication_enabled",
+		"ttlenabled":       "ttl_enabled",
+		"chunksize":        "chunk_size",
+	}
+	
+	for incorrect, correct := range commonMistakes {
+		if strings.Contains(configStr, incorrect+" =") || strings.Contains(configStr, incorrect+"=") {
+			result.AddWarning("config.syntax", incorrect, fmt.Sprintf("field name '%s' should be '%s' (use underscores)", incorrect, correct))
+		}
+	}
 }
