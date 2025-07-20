@@ -109,6 +109,84 @@ chmod +x hmac-file-server-linux-amd64
 
 ---
 
+## Mobile Network Resilience
+
+HMAC File Server 3.2 introduces enhanced network resilience specifically designed for mobile devices and network switching scenarios.
+
+### 📱 **Mobile Network Switching Support**
+
+#### **Scenario 1: WLAN ↔ IPv6 5G Switching**
+Perfect for mobile devices that switch between WiFi and cellular networks:
+
+```toml
+[server]
+networkevents = true                        # REQUIRED: Enable network monitoring
+
+[network_resilience] 
+fast_detection = true                       # 1-second detection vs 5-second default
+quality_monitoring = true                   # Monitor connection quality
+predictive_switching = true                 # Switch before network fails
+mobile_optimizations = true                # Cellular-friendly settings
+
+[uploads]
+session_recovery_timeout = "600s"           # 10-minute recovery window for IP changes
+client_reconnect_window = "300s"            # 5-minute reconnection window
+max_resumable_age = "72h"                   # Extended session retention
+max_upload_retries = 8                     # More retries for cellular
+
+[timeouts]
+readtimeout = "600s"                        # Extended for cellular latency
+writetimeout = "600s"                       # Handle cellular upload delays
+idletimeout = "1200s"                       # 20-minute tolerance
+```
+
+#### **Scenario 2: Dual-Connected Devices (Wired + WiFi)**
+For devices with multiple network interfaces:
+
+```toml
+[network_resilience]
+fast_detection = true                       # Quick interface change detection
+quality_monitoring = true                   # Monitor both connections
+predictive_switching = true                 # Use best available interface
+
+# System automatically selects best interface based on:
+# - RTT (latency)
+# - Packet loss percentage  
+# - Connection stability
+# - Interface priority (ethernet > wifi > cellular)
+```
+
+### **Benefits for Mobile Scenarios**
+
+| Feature | Standard Detection | Enhanced Mobile Detection |
+|---------|-------------------|---------------------------|
+| **Detection Speed** | 5 seconds | **1 second** |
+| **Network Quality** | Interface status only | **RTT + packet loss monitoring** |
+| **Switching Logic** | Reactive (after failure) | **Proactive (before failure)** |
+| **Mobile Tolerance** | Fixed thresholds | **Cellular-optimized thresholds** |
+| **Session Recovery** | 2-minute window | **10-minute window** |
+| **Upload Resumption** | Basic retry | **Smart retry with backoff** |
+
+### **Configuration Examples**
+
+**Ultra-Fast Mobile Detection**:
+```toml
+[network_resilience]
+detection_interval = "500ms"               # Sub-second detection
+quality_check_interval = "2s"             # Frequent quality checks
+mobile_optimizations = true               # Lenient cellular thresholds
+```
+
+**Conservative Stable Network**:
+```toml
+[network_resilience]
+detection_interval = "10s"                # Slower detection
+quality_monitoring = false                # Disable quality checks
+predictive_switching = false              # React only to hard failures
+```
+
+---
+
 ## Configuration Generation
 
 ### Generate Minimal Configuration
@@ -220,6 +298,16 @@ idle_conn_timeout = "90s"                  # Idle connection timeout
 disable_keep_alives = false                # Disable HTTP keep-alives
 client_timeout = "300s"                    # Client request timeout
 restart_grace_period = "60s"               # Grace period after restart
+
+# Enhanced Network Resilience (v3.2+)
+[network_resilience]
+fast_detection = true                       # Enable 1-second network change detection (vs 5-second default)
+quality_monitoring = true                   # Monitor RTT and packet loss per interface
+predictive_switching = true                 # Switch proactively before network failure
+mobile_optimizations = true                # Use mobile-friendly thresholds for cellular networks
+detection_interval = "1s"                  # Network change detection interval
+quality_check_interval = "5s"              # Connection quality monitoring interval
+max_detection_interval = "10s"             # Maximum detection interval during stable periods
 
 [uploads]
 # File upload configuration

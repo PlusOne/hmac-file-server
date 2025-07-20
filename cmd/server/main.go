@@ -223,22 +223,33 @@ type BuildConfig struct {
 	Version string `mapstructure:"version"` // Updated version
 }
 
+type NetworkResilienceConfig struct {
+	FastDetection        bool   `toml:"fast_detection" mapstructure:"fast_detection"`
+	QualityMonitoring    bool   `toml:"quality_monitoring" mapstructure:"quality_monitoring"`
+	PredictiveSwitching  bool   `toml:"predictive_switching" mapstructure:"predictive_switching"`
+	MobileOptimizations  bool   `toml:"mobile_optimizations" mapstructure:"mobile_optimizations"`
+	DetectionInterval    string `toml:"detection_interval" mapstructure:"detection_interval"`
+	QualityCheckInterval string `toml:"quality_check_interval" mapstructure:"quality_check_interval"`
+	MaxDetectionInterval string `toml:"max_detection_interval" mapstructure:"max_detection_interval"`
+}
+
 // This is the main Config struct to be used
 type Config struct {
-	Server        ServerConfig        `mapstructure:"server"`
-	Logging       LoggingConfig       `mapstructure:"logging"`
-	Deduplication DeduplicationConfig `mapstructure:"deduplication"` // Added
-	ISO           ISOConfig           `mapstructure:"iso"`           // Added
-	Timeouts      TimeoutConfig       `mapstructure:"timeouts"`      // Added
-	Security      SecurityConfig      `mapstructure:"security"`
-	Versioning    VersioningConfig    `mapstructure:"versioning"` // Added
-	Uploads       UploadsConfig       `mapstructure:"uploads"`
-	Downloads     DownloadsConfig     `mapstructure:"downloads"`
-	ClamAV        ClamAVConfig        `mapstructure:"clamav"`
-	Redis         RedisConfig         `mapstructure:"redis"`
-	Workers       WorkersConfig       `mapstructure:"workers"`
-	File          FileConfig          `mapstructure:"file"`
-	Build         BuildConfig         `mapstructure:"build"`
+	Server            ServerConfig             `mapstructure:"server"`
+	Logging           LoggingConfig            `mapstructure:"logging"`
+	Deduplication     DeduplicationConfig      `mapstructure:"deduplication"` // Added
+	ISO               ISOConfig                `mapstructure:"iso"`           // Added
+	Timeouts          TimeoutConfig            `mapstructure:"timeouts"`      // Added
+	Security          SecurityConfig           `mapstructure:"security"`
+	Versioning        VersioningConfig         `mapstructure:"versioning"` // Added
+	Uploads           UploadsConfig            `mapstructure:"uploads"`
+	Downloads         DownloadsConfig          `mapstructure:"downloads"`
+	ClamAV            ClamAVConfig             `mapstructure:"clamav"`
+	Redis             RedisConfig              `mapstructure:"redis"`
+	Workers           WorkersConfig            `mapstructure:"workers"`
+	File              FileConfig               `mapstructure:"file"`
+	Build             BuildConfig              `mapstructure:"build"`
+	NetworkResilience NetworkResilienceConfig  `mapstructure:"network_resilience"`
 }
 
 type UploadTask struct {
