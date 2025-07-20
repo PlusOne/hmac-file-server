@@ -38,9 +38,9 @@ ExecStart=/usr/bin/podman run \
     --volume /opt/podman/hmac-file-server/logs:/logs:rw,Z \
     --health-cmd="curl -f http://localhost:8888/health || exit 1" \
     --health-interval=30s \
-    --health-timeout=10s \
+    --health-timeout=15s \
     --health-retries=3 \
-    --health-start-period=40s \
+    --health-start-period=60s \
     localhost/hmac-file-server:latest -config /app/config.toml
 
 # Stop and cleanup

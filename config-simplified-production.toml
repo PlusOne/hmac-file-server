@@ -11,3 +11,12 @@ secret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
 [logging]
 level = "info"
 file = "/opt/hmac-file-server/data/logs/hmac-file-server.log"
+
+# Network resilience for production environments
+[uploads]
+networkevents = true
+
+[network_resilience]
+enabled = true
+quality_monitoring = true
+upload_resilience = true

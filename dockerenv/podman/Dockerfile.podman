@@ -29,13 +29,14 @@ RUN apk add --no-cache \
     tzdata \
     curl \
     shadow \
+    iputils \
     && adduser -D -s /bin/sh -u 1011 appuser \
     && rm -rf /var/cache/apk/*
 
-# Create application directories with proper ownership
+# Create application directories with proper ownership and secure permissions
 RUN mkdir -p /app /data /deduplication /iso /logs /tmp && \
     chown -R appuser:appuser /app /data /deduplication /iso /logs /tmp && \
-    chmod 755 /app /data /deduplication /iso /logs && \
+    chmod 750 /app /data /deduplication /iso /logs && \
     chmod 1777 /tmp
 
 # Copy binary from builder stage
@@ -59,8 +60,8 @@ LABEL org.opencontainers.image.title="HMAC File Server" \
       org.opencontainers.image.source="https://github.com/PlusOne/hmac-file-server" \
       org.opencontainers.image.licenses="MIT"
 
-# Health check for container orchestration
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+# Health check for container orchestration with network resilience awareness
+HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8888/health || exit 1
 
 # Expose default port (configurable via config)

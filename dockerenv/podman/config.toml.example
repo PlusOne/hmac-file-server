@@ -48,13 +48,22 @@ max_upload_retries = 3
 
 # Enhanced Network Resilience (NEW)
 [network_resilience]
+enabled = true
 fast_detection = true               # 1-second network change detection
 quality_monitoring = true           # Monitor RTT and packet loss
 predictive_switching = true         # Proactive network switching
 mobile_optimizations = true        # Mobile-friendly thresholds
+upload_resilience = true            # Resume uploads across network changes
 detection_interval = "1s"
 quality_check_interval = "5s"
-max_detection_interval = "10s"
+network_change_threshold = 3        # Switches required to trigger network change
+interface_stability_time = "10s"    # Mobile-appropriate stability time
+upload_pause_timeout = "10m"       # Mobile-friendly upload pause timeout
+upload_retry_timeout = "20m"       # Extended retry for mobile scenarios
+rtt_warning_threshold = "500ms"     # Cellular network warning threshold
+rtt_critical_threshold = "2000ms"   # Cellular network critical threshold
+packet_loss_warning_threshold = 5.0 # 5% packet loss warning
+packet_loss_critical_threshold = 15.0 # 15% packet loss critical
 
 [downloads]
 resumable_downloads_enabled = true

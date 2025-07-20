@@ -26,6 +26,26 @@ chunkeduploadsenabled = true
 chunksize = "32MB"
 resumableuploadsenabled = true
 maxresumableage = "48h"
+networkevents = true
+
+# Network Resilience Configuration (3.2 Enhanced Features)
+[network_resilience]
+enabled = true
+fast_detection = false                  # Standard 5-second detection
+quality_monitoring = false             # Basic monitoring only
+predictive_switching = false           # Wait for complete failure
+mobile_optimizations = false           # Standard network thresholds
+upload_resilience = true               # Resume uploads across network changes
+detection_interval = "5s"              # Standard detection interval
+quality_check_interval = "10s"         # Standard quality monitoring
+network_change_threshold = 3           # Switches required to trigger network change
+interface_stability_time = "30s"       # Time to wait before considering interface stable
+upload_pause_timeout = "5m"           # Standard upload pause timeout
+upload_retry_timeout = "10m"          # Standard retry timeout
+rtt_warning_threshold = "200ms"        # Standard RTT warning
+rtt_critical_threshold = "1000ms"      # Standard RTT critical
+packet_loss_warning_threshold = 2.0    # 2% packet loss warning
+packet_loss_critical_threshold = 10.0  # 10% packet loss critical
 
 [downloads]
 resumabledownloadsenabled = true

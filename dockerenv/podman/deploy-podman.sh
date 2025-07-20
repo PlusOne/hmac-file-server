@@ -94,6 +94,7 @@ worker_scale_down_thresh = 10
 deduplication_enabled = true
 min_free_bytes = "1GB"
 file_naming = "original"
+networkevents = true                # Enable network monitoring for resilience
 
 [uploads]
 # XMPP-compatible file extensions for maximum client support
@@ -112,6 +113,16 @@ client_reconnect_window = "120s"
 upload_slot_ttl = "3600s"
 retry_failed_uploads = true
 max_upload_retries = 3
+
+# Enhanced Network Resilience (NEW)
+[network_resilience]
+fast_detection = true               # 1-second network change detection
+quality_monitoring = true           # Monitor RTT and packet loss
+predictive_switching = true         # Proactive network switching
+mobile_optimizations = true        # Mobile-friendly thresholds
+detection_interval = "1s"
+quality_check_interval = "5s"
+max_detection_interval = "10s"
 
 [downloads]
 resumable_downloads_enabled = true

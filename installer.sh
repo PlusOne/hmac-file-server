@@ -64,6 +64,7 @@ show_help() {
     echo ""
     echo "New in 3.2 'Tremora del Terra':"
     echo "  - 93% Configuration Reduction: Simplified setup with intelligent defaults"
+    echo "  - Enhanced Network Resilience: Fast detection, quality monitoring, mobile optimization"
     echo "  - Enhanced Worker Scaling: Optimized 40%/10% thresholds"
     echo "  - Extended Timeouts: 4800s defaults for large file reliability"
     echo "  - Multi-Architecture Support: Native AMD64, ARM64, ARM32v7 builds"
@@ -91,7 +92,8 @@ echo -e "${BLUE}                     HMAC File Server 3.2 'Tremora del Terra' In
 echo -e "${BLUE}                           Professional XMPP Integration${NC}"
 echo ""
 echo -e "${YELLOW}--------------------------------------------------------------------------------${NC}"
-echo -e "${GREEN} 93% Config Reduction             Extended 4800s Timeouts${NC}"
+echo -e "${GREEN} 93% Config Reduction             Enhanced Network Resilience${NC}"
+echo -e "${GREEN} Fast Mobile Detection (1s)       Extended 4800s Timeouts${NC}"
 echo -e "${GREEN} Enhanced Worker Scaling (40/10)  Multi-Architecture Support${NC}"  
 echo -e "${GREEN} Prometheus Metrics Integration   ClamAV Virus Scanning${NC}"
 echo -e "${GREEN} Redis Cache & Session Management JWT & HMAC Authentication${NC}"
@@ -507,7 +509,7 @@ build_server() {
     
     # Build the server
     cd "$(dirname "$0")"
-    go build -o "$INSTALL_DIR/hmac-file-server" cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go
+    go build -o "$INSTALL_DIR/hmac-file-server" cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go cmd/server/network_resilience.go cmd/server/upload_session.go cmd/server/chunked_upload_handler.go
     
     # Set ownership and permissions
     chown "$HMAC_USER:$HMAC_USER" "$INSTALL_DIR/hmac-file-server"
@@ -543,6 +545,7 @@ max_file_age = "720h"
 enable_dynamic_workers = true
 worker_scale_up_thresh = 40
 worker_scale_down_thresh = 10
+networkevents = true
 
 # Caching and performance
 pre_cache = true
@@ -587,6 +590,14 @@ max_resumable_age = "48h"
 sessiontimeout = "60m"
 maxretries = 3
 
+# Upload resilience settings
+session_persistence = true
+session_recovery_timeout = "300s"
+client_reconnect_window = "120s"
+upload_slot_ttl = "3600s"
+retry_failed_uploads = true
+max_upload_retries = 3
+
 [downloads]
 chunked_downloads_enabled = true
 chunk_size = "10MB"
@@ -617,6 +628,16 @@ shutdown = "30s"
 
 [build]
 version = "3.2"
+
+# Enhanced Network Resilience (3.2+)
+[network_resilience]
+fast_detection = true
+quality_monitoring = true
+predictive_switching = true
+mobile_optimizations = true
+detection_interval = "1s"
+quality_check_interval = "5s"
+max_detection_interval = "10s"
 EOF
 
     if [[ $ENABLE_CLAMAV == "true" ]]; then
@@ -694,9 +715,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:$SERVER_PORT/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 15s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 EOF
 
     if [[ $ENABLE_REDIS == "true" ]]; then
@@ -747,11 +768,11 @@ COPY . .
 
 RUN apk add --no-cache git ca-certificates tzdata && \\
     go mod download && \\
-    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o hmac-file-server cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o hmac-file-server cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go cmd/server/network_resilience.go cmd/server/upload_session.go cmd/server/chunked_upload_handler.go
 
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates curl && \\
+RUN apk --no-cache add ca-certificates curl iputils && \\
     addgroup -g 1000 hmac && \\
     adduser -D -s /bin/sh -u 1000 -G hmac hmac
 
@@ -767,7 +788,7 @@ USER hmac
 
 EXPOSE $SERVER_PORT $METRICS_PORT
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
+HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \\
     CMD curl -f http://localhost:$SERVER_PORT/health || exit 1
 
 CMD ["./hmac-file-server", "-config", "/etc/hmac-file-server/config.toml"]
@@ -903,6 +924,27 @@ chunkeduploadsenabled = true
 chunksize = "10MB"
 ttlenabled = false
 ttl = "168h"
+networkevents = true
+
+# Network Resilience for Mobile Networks (Enhanced 3.2 features)
+# Optimized for mobile devices switching between WLAN and IPv6 5G
+[network_resilience]
+enabled = true
+fast_detection = true                    # 1-second detection vs 5-second standard
+quality_monitoring = true               # Monitor RTT and packet loss per interface
+predictive_switching = true             # Switch before complete failure
+mobile_optimizations = true            # Cellular network friendly thresholds
+upload_resilience = true               # Resume uploads across network changes
+detection_interval = "1s"              # Fast mobile network change detection
+quality_check_interval = "2s"          # Regular quality monitoring
+network_change_threshold = 3           # Switches required to trigger network change
+interface_stability_time = "10s"       # Time to wait before considering interface stable
+upload_pause_timeout = "10m"          # Mobile-friendly upload pause timeout
+upload_retry_timeout = "20m"          # Extended retry for mobile scenarios
+rtt_warning_threshold = "500ms"        # Cellular network warning threshold
+rtt_critical_threshold = "2000ms"      # Cellular network critical threshold
+packet_loss_warning_threshold = 5.0    # 5% packet loss warning
+packet_loss_critical_threshold = 15.0  # 15% packet loss critical
 
 [downloads]
 chunkeddownloadsenabled = true

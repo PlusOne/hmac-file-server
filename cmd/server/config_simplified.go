@@ -188,6 +188,15 @@ file = "/var/log/hmac-file-server.log"
 # [uploads]
 # max_resumable_age = "48h"
 # chunk_size = "10MB"
+# networkevents = true
+
+# [network_resilience]
+# enabled = true
+# fast_detection = true              # Enable 1-second detection for mobile
+# quality_monitoring = true          # Monitor RTT and packet loss
+# predictive_switching = true        # Switch before complete failure
+# mobile_optimizations = true       # Cellular-friendly thresholds
+# upload_resilience = true           # Resume uploads across network changes
 
 # [workers]
 # numworkers = 4
