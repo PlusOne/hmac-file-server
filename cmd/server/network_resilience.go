@@ -288,6 +288,17 @@ func (m *NetworkResilienceManager) UnregisterUpload(sessionID string) {
 	}
 }
 
+// GetUploadContext retrieves the upload context for a given session ID
+func (m *NetworkResilienceManager) GetUploadContext(sessionID string) *UploadContext {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	
+	if ctx, exists := m.activeUploads[sessionID]; exists {
+		return ctx
+	}
+	return nil
+}
+
 // PauseAllUploads pauses all active uploads
 func (m *NetworkResilienceManager) PauseAllUploads() {
 	m.mutex.Lock()

@@ -1,0 +1,143 @@
+[server]
+listen_address = "8080"
+bind_ip = "0.0.0.0"
+storage_path = "/opt/hmac-file-server/data/uploads"
+metrics_enabled = true
+metrics_path = "/metrics"
+pid_file = "/opt/hmac-file-server/data/hmac-file-server.pid"
+max_upload_size = "1GB"
+max_header_bytes = 1048576
+cleanup_interval = "24h"
+max_file_age = "720h"
+pre_cache = true
+pre_cache_workers = 4
+pre_cache_interval = "1h"
+deduplication_enabled = true
+min_free_bytes = "1GB"
+file_naming = "original"
+force_protocol = "auto"
+enable_dynamic_workers = true
+worker_scale_up_thresh = 40
+worker_scale_down_thresh = 20
+unixsocket = false
+metrics_port = "9090"
+filettl = "168h"
+filettl_enabled = true
+autoadjustworkers = true
+networkevents = true
+clean_upon_exit = true
+precaching = true
+
+[uploads]
+allowed_extensions = [
+    ".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".svg",
+    ".mp3", ".wav", ".aac", ".flac", ".ogg", ".wma", ".m4a",
+    ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mpeg",
+    ".zip", ".rar", ".7z", ".tar", ".gz", ".iso"
+]
+chunkeduploadsenabled = true
+chunk_size = "2MB"
+resumableuploadsenabled = true
+sessiontimeout = "60m"
+maxretries = 3
+
+# Enhanced Network Resilience Configuration (v3.2 Compatible)
+[network_resilience]
+enabled = true
+fast_detection = true
+quality_monitoring = true
+predictive_switching = true
+mobile_optimizations = true
+upload_resilience = true
+detection_interval = "500ms"
+quality_check_interval = "2s"
+network_change_threshold = 3
+interface_stability_time = "30s"
+upload_pause_timeout = "5m"
+upload_retry_timeout = "10m"
+rtt_warning_threshold = "200ms"
+rtt_critical_threshold = "1000ms"
+packet_loss_warning_threshold = 2.0
+packet_loss_critical_threshold = 10.0
+
+# Client Multi-Interface Support Configuration (v3.2 NEW)
+[client_network_support]
+session_based_tracking = true              # Track uploads by session, not IP
+allow_ip_changes = true                    # Allow same session from different IPs
+session_migration_timeout = "5m"           # Time to wait for client reconnection
+max_ip_changes_per_session = 10           # Prevent abuse
+client_connection_detection = true         # Detect client network type (mobile/wifi/ethernet)
+adapt_to_client_network = true            # Optimize based on client's connection
+
+[downloads]
+allowed_extensions = [
+    ".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".svg",
+    ".mp3", ".wav", ".aac", ".flac", ".ogg", ".wma", ".m4a",
+    ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mpeg",
+    ".zip", ".rar", ".7z", ".tar", ".gz", ".iso"
+]
+chunkeddownloadsenabled = true
+chunk_size = "1MB"
+resumable_downloads_enabled = true
+
+[security]
+secret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+enablejwt = false
+jwtsecret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+jwtalgorithm = "HS256"
+jwtexpiration = "24h"
+
+[logging]
+level = "info"
+file = "/opt/hmac-file-server/data/logs/hmac-file-server.log"
+max_size = 100
+max_backups = 5
+max_age = 30
+compress = true
+
+[deduplication]
+maxsize = "1GB"
+enabled = true
+directory = "/opt/hmac-file-server/data/dedup"
+
+[iso]
+enabled = false
+mountpoint = "/mnt/iso"
+size = "1GB"
+charset = "utf-8"
+containerfile = "/mnt/iso/container.iso"
+
+[timeouts]
+readtimeout = "300s"
+writetimeout = "300s"
+idletimeout = "60s"
+shutdown = "30s"
+
+[versioning]
+enableversioning = false
+backend = "filesystem"
+maxversions = 10
+
+[clamav]
+clamavenabled = false
+clamavsocket = "/var/run/clamav/clamd.ctl"
+numscanworkers = 2
+scanfileextensions = [".txt", ".pdf", ".jpg", ".png"]
+
+[redis]
+redisenabled = true
+redisdbindex = 0
+redisaddr = "localhost:6379"
+redispassword = ""
+redishealthcheckinterval = "120s"
+
+[workers]
+numworkers = 8
+uploadqueuesize = 100
+
+[file]
+
+[build]
+version = "3.2"

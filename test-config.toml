@@ -1,0 +1,260 @@
+# Enhanced Configuration Template for Adaptive I/O
+# This configuration enables the improved upload/download dual stack
+
+[server]
+listen_address = "0.0.0.0:8080"
+storage_path = "/data/uploads"
+metricsenabled = true
+metrics_path = "/metrics"
+max_upload_size = "10GB"
+max_header_bytes = 1048576
+deduplication_enabled = true
+file_naming = "original"
+networkevents = true
+precaching = true
+
+# Enhanced performance configuration
+[performance]
+# Adaptive buffer management
+adaptive_buffers = true
+min_buffer_size = "16KB"
+max_buffer_size = "1MB"
+buffer_optimization_interval = "30s"
+initial_buffer_size = "64KB"
+
+# Client profiling and optimization
+client_profiling = true
+profile_persistence_duration = "24h"
+connection_type_detection = true
+performance_history_samples = 100
+
+# Memory management
+max_memory_usage = "512MB"
+gc_optimization = true
+buffer_pool_preallocation = true
+
+[uploads]
+allowed_extensions = ["jpg", "jpeg", "png", "gif", "mp4", "mov", "avi", "pdf", "doc", "docx", "txt"]
+chunked_uploads_enabled = true
+chunk_size = "adaptive"  # Can be "adaptive", "fixed:2MB", etc.
+resumable_uploads_enabled = true
+sessiontimeout = "1h"
+maxretries = 3
+
+# Adaptive chunking parameters
+min_chunk_size = "256KB"
+max_chunk_size = "10MB"
+chunk_adaptation_algorithm = "predictive"  # "fixed", "adaptive", "predictive"
+
+# Upload optimization
+concurrent_chunk_uploads = 3
+upload_acceleration = true
+network_aware_chunking = true
+
+[downloads]
+allowed_extensions = ["jpg", "jpeg", "png", "gif", "mp4", "mov", "avi", "pdf", "doc", "docx", "txt"]
+chunked_downloads_enabled = true
+chunk_size = "adaptive"
+resumable_downloads_enabled = true
+range_requests = true
+
+# Download optimization
+connection_multiplexing = false
+bandwidth_estimation = true
+quality_adaptation = true
+progressive_download = true
+
+# Cache control
+cache_control_headers = true
+etag_support = true
+last_modified_support = true
+
+[streaming]
+# Advanced streaming features
+adaptive_streaming = true
+network_condition_monitoring = true
+throughput_optimization = true
+latency_optimization = true
+
+# Resilience features
+automatic_retry = true
+exponential_backoff = true
+circuit_breaker = true
+max_retry_attempts = 5
+retry_backoff_multiplier = 2.0
+
+# Quality adaptation
+quality_thresholds = [
+    { name = "excellent", min_throughput = "10MB/s", max_latency = "50ms" },
+    { name = "good", min_throughput = "1MB/s", max_latency = "200ms" },
+    { name = "fair", min_throughput = "100KB/s", max_latency = "500ms" },
+    { name = "poor", min_throughput = "10KB/s", max_latency = "2s" }
+]
+
+[security]
+secret = "your-hmac-secret-key-here"
+enablejwt = false
+jwtsecret = "your-jwt-secret-here"
+jwtalgorithm = "HS256"
+jwtexpiration = "24h"
+
+[logging]
+level = "info"
+file = "/var/log/hmac-file-server.log"
+max_size = 100
+max_backups = 3
+max_age = 28
+compress = true
+
+[network_resilience]
+# Enhanced network resilience with multi-interface support
+enabled = true
+fast_detection = true
+quality_monitoring = true
+predictive_switching = true
+mobile_optimizations = true
+
+# Multi-interface configuration
+multi_interface_enabled = true
+interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]
+auto_switch_enabled = true
+switch_threshold_latency = "500ms"
+switch_threshold_packet_loss = 5.0
+quality_degradation_threshold = 0.3
+max_switch_attempts = 3
+switch_detection_interval = "2s"
+
+# Timing configuration
+detection_interval = "1s"
+quality_check_interval = "5s"
+max_detection_interval = "10s"
+
+# Thresholds
+rtt_warning_threshold = "200ms"
+rtt_critical_threshold = "1s"
+packet_loss_warning = 2.0
+packet_loss_critical = 10.0
+stability_minimum = 0.8
+
+# Mobile-specific optimizations
+mobile_buffer_size = "32KB"
+mobile_chunk_size = "512KB"
+mobile_retry_multiplier = 1.5
+mobile_timeout_multiplier = 2.0
+
+# Interface-specific optimization settings
+[network_interfaces]
+ethernet = { buffer_size = "1MB", chunk_size = "10MB", timeout_multiplier = 1.0, priority = 10 }
+wifi = { buffer_size = "512KB", chunk_size = "5MB", timeout_multiplier = 1.2, priority = 20 }
+lte = { buffer_size = "256KB", chunk_size = "2MB", timeout_multiplier = 2.0, priority = 30 }
+cellular = { buffer_size = "128KB", chunk_size = "512KB", timeout_multiplier = 3.0, priority = 40 }
+vpn = { buffer_size = "256KB", chunk_size = "2MB", timeout_multiplier = 1.5, priority = 50 }
+
+# Handoff and switching behavior
+[handoff]
+seamless_switching = true
+chunk_retry_on_switch = true
+pause_transfers_on_switch = false
+switch_notification_enabled = true
+interface_quality_history = 50
+performance_comparison_window = "5m"
+
+[client_optimization]
+# Per-client optimization
+enabled = true
+learning_enabled = true
+adaptation_speed = "medium"  # "slow", "medium", "fast"
+
+# Client type detection
+user_agent_analysis = true
+connection_fingerprinting = true
+performance_classification = true
+
+# Optimization strategies
+strategy_mobile = {
+    buffer_size = "32KB",
+    chunk_size = "512KB",
+    retry_multiplier = 1.5,
+    timeout_multiplier = 2.0
+}
+
+strategy_desktop = {
+    buffer_size = "128KB",
+    chunk_size = "2MB",
+    retry_multiplier = 1.0,
+    timeout_multiplier = 1.0
+}
+
+strategy_server = {
+    buffer_size = "512KB",
+    chunk_size = "10MB",
+    retry_multiplier = 0.5,
+    timeout_multiplier = 0.5
+}
+
+[monitoring]
+# Enhanced monitoring and metrics
+detailed_metrics = true
+performance_tracking = true
+client_analytics = true
+
+# Metric collection intervals
+realtime_interval = "1s"
+aggregate_interval = "1m"
+summary_interval = "1h"
+
+# Storage for metrics
+metrics_retention = "7d"
+performance_history = "24h"
+client_profile_retention = "30d"
+
+[experimental]
+# Experimental features
+http3_support = false
+quic_protocol = false
+compression_negotiation = true
+adaptive_compression = true
+
+# Advanced I/O
+io_uring_support = false  # Linux only
+zero_copy_optimization = true
+memory_mapped_files = false
+
+# Machine learning optimizations
+ml_optimization = false
+predictive_caching = false
+intelligent_prefetching = false
+
+[timeouts]
+readtimeout = "30s"
+writetimeout = "30s"
+idletimeout = "60s"
+shutdown = "30s"
+
+# Adaptive timeouts
+adaptive_timeouts = true
+min_timeout = "5s"
+max_timeout = "300s"
+timeout_adaptation_factor = 1.2
+
+[deduplication]
+enabled = true
+directory = "/data/deduplication"
+maxsize = "1GB"
+algorithm = "sha256"
+cleanup_interval = "1h"
+
+[iso]
+enabled = false
+mountpoint = "/mnt/iso"
+size = "1GB"
+charset = "utf8"
+
+[versioning]
+enableversioning = false
+backend = "filesystem"
+maxversions = 10
+
+[clamav]
+clamavenabled = false
+clamavsocket = "/var/run/clamav/clamd.ctl"

@@ -224,13 +224,33 @@ type BuildConfig struct {
 }
 
 type NetworkResilienceConfig struct {
-	FastDetection        bool   `toml:"fast_detection" mapstructure:"fast_detection"`
-	QualityMonitoring    bool   `toml:"quality_monitoring" mapstructure:"quality_monitoring"`
-	PredictiveSwitching  bool   `toml:"predictive_switching" mapstructure:"predictive_switching"`
-	MobileOptimizations  bool   `toml:"mobile_optimizations" mapstructure:"mobile_optimizations"`
-	DetectionInterval    string `toml:"detection_interval" mapstructure:"detection_interval"`
-	QualityCheckInterval string `toml:"quality_check_interval" mapstructure:"quality_check_interval"`
-	MaxDetectionInterval string `toml:"max_detection_interval" mapstructure:"max_detection_interval"`
+	FastDetection               bool     `toml:"fast_detection" mapstructure:"fast_detection"`
+	QualityMonitoring          bool     `toml:"quality_monitoring" mapstructure:"quality_monitoring"`
+	PredictiveSwitching        bool     `toml:"predictive_switching" mapstructure:"predictive_switching"`
+	MobileOptimizations        bool     `toml:"mobile_optimizations" mapstructure:"mobile_optimizations"`
+	DetectionInterval          string   `toml:"detection_interval" mapstructure:"detection_interval"`
+	QualityCheckInterval       string   `toml:"quality_check_interval" mapstructure:"quality_check_interval"`
+	MaxDetectionInterval       string   `toml:"max_detection_interval" mapstructure:"max_detection_interval"`
+	
+	// Multi-interface support
+	MultiInterfaceEnabled      bool     `toml:"multi_interface_enabled" mapstructure:"multi_interface_enabled"`
+	InterfacePriority          []string `toml:"interface_priority" mapstructure:"interface_priority"`
+	AutoSwitchEnabled          bool     `toml:"auto_switch_enabled" mapstructure:"auto_switch_enabled"`
+	SwitchThresholdLatency     string   `toml:"switch_threshold_latency" mapstructure:"switch_threshold_latency"`
+	SwitchThresholdPacketLoss  float64  `toml:"switch_threshold_packet_loss" mapstructure:"switch_threshold_packet_loss"`
+	QualityDegradationThreshold float64  `toml:"quality_degradation_threshold" mapstructure:"quality_degradation_threshold"`
+	MaxSwitchAttempts          int      `toml:"max_switch_attempts" mapstructure:"max_switch_attempts"`
+	SwitchDetectionInterval    string   `toml:"switch_detection_interval" mapstructure:"switch_detection_interval"`
+}
+
+// ClientNetworkConfigTOML is used for loading from TOML where timeout is a string
+type ClientNetworkConfigTOML struct {
+	SessionBasedTracking      bool   `toml:"session_based_tracking" mapstructure:"session_based_tracking"`
+	AllowIPChanges           bool   `toml:"allow_ip_changes" mapstructure:"allow_ip_changes"`
+	SessionMigrationTimeout  string `toml:"session_migration_timeout" mapstructure:"session_migration_timeout"`
+	MaxIPChangesPerSession   int    `toml:"max_ip_changes_per_session" mapstructure:"max_ip_changes_per_session"`
+	ClientConnectionDetection bool  `toml:"client_connection_detection" mapstructure:"client_connection_detection"`
+	AdaptToClientNetwork     bool   `toml:"adapt_to_client_network" mapstructure:"adapt_to_client_network"`
 }
 
 // This is the main Config struct to be used
@@ -249,7 +269,8 @@ type Config struct {
 	Workers           WorkersConfig            `mapstructure:"workers"`
 	File              FileConfig               `mapstructure:"file"`
 	Build             BuildConfig              `mapstructure:"build"`
-	NetworkResilience NetworkResilienceConfig  `mapstructure:"network_resilience"`
+	NetworkResilience NetworkResilienceConfig      `mapstructure:"network_resilience"`
+	ClientNetwork     ClientNetworkConfigTOML     `mapstructure:"client_network_support"`
 }
 
 type UploadTask struct {
@@ -349,6 +370,9 @@ var bufferPool = sync.Pool{
 const maxConcurrentOperations = 10
 
 var semaphore = make(chan struct{}, maxConcurrentOperations)
+
+// Global client connection tracker for multi-interface support
+var clientTracker *ClientConnectionTracker
 
 var logMessages []string
 var logMu sync.Mutex
@@ -564,6 +588,37 @@ func main() {
 
 	// Perform comprehensive configuration validation
 	validationResult := ValidateConfigComprehensive(&conf)
+
+	// Initialize client connection tracker for multi-interface support
+	clientNetworkConfig := &ClientNetworkConfig{
+		SessionBasedTracking:     conf.ClientNetwork.SessionBasedTracking,
+		AllowIPChanges:          conf.ClientNetwork.AllowIPChanges,
+		MaxIPChangesPerSession:  conf.ClientNetwork.MaxIPChangesPerSession,
+		AdaptToClientNetwork:    conf.ClientNetwork.AdaptToClientNetwork,
+	}
+	
+	// Parse session migration timeout
+	if conf.ClientNetwork.SessionMigrationTimeout != "" {
+		if timeout, err := time.ParseDuration(conf.ClientNetwork.SessionMigrationTimeout); err == nil {
+			clientNetworkConfig.SessionMigrationTimeout = timeout
+		} else {
+			clientNetworkConfig.SessionMigrationTimeout = 5 * time.Minute // default
+		}
+	} else {
+		clientNetworkConfig.SessionMigrationTimeout = 5 * time.Minute // default
+	}
+	
+	// Set defaults if not configured
+	if clientNetworkConfig.MaxIPChangesPerSession == 0 {
+		clientNetworkConfig.MaxIPChangesPerSession = 10
+	}
+	
+	// Initialize the client tracker
+	clientTracker = NewClientConnectionTracker(clientNetworkConfig)
+	if clientTracker != nil {
+		clientTracker.StartCleanupRoutine()
+		log.Info("Client multi-interface support initialized")
+	}
 	PrintValidationResults(validationResult)
 
 	if validationResult.HasErrors() {
@@ -1417,6 +1472,12 @@ func validateV3HMAC(r *http.Request, secret string) error {
 	return nil
 }
 
+// generateSessionID creates a unique session ID for client tracking
+func generateSessionID() string {
+	return fmt.Sprintf("session_%d_%x", time.Now().UnixNano(), 
+		sha256.Sum256([]byte(fmt.Sprintf("%d%s", time.Now().UnixNano(), conf.Security.Secret))))[:16]
+}
+
 // handleUpload handles file uploads.
 func handleUpload(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
@@ -1447,6 +1508,30 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Debugf("HMAC authentication successful for upload request: %s", r.URL.Path)
+	}
+
+	// Client multi-interface tracking
+	var clientSession *ClientSession
+	if clientTracker != nil && conf.ClientNetwork.SessionBasedTracking {
+		// Generate or extract session ID (from headers, form data, or create new)
+		sessionID := r.Header.Get("X-Upload-Session-ID")
+		if sessionID == "" {
+			// Check if there's a session ID in form data
+			sessionID = r.FormValue("session_id")
+		}
+		if sessionID == "" {
+			// Generate new session ID
+			sessionID = generateSessionID()
+		}
+		
+		clientIP := getClientIP(r)
+		clientSession = clientTracker.TrackClientSession(sessionID, clientIP, r)
+		
+		// Add session ID to response headers for client to use in subsequent requests
+		w.Header().Set("X-Upload-Session-ID", sessionID)
+		
+		log.Debugf("Client session tracking: %s from IP %s (connection type: %s)", 
+			sessionID, clientIP, clientSession.ConnectionType)
 	}
 
 	// Parse multipart form

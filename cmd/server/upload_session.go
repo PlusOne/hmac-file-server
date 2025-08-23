@@ -305,10 +305,6 @@ func (s *UploadSessionStore) cleanupExpiredSessions() {
 }
 
 // Helper functions
-func generateSessionID() string {
-	return fmt.Sprintf("%d_%s", time.Now().Unix(), randomString(16))
-}
-
 func getChunkSize() int64 {
 	// Default 5MB chunks, configurable
 	if conf.Uploads.ChunkSize != "" {

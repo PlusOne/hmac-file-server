@@ -1,0 +1,203 @@
+[server]
+listen_address = "8080"
+bind_ip = "0.0.0.0"
+storage_path = "/opt/hmac-file-server/data/uploads"
+metrics_enabled = true
+metrics_path = "/metrics"
+pid_file = "/opt/hmac-file-server/data/hmac-file-server.pid"
+max_upload_size = "1GB"
+max_header_bytes = 1048576
+cleanup_interval = "24h"
+max_file_age = "720h"
+pre_cache = true
+pre_cache_workers = 4
+pre_cache_interval = "1h"
+deduplication_enabled = true
+min_free_bytes = "1GB"
+file_naming = "original"
+force_protocol = "auto"
+enable_dynamic_workers = true
+worker_scale_up_thresh = 40
+worker_scale_down_thresh = 20
+unixsocket = false
+metrics_port = "9090"
+filettl = "168h"
+filettlenabled = true
+autoadjustworkers = true
+networkevents = true
+clean_upon_exit = true
+precaching = true
+
+# Enhanced Performance Configuration (v3.2 Features)
+[performance]
+# Adaptive buffer management
+adaptive_buffers = true
+min_buffer_size = "16KB"
+max_buffer_size = "1MB"
+buffer_optimization_interval = "30s"
+initial_buffer_size = "64KB"
+
+# Client profiling and optimization
+client_profiling = true
+profile_persistence_duration = "24h"
+connection_type_detection = true
+performance_history_samples = 100
+
+# Memory management
+max_memory_usage = "512MB"
+gc_optimization = true
+buffer_pool_preallocation = true
+
+[uploads]
+allowed_extensions = [
+    ".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".svg",
+    ".mp3", ".wav", ".aac", ".flac", ".ogg", ".wma", ".m4a",
+    ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mpeg",
+    ".zip", ".rar", ".7z", ".tar", ".gz", ".iso"
+]
+chunkeduploadsenabled = true
+chunksize = "32MB"
+resumableuploadsenabled = true
+sessiontimeout = "60m"
+maxretries = 3
+
+# Adaptive chunking parameters (v3.2 Enhancement)
+min_chunk_size = "256KB"
+max_chunk_size = "10MB"
+chunk_adaptation_algorithm = "predictive"  # "fixed", "adaptive", "predictive"
+
+# Upload optimization
+concurrent_chunk_uploads = 3
+adaptive_compression = true
+compression_threshold = "1MB"
+
+[downloads]
+allowed_extensions = [
+    ".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".svg",
+    ".mp3", ".wav", ".aac", ".flac", ".ogg", ".wma", ".m4a",
+    ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mpeg",
+    ".zip", ".rar", ".7z", ".tar", ".gz", ".iso"
+]
+chunkeddownloadsenabled = true
+chunksize = "8KB"
+resumable_downloads_enabled = true
+
+# Adaptive download optimization (v3.2 Enhancement)
+adaptive_chunk_sizing = true
+connection_aware_buffering = true
+range_request_optimization = true
+
+# Enhanced Network Resilience Configuration (v3.2 Features)
+[network_resilience]
+enabled = true
+fast_detection = true
+quality_monitoring = true
+predictive_switching = true
+mobile_optimizations = true
+upload_resilience = true
+detection_interval = "500ms"
+quality_check_interval = "2s"
+network_change_threshold = 3
+interface_stability_time = "30s"
+upload_pause_timeout = "5m"
+upload_retry_timeout = "10m"
+rtt_warning_threshold = "200ms"
+rtt_critical_threshold = "1000ms"
+packet_loss_warning_threshold = 2.0
+packet_loss_critical_threshold = 10.0
+
+# Multi-Interface Management (v3.2 NEW)
+[network_interfaces]
+multi_interface_enabled = true
+primary_interface = "auto"
+interface_discovery_enabled = true
+interface_monitoring_interval = "10s"
+interface_quality_samples = 10
+
+# Interface priorities (higher = preferred)
+interface_priorities = [
+    { name = "eth0", priority = 10, type = "ethernet" },
+    { name = "enp*", priority = 9, type = "ethernet" },
+    { name = "wlan*", priority = 7, type = "wifi" },
+    { name = "wlp*", priority = 7, type = "wifi" },
+    { name = "ppp*", priority = 5, type = "cellular" },
+    { name = "wwan*", priority = 4, type = "cellular" }
+]
+
+# Network handoff configuration (v3.2 NEW)
+[handoff]
+enabled = true
+handoff_strategy = "quality_based"  # "priority_based", "quality_based", "hybrid"
+min_quality_threshold = 70.0        # Minimum quality before considering handoff
+handoff_hysteresis = 10.0          # Quality difference required for handoff
+handoff_cooldown = "30s"            # Minimum time between handoffs
+seamless_handoff = true             # Attempt seamless transitions
+handoff_timeout = "10s"             # Maximum time for handoff completion
+
+# Quality thresholds
+quality_excellent = 90.0
+quality_good = 70.0
+quality_fair = 50.0
+quality_poor = 30.0
+
+[security]
+secret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+enablejwt = false
+jwtsecret = "f6g4ldPvQM7O2UTFeBEUUj33VrXypDAcsDt0yqKrLiOr5oQW"
+jwtalgorithm = "HS256"
+jwtexpiration = "24h"
+
+[logging]
+level = "debug"
+file = "/opt/hmac-file-server/data/logs/hmac-file-server.log"
+max_size = 100
+max_backups = 5
+max_age = 30
+compress = true
+
+[deduplication]
+maxsize = "1GB"
+enabled = true
+directory = "/opt/hmac-file-server/data/dedup"
+
+[iso]
+enabled = false
+mountpoint = "/mnt/iso"
+size = "1GB"
+charset = "utf-8"
+containerfile = "/mnt/iso/container.iso"
+
+[timeouts]
+readtimeout = "4800s"
+writetimeout = "4800s"
+idletimeout = "60s"
+shutdown = "30s"
+
+[versioning]
+enableversioning = false
+backend = "filesystem"
+maxversions = 10
+
+[clamav]
+clamavenabled = false
+clamavsocket = "/var/run/clamav/clamd.ctl"
+numscanworkers = 2
+scanfileextensions = [".txt", ".pdf", ".jpg", ".png"]
+
+[redis]
+redisenabled = true
+redisdbindex = 0
+redisaddr = "localhost:6379"
+redispassword = ""
+redishealthcheckinterval = "120s"
+
+[workers]
+numworkers = 8
+uploadqueuesize = 100
+
+[file]
+
+[build]
+version = "3.2"
