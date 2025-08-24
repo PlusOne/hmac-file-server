@@ -1,0 +1,19 @@
+[server]
+listen_address = "8081"
+storage_path = "./test-uploads"
+network_events = true
+metrics_enabled = false
+
+[security]
+secret = "supersecret-hmac-key-minimum-16-chars"
+
+[logging]
+level = "info"
+file = ""
+
+[network_resilience]
+enabled = true
+
+[client_network_support]
+enabled = true
+wlan_5g_switching = true

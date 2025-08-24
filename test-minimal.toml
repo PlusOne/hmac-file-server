@@ -1,0 +1,14 @@
+[server]
+listen_address = "8080"
+storage_path = "./test-uploads"
+network_events = true
+
+[security]
+secret = "supersecret-hmac-key-minimum-16-chars"
+
+[logging]
+level = "info"
+file = ""
+
+[network_resilience]
+enabled = true
