@@ -13,7 +13,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"mime"
 	"net"
 	"net/http"
 	"os"
@@ -1357,10 +1356,7 @@ func validateHMAC(r *http.Request, secret string) error {
 		mac.Write([]byte(message))
 	} else {
 		// v2 and token protocols: fileStorePath + "\x00" + contentLength + "\x00" + contentType
-		contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
-		if contentType == "" {
-			contentType = "application/octet-stream"
-		}
+		contentType := GetContentType(fileStorePath)
 		message := fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType
 		log.Debugf("validateHMAC: %s protocol message: %q (len=%d)", protocolVersion, message, len(message))
 		mac.Write([]byte(message))
@@ -2179,10 +2175,7 @@ func handleLegacyDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set appropriate headers
-	contentType := mime.TypeByExtension(filepath.Ext(fileStorePath))
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
+	contentType := GetContentType(fileStorePath)
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Content-Length", strconv.FormatInt(fileInfo.Size(), 10))
 

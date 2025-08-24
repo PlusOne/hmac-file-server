@@ -1,6 +1,6 @@
-# HMAC File Server 3.2 - Tremora del Terra
+# HMAC File Server 3.2.2 - Tremora del Terra
 
-[![Version](https://img.shields.io/badge/version-3.2.1-blue.svg)](https://github.com/PlusOne/hmac-file-server)
+[![Version](https://img.shields.io/badge/version-3.2.2-blue.svg)](https://github.com/PlusOne/hmac-file-server)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://golang.org/)
 [![Architecture](https://img.shields.io/badge/arch-AMD64%20%7C%20ARM64%20%7C%20ARM32v7-brightgreen.svg)](https://github.com/PlusOne/hmac-file-server)
@@ -9,7 +9,7 @@ A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) 
 
 ---
 
-## What's New in 3.2 "Tremora del Terra"
+## What's New in 3.2.2 "Tremora del Terra"
 
 ### Configuration Revolution
 - **93% Config Reduction**: From 112-line complex configs to 8-line minimal configs
@@ -40,8 +40,8 @@ A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) 
 
 ### Option 1: Minimal Configuration (Recommended)
 ```bash
-# Download HMAC File Server 3.2
-wget https://github.com/PlusOne/hmac-file-server/releases/download/v3.2/hmac-file-server-linux-amd64
+# Download HMAC File Server 3.2.2
+wget https://github.com/PlusOne/hmac-file-server/releases/download/v3.2.2/hmac-file-server-linux-amd64
 chmod +x hmac-file-server-linux-amd64
 
 # Generate minimal config
@@ -67,7 +67,7 @@ chmod +x hmac-file-server-linux-amd64
 
 ## Universal Installation Manager
 
-HMAC File Server 3.2 includes a comprehensive installation framework that supports all deployment methods:
+HMAC File Server 3.2.2 includes a comprehensive installation framework that supports all deployment methods:
 
 ### 🚀 **Automated Installation (All Methods)**
 ```bash
@@ -156,10 +156,17 @@ HMAC File Server 3.2 includes a comprehensive installation framework that suppor
 
 ## Release Information
 
-### HMAC File Server 3.2.1 - Tremora del Terra
+### HMAC File Server 3.2.2 - Tremora del Terra
 
-**Release Date**: July 20, 2025  
+**Release Date**: August 24, 2025  
 **Codename**: Tremora del Terra (powerful, balanced, and ready to shake the ground)
+
+#### Latest Updates (3.2.2)
+- **🚀 Enhanced MIME Types**: Added 80+ additional file format support
+- **🔧 XMPP Client Ecosystem**: Comprehensive compatibility analysis 
+- **🌐 Network Resilience**: Advanced mobile switching optimizations
+- **📊 Documentation**: Complete client compatibility matrix
+- **🔒 Security**: HMAC core functions remain untouched and secure
 
 #### Key Improvements
 - **Configuration Simplification**: 93% reduction in required configuration
@@ -189,7 +196,7 @@ HMAC File Server 3.2 includes a comprehensive installation framework that suppor
 
 ## Mobile Network Resilience
 
-HMAC File Server 3.2 introduces enhanced network resilience specifically designed for mobile devices and network switching scenarios.
+HMAC File Server 3.2.2 introduces enhanced network resilience specifically designed for mobile devices and network switching scenarios.
 
 ### 📱 **Mobile Network Switching Support**
 
@@ -437,7 +444,7 @@ disable_keep_alives = false                # Disable HTTP keep-alives
 client_timeout = "300s"                    # Client request timeout
 restart_grace_period = "60s"               # Grace period after restart
 
-# Enhanced Network Resilience (v3.2+)
+# Enhanced Network Resilience (v3.2.2+)
 [network_resilience]
 enabled = true                              # Enable network resilience system
 fast_detection = true                       # Enable 1-second network change detection (vs 5-second default)
@@ -457,7 +464,7 @@ rtt_critical_threshold = "1000ms"          # RTT threshold for critical
 packet_loss_warning_threshold = 2.0        # Packet loss % for warning
 packet_loss_critical_threshold = 10.0      # Packet loss % for critical
 
-# Multi-Interface Support (v3.2+)
+# Multi-Interface Support (v3.2.2+)
 multi_interface_enabled = false            # Enable multi-interface management
 interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Interface priority order
 auto_switch_enabled = true                 # Enable automatic interface switching
@@ -467,7 +474,7 @@ quality_degradation_threshold = 0.5        # Quality degradation threshold
 max_switch_attempts = 3                    # Maximum switch attempts per detection
 switch_detection_interval = "10s"          # Switch detection interval
 
-# Client Network Support (v3.2+)
+# Client Network Support (v3.2.2+)
 [client_network_support]
 session_based_tracking = false             # Track sessions by ID instead of IP
 allow_ip_changes = true                    # Allow session continuation from different IPs
@@ -569,11 +576,11 @@ redishealthcheckinterval = "120s"         # Redis health check interval
 [workers]
 # Worker pool configuration
 numworkers = 4                            # Number of worker threads
-uploadqueuesize = 100                     # Upload queue size (doubled in 3.2)
+uploadqueuesize = 100                     # Upload queue size (doubled in 3.2.2)
 
 [build]
 # Build information
-version = "3.2"                          # Application version
+version = "3.2.2"                          # Application version
 ```
 
 ---
@@ -642,10 +649,10 @@ CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-w -s" -o hmac-file-server ./cmd/
 ### Docker Build
 ```bash
 # Build Docker image
-docker build -t hmac-file-server:3.2 .
+docker build -t hmac-file-server:3.2.2 .
 
 # Multi-platform Docker build
-docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t hmac-file-server:3.2 .
+docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t hmac-file-server:3.2.2 .
 ```
 
 ---
@@ -659,7 +666,7 @@ version: '3.8'
 
 services:
   hmac-file-server:
-    image: hmac-file-server:3.2
+    image: hmac-file-server:3.2.2
     container_name: hmac-file-server
     restart: unless-stopped
     ports:
@@ -687,7 +694,7 @@ version: '3.8'
 
 services:
   hmac-file-server:
-    image: hmac-file-server:3.2
+    image: hmac-file-server:3.2.2
     container_name: hmac-file-server
     restart: unless-stopped
     depends_on:
@@ -784,7 +791,7 @@ version: '3.8'
 
 services:
   hmac-file-server:
-    image: hmac-file-server:3.2
+    image: hmac-file-server:3.2.2
     container_name: hmac-file-server
     restart: unless-stopped
     depends_on:

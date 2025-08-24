@@ -1,4 +1,4 @@
-# HMAC File Server 3.2 - Stability & Reliability Audit Plan
+# HMAC File Server 3.2.2 - Stability & Reliability Audit Plan
 
 ## 🎯 Objective
 Comprehensive code audit focused on **STABILITY** and **RELIABILITY** without rewriting core functions. Identify potential issues that could cause crashes, data loss, memory leaks, race conditions, or degraded performance.

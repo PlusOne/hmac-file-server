@@ -1,6 +1,6 @@
 # HMAC File Server - Podman Configuration Examples
 
-This directory contains Podman-specific deployment files for HMAC File Server 3.2 "Tremora del Terra".
+This directory contains Podman-specific deployment files for HMAC File Server 3.2.2 "Tremora del Terra".
 
 ## 🚀 Quick Start
 

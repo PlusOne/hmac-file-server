@@ -1,6 +1,6 @@
-# HMAC File Server 3.2 Test Suite
+# HMAC File Server 3.2.2 Test Suite
 
-This directory contains comprehensive testing tools for the HMAC File Server 3.2 "Tremora del Terra".
+This directory contains comprehensive testing tools for the HMAC File Server 3.2.2 "Tremora del Terra".
 
 ## 🚀 Quick Start
 
@@ -24,7 +24,7 @@ The comprehensive test suite covers:
 - **Image Upload**: Tests image sharing (PNG, JPEG)
 - **File Size Limits**: Validates large file handling
 
-### 🌐 Network Resilience (3.2 Features)
+### 🌐 Network Resilience (3.2.2 Features)
 - **Health Monitoring**: Tests network resilience endpoints
 - **Metrics Collection**: Validates monitoring capabilities
 - **Mobile Switching**: Supports seamless network transitions
@@ -107,7 +107,7 @@ This comprehensive suite replaces these scattered root-level test files:
 - `comprehensive_upload_test.sh` → Replaced by this suite
 - Various monitor scripts → Health checks integrated
 
-## 🎉 3.2 "Tremora del Terra" Features Tested
+## 🎉 3.2.2 "Tremora del Terra" Features Tested
 
 - ✅ **Enhanced Network Resilience**: 1-second detection
 - ✅ **Mobile Network Switching**: WLAN ↔ IPv6 5G seamless transitions

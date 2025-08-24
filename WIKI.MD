@@ -5,7 +5,7 @@ This documentation provides detailed information on configuring, setting up, and
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [3.2 "Tremora del Terra" Revolutionary Features](#32-tremora-del-terra-revolutionary-features)
+2. [3.2.2 "Tremora del Terra" Revolutionary Features](#322-tremora-del-terra-revolutionary-features)
 3. [Configuration](#configuration)
     - [Server Configuration](#server-configuration)
     - [Deduplication Settings](#deduplication-settings)
@@ -42,9 +42,9 @@ This documentation provides detailed information on configuring, setting up, and
 
 ## Introduction
 
-The **HMAC File Server 3.2 "Tremora del Terra"** is a revolutionary secure and efficient file management solution designed to handle file uploads, downloads, deduplication, and more. This major release brings **93% configuration reduction**, dramatically simplifying setup while maintaining enterprise-grade features.
+The **HMAC File Server 3.2.2 "Tremora del Terra"** is a revolutionary secure and efficient file management solution designed to handle file uploads, downloads, deduplication, and more. This major release brings **93% configuration reduction**, dramatically simplifying setup while maintaining enterprise-grade features.
 
-**Version 3.2 Revolutionary Features:**
+**Version 3.2.2 Revolutionary Features:**
 - **93% Configuration Reduction**: Simplified setup with intelligent defaults
 - **Network Resilience**: Advanced connection recovery and stability
 - **Queue Optimization**: Enhanced dynamic worker scaling (40%/10% thresholds)
@@ -57,9 +57,9 @@ Built with a focus on security, scalability, and performance, it integrates seam
 
 ---
 
-## 3.2 "Tremora del Terra" Revolutionary Features
+## 3.2.2 "Tremora del Terra" Revolutionary Features
 
-HMAC File Server 3.2 "Tremora del Terra" represents a revolutionary leap forward in file server technology, introducing breakthrough simplifications and advanced enterprise features:
+HMAC File Server 3.2.2 "Tremora del Terra" represents a revolutionary leap forward in file server technology, introducing breakthrough simplifications and advanced enterprise features:
 
 ### 🚀 **93% Configuration Reduction**
 - **Simplified Setup**: Reduced configuration complexity by 93% through intelligent defaults
@@ -644,7 +644,7 @@ rtt_critical_threshold = "1000ms"          # RTT threshold for critical
 packet_loss_warning_threshold = 2.0        # Packet loss % for warning
 packet_loss_critical_threshold = 10.0      # Packet loss % for critical
 
-# Multi-Interface Support (v3.2+)
+# Multi-Interface Support (v3.2.2+)
 multi_interface_enabled = false            # Enable multi-interface management
 interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Interface priority order
 auto_switch_enabled = true                 # Enable automatic interface switching
@@ -859,7 +859,7 @@ Before starting the service, verify:
 
 ## Configuration Validation
 
-The HMAC File Server v3.2 includes a comprehensive configuration validation system with specialized command-line flags for different validation scenarios.
+The HMAC File Server v3.2.2 includes a comprehensive configuration validation system with specialized command-line flags for different validation scenarios.
 
 ### Available Validation Flags
 
@@ -987,7 +987,7 @@ livenessProbe:
   periodSeconds: 60
 ```
 
-The enhanced command-line validation system provides comprehensive coverage with 50+ validation checks across all configuration areas, making HMAC File Server v3.2 production-ready with enterprise-grade configuration management.
+The enhanced command-line validation system provides comprehensive coverage with 50+ validation checks across all configuration areas, making HMAC File Server v3.2.2 production-ready with enterprise-grade configuration management.
 
 ---
 
@@ -1094,7 +1094,7 @@ redishealthcheckinterval = "120s"
 numworkers = 4
 uploadqueuesize = 50
 
-# Network Resilience (v3.2+)
+# Network Resilience (v3.2.2+)
 [network_resilience]
 enabled = true
 fast_detection = true
@@ -1120,7 +1120,7 @@ auto_switch_enabled = true
 switch_threshold_latency = "500ms"
 switch_threshold_packet_loss = 5.0
 
-# Client Network Support (v3.2+)
+# Client Network Support (v3.2.2+)
 [client_network_support]
 session_based_tracking = false             # Standard IP-based tracking for servers
 allow_ip_changes = true                    # Allow for client network changes
@@ -1133,7 +1133,7 @@ adapt_to_client_network = false
 # Add file-specific configurations here
 
 [build]
-version = "3.2"
+version = "3.2.2"
 ```
 
 ---
@@ -1472,7 +1472,7 @@ services:
 
 ## Running with Podman
 
-Podman is a daemonless container engine that's often preferred in enterprise environments for enhanced security and rootless capabilities. HMAC File Server 3.2 provides complete Podman support with optimized deployment scripts.
+Podman is a daemonless container engine that's often preferred in enterprise environments for enhanced security and rootless capabilities. HMAC File Server 3.2.2 provides complete Podman support with optimized deployment scripts.
 
 ### Why Choose Podman?
 
@@ -1893,7 +1893,7 @@ nc -zv localhost 8888
 
 ## Multi-Architecture Deployment
 
-HMAC File Server 3.2 "Tremora del Terra" provides comprehensive multi-architecture support for modern deployment scenarios.
+HMAC File Server 3.2.2 "Tremora del Terra" provides comprehensive multi-architecture support for modern deployment scenarios.
 
 ### Supported Architectures
 
@@ -1931,10 +1931,10 @@ GOOS=linux GOARCH=arm GOARM=7 go build -o hmac-file-server-linux-arm32v7 ./cmd/s
 
 ```bash
 # Build multi-platform Docker images
-docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t hmac-file-server:3.2 .
+docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t hmac-file-server:3.2.2 .
 
 # Run platform-specific image
-docker run --platform linux/arm64 hmac-file-server:3.2
+docker run --platform linux/arm64 hmac-file-server:3.2.2
 ```
 
 ### Architecture-Specific Optimizations
@@ -1958,7 +1958,7 @@ docker run --platform linux/arm64 hmac-file-server:3.2
 
 ## Network Resilience & Queue Optimization
 
-HMAC File Server 3.2 introduces advanced network resilience and queue optimization systems designed for enterprise-grade reliability.
+HMAC File Server 3.2.2 introduces advanced network resilience and queue optimization systems designed for enterprise-grade reliability.
 
 ### Network Resilience Features
 
@@ -2131,7 +2131,7 @@ uploadqueuesize = 50
 # Add file-specific configurations here
 
 [build]
-version = "3.2"
+version = "3.2.2"
 ```
 
 ### Quickstart with Docker Compose
@@ -2149,7 +2149,7 @@ docker compose up -d
 
 ## Simplified Configuration Examples
 
-HMAC File Server 3.2 "Tremora del Terra" achieves **93% configuration reduction** through intelligent defaults. Here are minimal configurations for common scenarios:
+HMAC File Server 3.2.2 "Tremora del Terra" achieves **93% configuration reduction** through intelligent defaults. Here are minimal configurations for common scenarios:
 
 ### Minimal Production Configuration (93% Simplified)
 
