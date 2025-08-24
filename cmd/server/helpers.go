@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -705,7 +707,10 @@ func setupRouter() *http.ServeMux {
 				return
 			}
 			
-			log.Info("🔍 ROUTER DEBUG: PUT request with no matching protocol parameters")
+			// Handle regular PUT uploads (non-XMPP) - route to general upload handler
+			log.Info("🔍 ROUTER DEBUG: PUT request with no protocol parameters - routing to handlePutUpload")
+			handlePutUpload(w, r)
+			return
 		}
 		
 		// Handle GET/HEAD requests for downloads
@@ -832,4 +837,144 @@ func copyWithProgress(dst io.Writer, src io.Reader, total int64, filename string
 	buf := *bufPtr
 	
 	return io.CopyBuffer(progressWriter, src, buf)
+}
+
+// handlePutUpload handles regular PUT uploads (non-XMPP protocol)
+func handlePutUpload(w http.ResponseWriter, r *http.Request) {
+	startTime := time.Now()
+	activeConnections.Inc()
+	defer activeConnections.Dec()
+
+	// Only allow PUT method
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		uploadErrorsTotal.Inc()
+		return
+	}
+
+	// Authentication - same as handleUpload
+	if conf.Security.EnableJWT {
+		_, err := validateJWTFromRequest(r, conf.Security.JWTSecret)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("JWT Authentication failed: %v", err), http.StatusUnauthorized)
+			uploadErrorsTotal.Inc()
+			return
+		}
+		log.Debugf("JWT authentication successful for PUT upload request: %s", r.URL.Path)
+	} else {
+		err := validateHMAC(r, conf.Security.Secret)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("HMAC Authentication failed: %v", err), http.StatusUnauthorized)
+			uploadErrorsTotal.Inc()
+			return
+		}
+		log.Debugf("HMAC authentication successful for PUT upload request: %s", r.URL.Path)
+	}
+
+	// Extract filename from URL path
+	originalFilename := strings.TrimPrefix(r.URL.Path, "/")
+	if originalFilename == "" {
+		http.Error(w, "Filename required in URL path", http.StatusBadRequest)
+		uploadErrorsTotal.Inc()
+		return
+	}
+
+	// Validate file size against max_upload_size if configured
+	if conf.Server.MaxUploadSize != "" && r.ContentLength > 0 {
+		maxSizeBytes, err := parseSize(conf.Server.MaxUploadSize)
+		if err != nil {
+			log.Errorf("Invalid max_upload_size configuration: %v", err)
+			http.Error(w, "Server configuration error", http.StatusInternalServerError)
+			uploadErrorsTotal.Inc()
+			return
+		}
+		if r.ContentLength > maxSizeBytes {
+			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s", 
+				formatBytes(r.ContentLength), conf.Server.MaxUploadSize), http.StatusRequestEntityTooLarge)
+			uploadErrorsTotal.Inc()
+			return
+		}
+	}
+
+	// Validate file extension if configured
+	if len(conf.Uploads.AllowedExtensions) > 0 {
+		ext := strings.ToLower(filepath.Ext(originalFilename))
+		allowed := false
+		for _, allowedExt := range conf.Uploads.AllowedExtensions {
+			if ext == allowedExt {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			http.Error(w, fmt.Sprintf("File extension %s not allowed", ext), http.StatusBadRequest)
+			uploadErrorsTotal.Inc()
+			return
+		}
+	}
+
+	// Generate filename based on configuration
+	var filename string
+	switch conf.Server.FileNaming {
+	case "HMAC":
+		// Generate HMAC-based filename
+		h := hmac.New(sha256.New, []byte(conf.Security.Secret))
+		h.Write([]byte(originalFilename + time.Now().String()))
+		filename = hex.EncodeToString(h.Sum(nil)) + filepath.Ext(originalFilename)
+	default: // "original" or "None"
+		filename = originalFilename
+	}
+
+	// Create the file path
+	filePath := filepath.Join(conf.Server.StoragePath, filename)
+
+	// Create the directory if it doesn't exist
+	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+		log.Errorf("Failed to create directory: %v", err)
+		http.Error(w, "Failed to create directory", http.StatusInternalServerError)
+		uploadErrorsTotal.Inc()
+		return
+	}
+
+	// Create the file
+	dst, err := os.Create(filePath)
+	if err != nil {
+		log.Errorf("Failed to create file %s: %v", filePath, err)
+		http.Error(w, "Failed to create file", http.StatusInternalServerError)
+		uploadErrorsTotal.Inc()
+		return
+	}
+	defer dst.Close()
+
+	// Copy data from request body to file
+	written, err := io.Copy(dst, r.Body)
+	if err != nil {
+		log.Errorf("Failed to write file %s: %v", filePath, err)
+		http.Error(w, "Failed to write file", http.StatusInternalServerError)
+		uploadErrorsTotal.Inc()
+		return
+	}
+
+	// Create response
+	response := map[string]interface{}{
+		"message":  "File uploaded successfully",
+		"filename": filename,
+		"size":     written,
+		"url":      fmt.Sprintf("/download/%s", filename),
+	}
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Errorf("Failed to encode response: %v", err)
+	}
+
+	// Record metrics
+	requestDuration := time.Since(startTime)
+	uploadDuration.Observe(requestDuration.Seconds())
+	uploadsTotal.Inc()
+	
+	log.Infof("PUT upload completed: %s (%d bytes) in %v", filename, written, requestDuration)
 }
