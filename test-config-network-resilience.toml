@@ -1,0 +1,24 @@
+# HMAC File Server Test Configuration - Network Resilience Testing
+[server]
+listen_address = "8080"
+storage_path = "./test-uploads"
+
+[security]
+secret = "test-secret-key-network-resilience-2025"
+
+[logging]
+level = "debug"
+file = "./test-server.log"
+
+[uploads]
+networkevents = true
+
+[network_resilience]
+enabled = true
+fast_detection = true
+quality_monitoring = true
+predictive_switching = true
+mobile_optimizations = true
+upload_resilience = true
+detection_interval = "1s"
+quality_check_interval = "5s"

@@ -33,6 +33,7 @@ func DefaultConfig() *Config {
 			EnableDynamicWorkers:  true,
 			WorkerScaleUpThresh:   40,  // Optimized from previous session
 			WorkerScaleDownThresh: 10,
+			NetworkEvents:         true,  // Enable network resilience by default
 		},
 		Uploads: UploadsConfig{
 			AllowedExtensions:       []string{".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp", ".txt", ".pdf", ".png", ".jpg", ".jpeg"},
@@ -103,6 +104,14 @@ func DefaultConfig() *Config {
 		Workers: WorkersConfig{
 			NumWorkers:      4,
 			UploadQueueSize: 100, // Optimized from previous session
+		},
+		NetworkResilience: NetworkResilienceConfig{
+			FastDetection:        true,   // Enable fast 1-second detection
+			QualityMonitoring:    true,   // Monitor connection quality
+			PredictiveSwitching:  true,   // Switch before complete failure
+			MobileOptimizations:  true,   // Mobile-friendly thresholds
+			DetectionInterval:    "1s",   // Fast detection
+			QualityCheckInterval: "5s",   // Regular quality checks
 		},
 		File: FileConfig{},
 		Build: BuildConfig{
@@ -254,13 +263,26 @@ worker_scale_up_thresh = 40
 worker_scale_down_thresh = 10
 
 [uploads]
-allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]
+allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp", ".txt", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".mov", ".ogg", ".mp3", ".doc", ".docx"]
 chunked_uploads_enabled = true
 chunk_size = "10MB"
 resumable_uploads_enabled = true
 max_resumable_age = "48h"
 sessiontimeout = "60m"
 maxretries = 3
+networkevents = false                      # Enable network event monitoring for resilience
+
+# Upload resilience and session management
+session_persistence = true                 # Persist sessions across restarts
+session_recovery_timeout = "300s"          # Session recovery timeout after network changes
+client_reconnect_window = "120s"           # Time window for client reconnection
+upload_slot_ttl = "3600s"                  # Upload slot validity time
+retry_failed_uploads = true                # Auto-retry failed uploads
+max_upload_retries = 3                     # Maximum retry attempts
+allow_session_resume = true                # Allow resume from different IPs
+session_persistence_duration = "24h"       # How long to keep session data
+detect_duplicate_uploads = true            # Detect same upload from different IPs
+merge_duplicate_sessions = true            # Merge sessions from same client
 
 [downloads]
 allowed_extensions = [".txt", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg", ".webp"]
@@ -321,6 +343,45 @@ redishealthcheckinterval = "120s"
 [workers]
 numworkers = 4
 uploadqueuesize = 100
+
+# Network Resilience Configuration (v3.2+)
+[network_resilience]
+enabled = true                              # Enable network resilience system
+fast_detection = true                       # Enable 1-second network change detection
+quality_monitoring = true                   # Monitor RTT and packet loss per interface
+predictive_switching = true                 # Switch proactively before network failure
+mobile_optimizations = true                # Use mobile-friendly thresholds for cellular networks
+upload_resilience = true                    # Resume uploads across network changes
+detection_interval = "1s"                  # Network change detection interval
+quality_check_interval = "5s"              # Connection quality monitoring interval
+max_detection_interval = "10s"             # Maximum detection interval during stable periods
+network_change_threshold = 3               # Switches required to trigger network change
+interface_stability_time = "30s"           # Time to wait before marking interface stable
+upload_pause_timeout = "5m"               # Maximum time to pause uploads during network changes
+upload_retry_timeout = "10m"              # Maximum time to retry uploads after network changes
+rtt_warning_threshold = "200ms"            # RTT threshold for warning
+rtt_critical_threshold = "1000ms"          # RTT threshold for critical
+packet_loss_warning_threshold = 2.0        # Packet loss % for warning
+packet_loss_critical_threshold = 10.0      # Packet loss % for critical
+
+# Multi-Interface Support (v3.2+)
+multi_interface_enabled = false            # Enable multi-interface management
+interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Interface priority order
+auto_switch_enabled = true                 # Enable automatic interface switching
+switch_threshold_latency = "500ms"         # Latency threshold for switching
+switch_threshold_packet_loss = 5.0         # Packet loss threshold for switching
+quality_degradation_threshold = 0.5        # Quality degradation threshold
+max_switch_attempts = 3                    # Maximum switch attempts per detection
+switch_detection_interval = "10s"          # Switch detection interval
+
+# Client Network Support (v3.2+)
+[client_network_support]
+session_based_tracking = false             # Track sessions by ID instead of IP
+allow_ip_changes = true                    # Allow session continuation from different IPs
+session_migration_timeout = "5m"           # Time to wait for client reconnection
+max_ip_changes_per_session = 10           # Maximum IP changes per session
+client_connection_detection = false        # Detect client network type
+adapt_to_client_network = false           # Optimize parameters based on client connection
 
 [build]
 version = "3.2"

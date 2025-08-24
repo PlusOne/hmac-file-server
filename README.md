@@ -197,20 +197,24 @@ HMAC File Server 3.2 introduces enhanced network resilience specifically designe
 Perfect for mobile devices that switch between WiFi and cellular networks:
 
 ```toml
-[server]
+```toml
+[uploads]
 networkevents = true                        # REQUIRED: Enable network monitoring
 
 [network_resilience] 
+enabled = true                              # Enable network resilience system
 fast_detection = true                       # 1-second detection vs 5-second default
 quality_monitoring = true                   # Monitor connection quality
 predictive_switching = true                 # Switch before network fails
 mobile_optimizations = true                # Cellular-friendly settings
+upload_resilience = true                    # Resume uploads across network changes
 
 [uploads]
 session_recovery_timeout = "600s"           # 10-minute recovery window for IP changes
 client_reconnect_window = "300s"            # 5-minute reconnection window
 max_resumable_age = "72h"                   # Extended session retention
 max_upload_retries = 8                     # More retries for cellular
+networkevents = true                        # Enable network event monitoring
 
 [timeouts]
 readtimeout = "600s"                        # Extended for cellular latency
@@ -218,13 +222,17 @@ writetimeout = "600s"                       # Handle cellular upload delays
 idletimeout = "1200s"                       # 20-minute tolerance
 ```
 
-#### **Scenario 2: Dual-Connected Devices (Wired + WiFi)**
+#### **Scenario 2: Multi-Interface Devices (Ethernet + WiFi + LTE)**
 For devices with multiple network interfaces:
 
 ```toml
 [network_resilience]
+enabled = true                              # Enable network resilience
+multi_interface_enabled = true             # Enable multi-interface management
+interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Priority order
+auto_switch_enabled = true                 # Automatic interface switching
 fast_detection = true                       # Quick interface change detection
-quality_monitoring = true                   # Monitor both connections
+quality_monitoring = true                   # Monitor all connections
 predictive_switching = true                 # Use best available interface
 
 # System automatically selects best interface based on:
@@ -232,6 +240,11 @@ predictive_switching = true                 # Use best available interface
 # - Packet loss percentage  
 # - Connection stability
 # - Interface priority (ethernet > wifi > cellular)
+
+[client_network_support]
+session_based_tracking = true              # Track sessions by ID, not IP
+allow_ip_changes = true                    # Allow IP changes during uploads
+adapt_to_client_network = true            # Optimize for client connection type
 ```
 
 ### **Benefits for Mobile Scenarios**
@@ -250,17 +263,32 @@ predictive_switching = true                 # Use best available interface
 **Ultra-Fast Mobile Detection**:
 ```toml
 [network_resilience]
+enabled = true
 detection_interval = "500ms"               # Sub-second detection
 quality_check_interval = "2s"             # Frequent quality checks
 mobile_optimizations = true               # Lenient cellular thresholds
+upload_resilience = true                  # Resume uploads on network changes
 ```
 
 **Conservative Stable Network**:
 ```toml
 [network_resilience]
+enabled = true
 detection_interval = "10s"                # Slower detection
 quality_monitoring = false                # Disable quality checks
 predictive_switching = false              # React only to hard failures
+mobile_optimizations = false             # Use strict thresholds
+```
+
+**Multi-Interface Optimized**:
+```toml
+[network_resilience]
+enabled = true
+multi_interface_enabled = true           # Enable interface management
+interface_priority = ["eth0", "wlan0", "wwan0"]  # Preference order
+auto_switch_enabled = true               # Automatic switching
+switch_threshold_latency = "300ms"       # Switch threshold
+switch_threshold_packet_loss = 3.0       # 3% packet loss trigger
 ```
 
 ---
@@ -411,13 +439,42 @@ restart_grace_period = "60s"               # Grace period after restart
 
 # Enhanced Network Resilience (v3.2+)
 [network_resilience]
+enabled = true                              # Enable network resilience system
 fast_detection = true                       # Enable 1-second network change detection (vs 5-second default)
 quality_monitoring = true                   # Monitor RTT and packet loss per interface
 predictive_switching = true                 # Switch proactively before network failure
 mobile_optimizations = true                # Use mobile-friendly thresholds for cellular networks
+upload_resilience = true                    # Resume uploads across network changes
 detection_interval = "1s"                  # Network change detection interval
 quality_check_interval = "5s"              # Connection quality monitoring interval
 max_detection_interval = "10s"             # Maximum detection interval during stable periods
+network_change_threshold = 3               # Switches required to trigger network change
+interface_stability_time = "30s"           # Time to wait before marking interface stable
+upload_pause_timeout = "5m"               # Maximum time to pause uploads during network changes
+upload_retry_timeout = "10m"              # Maximum time to retry uploads after network changes
+rtt_warning_threshold = "200ms"            # RTT threshold for warning
+rtt_critical_threshold = "1000ms"          # RTT threshold for critical
+packet_loss_warning_threshold = 2.0        # Packet loss % for warning
+packet_loss_critical_threshold = 10.0      # Packet loss % for critical
+
+# Multi-Interface Support (v3.2+)
+multi_interface_enabled = false            # Enable multi-interface management
+interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Interface priority order
+auto_switch_enabled = true                 # Enable automatic interface switching
+switch_threshold_latency = "500ms"         # Latency threshold for switching
+switch_threshold_packet_loss = 5.0         # Packet loss threshold for switching
+quality_degradation_threshold = 0.5        # Quality degradation threshold
+max_switch_attempts = 3                    # Maximum switch attempts per detection
+switch_detection_interval = "10s"          # Switch detection interval
+
+# Client Network Support (v3.2+)
+[client_network_support]
+session_based_tracking = false             # Track sessions by ID instead of IP
+allow_ip_changes = true                    # Allow session continuation from different IPs
+session_migration_timeout = "5m"           # Time to wait for client reconnection
+max_ip_changes_per_session = 10           # Maximum IP changes per session
+client_connection_detection = false        # Detect client network type
+adapt_to_client_network = false           # Optimize parameters based on client connection
 
 [uploads]
 # File upload configuration
@@ -428,14 +485,19 @@ resumable_uploads_enabled = true           # Enable upload resumption
 max_resumable_age = "48h"                  # How long to keep resumable uploads
 sessiontimeout = "60m"                     # Upload session timeout
 maxretries = 3                             # Maximum upload retry attempts
+networkevents = false                      # Enable network event monitoring for uploads
 
-# Upload resilience
+# Upload resilience and session management
 session_persistence = true                 # Persist sessions across restarts
-session_recovery_timeout = "300s"          # Session recovery timeout
-client_reconnect_window = "120s"           # Client reconnection window
+session_recovery_timeout = "300s"          # Session recovery timeout after network changes
+client_reconnect_window = "120s"           # Time window for client reconnection
 upload_slot_ttl = "3600s"                  # Upload slot validity time
 retry_failed_uploads = true                # Auto-retry failed uploads
 max_upload_retries = 3                     # Maximum retry attempts
+allow_session_resume = true                # Allow resume from different IPs
+session_persistence_duration = "24h"       # How long to keep session data
+detect_duplicate_uploads = true            # Detect same upload from different IPs
+merge_duplicate_sessions = true            # Merge sessions from same client
 
 [downloads]
 # File download configuration

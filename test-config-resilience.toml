@@ -1,0 +1,59 @@
+# Option 1: Minimal Configuration (recommended for most users)
+# HMAC File Server - Minimal Configuration
+# This file contains only the essential settings you might want to customize.
+# All other settings use sensible defaults defined in the application.
+
+[server]
+# Network binding
+listen_address = "8080"
+
+# Storage location for uploaded files
+storage_path = "./uploads"
+
+# Security settings
+[security]
+# IMPORTANT: Change this secret key for production use!
+secret = "your-very-secret-hmac-key"
+
+# Logging configuration
+[logging]
+# Log level: debug, info, warn, error
+level = "info"
+file = "/var/log/hmac-file-server.log"
+
+# Advanced settings (uncomment and modify if needed)
+# [uploads]
+# max_resumable_age = "48h"
+# chunk_size = "10MB"
+# networkevents = true
+
+# [network_resilience]
+# enabled = true
+# fast_detection = true              # Enable 1-second detection for mobile
+# quality_monitoring = true          # Monitor RTT and packet loss
+# predictive_switching = true        # Switch before complete failure
+# mobile_optimizations = true       # Cellular-friendly thresholds
+# upload_resilience = true           # Resume uploads across network changes
+
+# [workers]
+# numworkers = 4
+# uploadqueuesize = 100
+
+# [deduplication]
+# enabled = true
+# directory = "./dedup_store"
+
+# [timeouts]
+# readtimeout = "4800s"
+# writetimeout = "4800s"
+# idletimeout = "4800s"
+
+# [clamav]
+# clamavenabled = false
+
+# [redis]
+# redisenabled = false
+
+
+# Option 2: Advanced Configuration Template (for fine-tuning)
+# Use -genconfig-advanced to generate the advanced template

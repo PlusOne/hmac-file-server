@@ -18,6 +18,8 @@ This documentation provides detailed information on configuring, setting up, and
     - [ClamAV Settings](#clamav-settings)
     - [Redis Settings](#redis-settings)
     - [Worker Settings](#worker-settings)
+    - [Network Resilience Settings](#network-resilience-settings)
+    - [Client Network Support Settings](#client-network-support-settings)
 4. [Example Configuration](#example-configuration)
 5. [Setup Instructions](#setup-instructions)
     - [1. HMAC File Server Installation](#1-hmac-file-server-installation)
@@ -399,19 +401,34 @@ compress = true   # Compress old log files
 ```toml
 # Upload settings
 [uploads]
-allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]
+allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp", ".txt", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".mov", ".ogg", ".mp3", ".doc", ".docx"]
 chunked_uploads_enabled = true
-chunk_size = "10MB"  # Chunk size for uploads
+chunk_size = "10MB"                        # Chunk size for uploads
 resumable_uploads_enabled = true
-max_resumable_age = "48h"  # Maximum age for resumable uploads
+max_resumable_age = "48h"                  # Maximum age for resumable uploads
+sessiontimeout = "60m"                     # Upload session timeout
+maxretries = 3                             # Maximum upload retry attempts
+networkevents = false                      # Enable network event monitoring for uploads
+
+# Upload resilience and session management
+session_persistence = true                 # Persist sessions across restarts
+session_recovery_timeout = "300s"          # Session recovery timeout after network changes
+client_reconnect_window = "120s"           # Time window for client reconnection
+upload_slot_ttl = "3600s"                  # Upload slot validity time
+retry_failed_uploads = true                # Auto-retry failed uploads
+max_upload_retries = 3                     # Maximum retry attempts
+allow_session_resume = true                # Allow resume from different IPs
+session_persistence_duration = "24h"       # How long to keep session data
+detect_duplicate_uploads = true            # Detect same upload from different IPs
+merge_duplicate_sessions = true            # Merge sessions from same client
 ```
 
 #### Configuration Options
 
 - **allowed_extensions**:  
   - *Type*: `Array of Strings`  
-  - *Description*: Lists the file extensions permitted for upload.  
-  - *Default*: `[".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]`
+  - *Description*: Lists the file extensions permitted for upload. Includes XMPP-compatible formats.  
+  - *Default*: `[".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp", ".txt", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".mov", ".ogg", ".mp3", ".doc", ".docx"]`
 
 - **chunked_uploads_enabled**:  
   - *Type*: `Boolean`  
@@ -434,6 +451,27 @@ max_resumable_age = "48h"  # Maximum age for resumable uploads
   - *Description*: Maximum time a resumable upload session remains valid.  
   - *Format*: Duration (e.g., `"48h"`)  
   - *Default*: `"48h"`
+
+- **networkevents**:  
+  - *Type*: `Boolean`  
+  - *Description*: Enables network event monitoring for uploads. Required for network resilience features.  
+  - *Default*: `false`
+
+- **session_persistence**:  
+  - *Type*: `Boolean`  
+  - *Description*: Persists upload sessions across server restarts and network changes.  
+  - *Default*: `true`
+
+- **session_recovery_timeout**:  
+  - *Type*: `String`  
+  - *Description*: Maximum time to wait for session recovery after network changes.  
+  - *Format*: Duration (e.g., `"300s"`)  
+  - *Default*: `"300s"`
+
+- **allow_session_resume**:  
+  - *Type*: `Boolean`  
+  - *Description*: Allows upload sessions to resume from different IP addresses (useful for mobile clients).  
+  - *Default*: `true`
 
 ---
 
@@ -583,6 +621,124 @@ uploadqueuesize = 50         # Size of upload queue
 
 ---
 
+### Network Resilience Settings
+
+```toml
+# Network resilience configuration for mobile and multi-interface environments
+[network_resilience]
+enabled = true                              # Enable network resilience system
+fast_detection = true                       # Enable 1-second network change detection
+quality_monitoring = true                   # Monitor RTT and packet loss per interface
+predictive_switching = true                 # Switch proactively before network failure
+mobile_optimizations = true                # Use mobile-friendly thresholds for cellular networks
+upload_resilience = true                    # Resume uploads across network changes
+detection_interval = "1s"                  # Network change detection interval
+quality_check_interval = "5s"              # Connection quality monitoring interval
+max_detection_interval = "10s"             # Maximum detection interval during stable periods
+network_change_threshold = 3               # Switches required to trigger network change
+interface_stability_time = "30s"           # Time to wait before marking interface stable
+upload_pause_timeout = "5m"               # Maximum time to pause uploads during network changes
+upload_retry_timeout = "10m"              # Maximum time to retry uploads after network changes
+rtt_warning_threshold = "200ms"            # RTT threshold for warning
+rtt_critical_threshold = "1000ms"          # RTT threshold for critical
+packet_loss_warning_threshold = 2.0        # Packet loss % for warning
+packet_loss_critical_threshold = 10.0      # Packet loss % for critical
+
+# Multi-Interface Support (v3.2+)
+multi_interface_enabled = false            # Enable multi-interface management
+interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Interface priority order
+auto_switch_enabled = true                 # Enable automatic interface switching
+switch_threshold_latency = "500ms"         # Latency threshold for switching
+switch_threshold_packet_loss = 5.0         # Packet loss threshold for switching
+quality_degradation_threshold = 0.5        # Quality degradation threshold
+max_switch_attempts = 3                    # Maximum switch attempts per detection
+switch_detection_interval = "10s"          # Switch detection interval
+```
+
+#### Configuration Options
+
+- **enabled**:  
+  - *Type*: `Boolean`  
+  - *Description*: Enables the network resilience system for handling network changes and quality monitoring.  
+  - *Default*: `true`
+
+- **fast_detection**:  
+  - *Type*: `Boolean`  
+  - *Description*: Enables 1-second network change detection vs 5-second default for rapid network switching scenarios.  
+  - *Default*: `true`
+
+- **quality_monitoring**:  
+  - *Type*: `Boolean`  
+  - *Description*: Monitors RTT and packet loss per interface to determine network quality and trigger proactive switching.  
+  - *Default*: `true`
+
+- **predictive_switching**:  
+  - *Type*: `Boolean`  
+  - *Description*: Switches networks proactively before complete failure based on quality degradation patterns.  
+  - *Default*: `true`
+
+- **mobile_optimizations**:  
+  - *Type*: `Boolean`  
+  - *Description*: Uses mobile-friendly thresholds for cellular networks with higher tolerance for latency and packet loss.  
+  - *Default*: `true`
+
+- **upload_resilience**:  
+  - *Type*: `Boolean`  
+  - *Description*: Enables upload session preservation and resumption across network changes.  
+  - *Default*: `true`
+
+- **multi_interface_enabled**:  
+  - *Type*: `Boolean`  
+  - *Description*: Enables management of multiple network interfaces with automatic switching capabilities.  
+  - *Default*: `false`
+
+- **interface_priority**:  
+  - *Type*: `Array of Strings`  
+  - *Description*: Defines the preference order for network interfaces. First interface has highest priority.  
+  - *Default*: `["eth0", "wlan0", "wwan0", "ppp0"]`
+
+**Use Cases**:
+- Mobile devices switching between WiFi and cellular
+- Laptops with Ethernet + WiFi
+- IoT devices with primary and backup connections
+- Server environments with multiple network adapters
+
+---
+
+### Client Network Support Settings
+
+```toml
+# Client network support for handling clients with changing IPs
+[client_network_support]
+session_based_tracking = false             # Track sessions by ID instead of IP
+allow_ip_changes = true                    # Allow session continuation from different IPs
+session_migration_timeout = "5m"           # Time to wait for client reconnection
+max_ip_changes_per_session = 10           # Maximum IP changes per session
+client_connection_detection = false        # Detect client network type
+adapt_to_client_network = false           # Optimize parameters based on client connection
+```
+
+#### Configuration Options
+
+- **session_based_tracking**:  
+  - *Type*: `Boolean`  
+  - *Description*: Tracks upload sessions by session ID instead of client IP, enabling seamless operation when clients change networks.  
+  - *Default*: `false`
+
+- **allow_ip_changes**:  
+  - *Type*: `Boolean`  
+  - *Description*: Allows the same upload session to continue from different IP addresses.  
+  - *Default*: `true`
+
+- **adapt_to_client_network**:  
+  - *Type*: `Boolean`  
+  - *Description*: Automatically optimizes upload parameters (chunk size, timeouts) based on detected client connection type.  
+  - *Default*: `false`
+
+**Note**: These settings are particularly useful for mobile applications and environments where clients frequently change networks.
+
+---
+
 #### Configuration Options
 
 - **maxfilesize**:  
@@ -636,16 +792,22 @@ sudo chmod 750 /opt/hmac-file-server/data/uploads
 **Problem**: Network events not detected, uploads don't resume after network changes
 
 ```toml
-# ✅ Enable network events in uploads section
+# ✅ Enable network events in uploads section (REQUIRED)
 [uploads]
-networkevents = true  # This enables the feature
+networkevents = true  # This enables the network monitoring system
 
 # ✅ Add network resilience configuration
 [network_resilience]
 enabled = true
 quality_monitoring = true
 upload_resilience = true
+fast_detection = true
 ```
+
+**Common Issues**:
+- `networkevents = false` (or missing) in uploads section
+- Network resilience disabled but expecting network change detection
+- Missing `upload_resilience = true` for upload session recovery
 
 #### ❌ **Service Fails with Read-Only File System**
 
@@ -859,11 +1021,18 @@ worker_scale_up_thresh = 40   # 40% optimized threshold for 3.2
 worker_scale_down_thresh = 10
 
 [uploads]
-allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp"]
+allowed_extensions = [".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp", ".txt", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".mov", ".ogg", ".mp3", ".doc", ".docx"]
 chunked_uploads_enabled = true
 chunk_size = "10MB"
 resumable_uploads_enabled = true
 max_resumable_age = "48h"
+sessiontimeout = "60m"
+maxretries = 3
+networkevents = true                        # Enable network event monitoring
+session_persistence = true
+session_recovery_timeout = "300s"
+client_reconnect_window = "120s"
+allow_session_resume = true
 
 [downloads]
 resumable_downloads_enabled = true
@@ -924,6 +1093,41 @@ redishealthcheckinterval = "120s"
 [workers]
 numworkers = 4
 uploadqueuesize = 50
+
+# Network Resilience (v3.2+)
+[network_resilience]
+enabled = true
+fast_detection = true
+quality_monitoring = true
+predictive_switching = true
+mobile_optimizations = false               # Use strict thresholds for server environment
+upload_resilience = true
+detection_interval = "5s"                  # Standard detection for servers
+quality_check_interval = "10s"
+network_change_threshold = 3
+interface_stability_time = "30s"
+upload_pause_timeout = "5m"
+upload_retry_timeout = "10m"
+rtt_warning_threshold = "200ms"
+rtt_critical_threshold = "1000ms"
+packet_loss_warning_threshold = 2.0
+packet_loss_critical_threshold = 10.0
+
+# Multi-interface support (optional)
+multi_interface_enabled = false            # Enable for multi-interface setups
+interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]
+auto_switch_enabled = true
+switch_threshold_latency = "500ms"
+switch_threshold_packet_loss = 5.0
+
+# Client Network Support (v3.2+)
+[client_network_support]
+session_based_tracking = false             # Standard IP-based tracking for servers
+allow_ip_changes = true                    # Allow for client network changes
+session_migration_timeout = "5m"
+max_ip_changes_per_session = 10
+client_connection_detection = false
+adapt_to_client_network = false
 
 [file]
 # Add file-specific configurations here

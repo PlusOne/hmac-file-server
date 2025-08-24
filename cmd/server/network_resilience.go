@@ -4,11 +4,13 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"os/exec"
 	"sync"
 	"time"
-	"os/exec"
 )
 
 // NetworkResilienceManager handles network change detection and upload pausing
@@ -840,4 +842,57 @@ func InitializeNetworkResilience() {
 	networkManager = NewNetworkResilienceManager()
 	ConfigureEnhancedTimeouts()
 	log.Info("Network resilience system initialized")
+}
+
+// copyWithNetworkResilience performs io.Copy with network resilience support
+func copyWithNetworkResilience(dst io.Writer, src io.Reader, uploadCtx *UploadContext) (int64, error) {
+	if uploadCtx == nil {
+		// Fallback to regular copy if no network resilience
+		return io.Copy(dst, src)
+	}
+	
+	const bufferSize = 32 * 1024 // 32KB buffer
+	buf := make([]byte, bufferSize)
+	var written int64
+	
+	for {
+		// Check for network resilience signals before each read
+		select {
+		case <-uploadCtx.PauseChan:
+			log.Debug("Upload paused due to network change, waiting for resume...")
+			uploadCtx.IsPaused = true
+			// Wait for resume signal
+			<-uploadCtx.ResumeChan
+			uploadCtx.IsPaused = false
+			log.Debug("Upload resumed after network stabilization")
+		case <-uploadCtx.CancelChan:
+			return written, fmt.Errorf("upload cancelled due to network issues")
+		default:
+			// Continue with upload
+		}
+		
+		// Read data
+		nr, readErr := src.Read(buf)
+		if nr > 0 {
+			// Write data
+			nw, writeErr := dst.Write(buf[:nr])
+			if nw > 0 {
+				written += int64(nw)
+			}
+			if writeErr != nil {
+				return written, writeErr
+			}
+			if nr != nw {
+				return written, io.ErrShortWrite
+			}
+		}
+		if readErr != nil {
+			if readErr != io.EOF {
+				return written, readErr
+			}
+			break
+		}
+	}
+	
+	return written, nil
 }

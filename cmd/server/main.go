@@ -748,10 +748,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if conf.Server.NetworkEvents { // Corrected field name
-		go monitorNetwork(ctx)      // Assuming monitorNetwork is defined in helpers.go or elsewhere
-		go handleNetworkEvents(ctx) // Assuming handleNetworkEvents is defined in helpers.go or elsewhere
-	}
+	// Legacy network monitoring disabled - now handled by NetworkResilienceManager
+	// if conf.Server.NetworkEvents { // Corrected field name
+	//	go monitorNetwork(ctx)      // OLD: Basic network monitoring (replaced by NetworkResilienceManager)
+	//	go handleNetworkEvents(ctx) // OLD: Basic event logging (replaced by NetworkResilienceManager)
+	// }
 	go updateSystemMetrics(ctx)
 
 	if conf.ClamAV.ClamAVEnabled {
@@ -1640,8 +1641,21 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer dst.Close()
 
-	// Copy file content
-	written, err := io.Copy(dst, file)
+	// Register upload with network resilience manager for WLAN/5G switching support
+	var uploadCtx *UploadContext
+	var sessionID string
+	if networkManager != nil {
+		sessionID = r.Header.Get("X-Upload-Session-ID")
+		if sessionID == "" {
+			sessionID = fmt.Sprintf("upload_%s_%d", getClientIP(r), time.Now().UnixNano())
+		}
+		uploadCtx = networkManager.RegisterUpload(sessionID)
+		defer networkManager.UnregisterUpload(sessionID)
+		log.Debugf("Registered upload with network resilience: %s", sessionID)
+	}
+
+	// Copy file content with network resilience support
+	written, err := copyWithNetworkResilience(dst, file, uploadCtx)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error saving file: %v", err), http.StatusInternalServerError)
 		uploadErrorsTotal.Inc()
