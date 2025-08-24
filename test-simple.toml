@@ -1,0 +1,10 @@
+# Simple test configuration
+[server]
+listen_address = "8080"
+storage_path = "./test-uploads"
+
+[security]
+secret = "test-secret-key"
+
+[logging]
+level = "info"
