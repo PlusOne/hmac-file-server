@@ -39,17 +39,22 @@ import (
 
 // NetworkResilientSession represents a persistent session for network switching
 type NetworkResilientSession struct {
-	SessionID       string            `json:"session_id"`
-	UserJID         string            `json:"user_jid"`
-	OriginalToken   string            `json:"original_token"`
-	CreatedAt       time.Time         `json:"created_at"`
-	LastSeen        time.Time         `json:"last_seen"`
-	NetworkHistory  []NetworkEvent    `json:"network_history"`
-	UploadContext   *UploadContext    `json:"upload_context,omitempty"`
-	RefreshCount    int               `json:"refresh_count"`
-	MaxRefreshes    int               `json:"max_refreshes"`
-	LastIP          string            `json:"last_ip"`
-	UserAgent       string            `json:"user_agent"`
+	SessionID         string            `json:"session_id"`
+	UserJID           string            `json:"user_jid"`
+	OriginalToken     string            `json:"original_token"`
+	CreatedAt         time.Time         `json:"created_at"`
+	LastSeen          time.Time         `json:"last_seen"`
+	NetworkHistory    []NetworkEvent    `json:"network_history"`
+	UploadContext     *UploadContext    `json:"upload_context,omitempty"`
+	RefreshCount      int               `json:"refresh_count"`
+	MaxRefreshes      int               `json:"max_refreshes"`
+	LastIP            string            `json:"last_ip"`
+	UserAgent         string            `json:"user_agent"`
+	SecurityLevel     int               `json:"security_level"`     // 1=normal, 2=challenge, 3=reauth
+	LastSecurityCheck time.Time         `json:"last_security_check"`
+	NetworkChangeCount int              `json:"network_change_count"`
+	StandbyDetected   bool              `json:"standby_detected"`
+	LastActivity      time.Time         `json:"last_activity"`
 }
 
 // NetworkEvent tracks network transitions during session
@@ -428,11 +433,16 @@ type DownloadsConfig struct {
 }
 
 type SecurityConfig struct {
-	Secret        string `toml:"secret" mapstructure:"secret"`
-	EnableJWT     bool   `toml:"enablejwt" mapstructure:"enablejwt"` // Added EnableJWT field
-	JWTSecret     string `toml:"jwtsecret" mapstructure:"jwtsecret"`
-	JWTAlgorithm  string `toml:"jwtalgorithm" mapstructure:"jwtalgorithm"`
-	JWTExpiration string `toml:"jwtexpiration" mapstructure:"jwtexpiration"`
+	Secret                    string `toml:"secret" mapstructure:"secret"`
+	EnableJWT                 bool   `toml:"enablejwt" mapstructure:"enablejwt"` // Added EnableJWT field
+	JWTSecret                 string `toml:"jwtsecret" mapstructure:"jwtsecret"`
+	JWTAlgorithm              string `toml:"jwtalgorithm" mapstructure:"jwtalgorithm"`
+	JWTExpiration             string `toml:"jwtexpiration" mapstructure:"jwtexpiration"`
+	EnhancedSecurity          bool   `toml:"enhanced_security" mapstructure:"enhanced_security"`
+	ChallengeOnNetworkChange  bool   `toml:"challenge_on_network_change" mapstructure:"challenge_on_network_change"`
+	ReauthOnLongStandby       bool   `toml:"reauth_on_long_standby" mapstructure:"reauth_on_long_standby"`
+	StandbyThresholdMinutes   int    `toml:"standby_threshold_minutes" mapstructure:"standby_threshold_minutes"`
+	LongStandbyThresholdHours int    `toml:"long_standby_threshold_hours" mapstructure:"long_standby_threshold_hours"`
 }
 
 type LoggingConfig struct {
@@ -1858,6 +1868,123 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 	return claims, nil
 }
 
+// evaluateSecurityLevel determines the required security level based on network changes and standby detection
+func evaluateSecurityLevel(session *NetworkResilientSession, currentIP string, userAgent string) int {
+	now := time.Now()
+	
+	// Initialize if this is the first check
+	if session.LastSecurityCheck.IsZero() {
+		session.LastSecurityCheck = now
+		session.LastActivity = now
+		session.SecurityLevel = 1 // Normal level
+		return 1
+	}
+	
+	// Detect potential standby scenario
+	timeSinceLastActivity := now.Sub(session.LastActivity)
+	standbyThreshold := 30 * time.Minute
+	
+	if timeSinceLastActivity > standbyThreshold {
+		session.StandbyDetected = true
+		log.Infof("🔒 STANDBY DETECTED: %v since last activity for session %s", timeSinceLastActivity, session.SessionID)
+		
+		// Long standby requires full re-authentication
+		if timeSinceLastActivity > 2*time.Hour {
+			log.Warnf("🔐 SECURITY LEVEL 3: Long standby (%v) requires full re-authentication", timeSinceLastActivity)
+			return 3
+		}
+		
+		// Medium standby requires challenge-response
+		log.Infof("🔐 SECURITY LEVEL 2: Medium standby (%v) requires challenge-response", timeSinceLastActivity)
+		return 2
+	}
+	
+	// Detect network changes
+	if session.LastIP != "" && session.LastIP != currentIP {
+		session.NetworkChangeCount++
+		log.Infof("🌐 NETWORK CHANGE #%d: %s → %s for session %s", 
+			session.NetworkChangeCount, session.LastIP, currentIP, session.SessionID)
+		
+		// Multiple rapid network changes are suspicious
+		if session.NetworkChangeCount > 3 {
+			log.Warnf("🔐 SECURITY LEVEL 3: Multiple network changes (%d) requires full re-authentication", 
+				session.NetworkChangeCount)
+			return 3
+		}
+		
+		// Single network change requires challenge-response
+		log.Infof("🔐 SECURITY LEVEL 2: Network change requires challenge-response")
+		return 2
+	}
+	
+	// Check for suspicious user agent changes
+	if session.UserAgent != "" && session.UserAgent != userAgent {
+		log.Warnf("🔐 SECURITY LEVEL 3: User agent change detected - potential device hijacking")
+		return 3
+	}
+	
+	// Normal operation
+	return 1
+}
+
+// generateSecurityChallenge creates a challenge for Level 2 authentication
+func generateSecurityChallenge(session *NetworkResilientSession, secret string) (string, error) {
+	// Create a time-based challenge using session data
+	timestamp := time.Now().Unix()
+	challengeData := fmt.Sprintf("%s:%s:%d", session.SessionID, session.UserJID, timestamp)
+	
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write([]byte(challengeData))
+	challenge := hex.EncodeToString(h.Sum(nil))
+	
+	log.Infof("🔐 Generated security challenge for session %s", session.SessionID)
+	return challenge, nil
+}
+
+// validateSecurityChallenge verifies Level 2 challenge-response
+func validateSecurityChallenge(session *NetworkResilientSession, providedResponse string, secret string) bool {
+	// This would validate against the expected response
+	// For now, we'll implement a simple time-window validation
+	timestamp := time.Now().Unix()
+	
+	// Allow 5-minute window for challenge responses
+	for i := int64(0); i <= 300; i += 60 {
+		testTimestamp := timestamp - i
+		challengeData := fmt.Sprintf("%s:%s:%d", session.SessionID, session.UserJID, testTimestamp)
+		
+		h := hmac.New(sha256.New, []byte(secret))
+		h.Write([]byte(challengeData))
+		expectedResponse := hex.EncodeToString(h.Sum(nil))
+		
+		if expectedResponse == providedResponse {
+			log.Infof("✅ Security challenge validated for session %s", session.SessionID)
+			return true
+		}
+	}
+	
+	log.Warnf("❌ Security challenge failed for session %s", session.SessionID)
+	return false
+}
+
+// setSecurityHeaders adds appropriate headers for re-authentication requests
+func setSecurityHeaders(w http.ResponseWriter, securityLevel int, challenge string) {
+	switch securityLevel {
+	case 2:
+		// Challenge-response required
+		w.Header().Set("WWW-Authenticate", fmt.Sprintf("HMAC-Challenge challenge=\"%s\"", challenge))
+		w.Header().Set("X-Security-Level", "2")
+		w.Header().Set("X-Auth-Required", "challenge-response")
+	case 3:
+		// Full re-authentication required
+		w.Header().Set("WWW-Authenticate", "HMAC realm=\"HMAC File Server\"")
+		w.Header().Set("X-Security-Level", "3")
+		w.Header().Set("X-Auth-Required", "full-authentication")
+	default:
+		// Normal level
+		w.Header().Set("X-Security-Level", "1")
+	}
+}
+
 // validateBearerTokenWithSession validates Bearer token with session recovery support
 // ENHANCED FOR NETWORK SWITCHING: 5G ↔ WiFi transition support with session persistence
 func validateBearerTokenWithSession(r *http.Request, secret string) (*BearerTokenClaims, error) {
@@ -1874,18 +2001,70 @@ func validateBearerTokenWithSession(r *http.Request, secret string) (*BearerToke
 		session := sessionStore.GetSession(sessionID)
 		if session == nil {
 			session = &NetworkResilientSession{
-				SessionID:    sessionID,
-				UserJID:      claims.User,
-				OriginalToken: getBearerTokenFromRequest(r),
-				CreatedAt:    time.Now(),
-				MaxRefreshes: 10,
-				NetworkHistory: []NetworkEvent{},
+				SessionID:         sessionID,
+				UserJID:           claims.User,
+				OriginalToken:     getBearerTokenFromRequest(r),
+				CreatedAt:         time.Now(),
+				MaxRefreshes:      10,
+				NetworkHistory:    []NetworkEvent{},
+				SecurityLevel:     1,
+				LastSecurityCheck: time.Now(),
+				NetworkChangeCount: 0,
+				StandbyDetected:   false,
+				LastActivity:      time.Now(),
 			}
 		}
 
 		// Update session with current network context
 		currentIP := getClientIP(r)
 		userAgent := r.Header.Get("User-Agent")
+
+		// ENHANCED SECURITY: Evaluate security level based on network changes and standby
+		requiredSecurityLevel := evaluateSecurityLevel(session, currentIP, userAgent)
+		session.SecurityLevel = requiredSecurityLevel
+		session.LastActivity = time.Now()
+
+		// Handle security level requirements
+		if requiredSecurityLevel > 1 {
+			// Extract response writer from context for security headers
+			w, ok := r.Context().Value("responseWriter").(http.ResponseWriter)
+			if !ok {
+				log.Errorf("❌ Could not extract response writer for security headers")
+				return nil, fmt.Errorf("security evaluation failed")
+			}
+
+			switch requiredSecurityLevel {
+			case 2:
+				// Challenge-response required
+				challenge, err := generateSecurityChallenge(session, secret)
+				if err != nil {
+					log.Errorf("❌ Failed to generate security challenge: %v", err)
+					return nil, fmt.Errorf("security challenge generation failed")
+				}
+				
+				// Check if client provided challenge response
+				challengeResponse := r.Header.Get("X-Challenge-Response")
+				if challengeResponse == "" {
+					// No response provided, send challenge
+					setSecurityHeaders(w, 2, challenge)
+					return nil, fmt.Errorf("challenge-response required for network change")
+				}
+				
+				// Validate challenge response
+				if !validateSecurityChallenge(session, challengeResponse, secret) {
+					setSecurityHeaders(w, 2, challenge)
+					return nil, fmt.Errorf("invalid challenge response")
+				}
+				
+				log.Infof("✅ Challenge-response validated for session %s", sessionID)
+				
+			case 3:
+				// Full re-authentication required
+				setSecurityHeaders(w, 3, "")
+				log.Warnf("🔐 Full re-authentication required for session %s", sessionID)
+				return nil, fmt.Errorf("full re-authentication required")
+			}
+		}
 
 		if session.LastIP != "" && session.LastIP != currentIP {
 			// Network change detected

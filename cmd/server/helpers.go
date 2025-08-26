@@ -674,12 +674,31 @@ func updateSystemMetrics(ctx context.Context) {
 func setupRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 	
-	mux.HandleFunc("/upload", handleUpload)
-	mux.HandleFunc("/download/", handleDownload)
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	// Add CORS middleware wrapper
+	corsWrapper := func(handler http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			// Set CORS headers for all responses
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS, HEAD")
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Content-Length, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+			
+			// Handle OPTIONS preflight for all endpoints
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			
+			handler(w, r)
+		}
+	}
+	
+	mux.HandleFunc("/upload", corsWrapper(handleUpload))
+	mux.HandleFunc("/download/", corsWrapper(handleDownload))
+	mux.HandleFunc("/health", corsWrapper(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
-	})
+	}))
 
 	if conf.Server.MetricsEnabled {
 		mux.Handle("/metrics", promhttp.Handler())
@@ -689,6 +708,19 @@ func setupRouter() *http.ServeMux {
 	// This must be added last as it matches all paths
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Infof("🔍 ROUTER DEBUG: Catch-all handler called - method:%s path:%s query:%s", r.Method, r.URL.Path, r.URL.RawQuery)
+		
+		// Add CORS headers for all responses
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS, HEAD")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Content-Length, X-Requested-With")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+		
+		// Handle CORS preflight requests (fix for Gajim "bad gateway" error)
+		if r.Method == http.MethodOptions {
+			log.Info("🔍 ROUTER DEBUG: Handling CORS preflight (OPTIONS) request")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 		
 		// Handle PUT requests for all upload protocols
 		if r.Method == http.MethodPut {

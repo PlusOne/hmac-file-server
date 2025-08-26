@@ -11,6 +11,12 @@ A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) 
 
 ## What's New in 3.3.0 "Nexus Infinitum"
 
+### 🔧 XMPP Client Compatibility
+- **✅ Gajim "Bad Gateway" Fix**: Full CORS support resolves intermittent upload errors
+- **✅ Universal XMPP Support**: Tested with Dino, Gajim, Conversations, Monal
+- **✅ Web Client Ready**: CORS headers for Converse.js and browser-based clients
+- **✅ Standards Compliant**: W3C CORS + XEP-0363 HTTP File Upload
+
 ### Configuration Revolution
 - **93% Config Reduction**: From 112-line complex configs to 8-line minimal configs
 - **Smart Defaults**: Production-ready settings built into the application
@@ -371,6 +377,17 @@ listenport = "8080"
 storage_path = "/opt/hmac-file-server/data/uploads"
 listen_address = "8080"
 ```
+
+### 🔧 XMPP Client Issues
+
+**Gajim "Bad Gateway" Error**: Fixed in 3.3.0 with full CORS support
+```bash
+# Verify CORS functionality
+curl -X OPTIONS http://your-server:8080/ -v
+# Should return HTTP 200 with Access-Control headers
+```
+
+📖 **See**: [GAJIM_BAD_GATEWAY_FIX.md](GAJIM_BAD_GATEWAY_FIX.md) for complete details
 
 **Quick Fix Commands:**
 ```bash

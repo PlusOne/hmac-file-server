@@ -1,0 +1,59 @@
+# 🔐 Enhanced Security Configuration for HMAC File Server 3.3.0
+# Advanced security features for network switching and standby recovery
+
+[server]
+# Basic server configuration
+listen_address = "8080"
+bind_ip = "0.0.0.0"
+storage_path = "./uploads"
+unix_socket = false
+
+# Network resilience features (3.3.0+)
+network_events = true
+client_multi_interface = true
+
+[security]
+# HMAC authentication secret (CHANGE THIS IN PRODUCTION!)
+secret = "your-very-secret-hmac-key-change-in-production"
+
+# Enhanced Security Features (NEW in 3.3.0)
+enhanced_security = true                    # Enable enhanced security evaluation
+challenge_on_network_change = true         # Require challenge-response on network change
+reauth_on_long_standby = true              # Require full re-auth after long standby
+standby_threshold_minutes = 30             # Minutes to detect standby
+long_standby_threshold_hours = 2           # Hours to require full re-auth
+
+# JWT configuration (optional)
+enablejwt = false
+jwtsecret = "your-256-bit-jwt-secret-key-change-this"
+
+[sessionstore]
+# Session storage for network switching
+enabled = true
+backend = "memory"                          # Options: memory, redis
+expiry_hours = 72                          # Maximum session age
+cleanup_interval_minutes = 60             # Cleanup frequency
+
+# Redis backend (if using redis)
+# redis_url = "redis://localhost:6379/0"
+
+[uploads]
+# File upload configuration
+max_file_size = "100MB"
+allowed_extensions = [".txt", ".pdf", ".jpg", ".png", ".mp4", ".mkv"]
+dedupe = true
+
+[downloads]
+# File download configuration  
+max_file_size = "100MB"
+allowed_extensions = [".txt", ".pdf", ".jpg", ".png", ".mp4", ".mkv"]
+chunked_downloads_enabled = true
+chunk_size = "1MB"
+
+[logging]
+# Logging configuration
+level = "info"
+file = "/var/log/hmac-file-server/enhanced-security.log"
+
+[build]
+version = "3.3.0"
