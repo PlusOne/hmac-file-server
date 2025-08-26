@@ -1,0 +1,31 @@
+# Ejabberd Module Configuration
+
+modules:
+  mod_http_upload_hmac:
+    hmac_server_url: "http://localhost:8080"
+    hmac_shared_secret: "your-secure-secret-change-me"
+    max_size: 104857600  # 100MB
+    quota_per_user: 1073741824  # 1GB  
+    token_expiry: 3600  # 1 hour
+    allowed_extensions: 
+      - ".jpg"
+      - ".jpeg" 
+      - ".png"
+      - ".gif"
+      - ".webp"
+      - ".pdf"
+      - ".mp4"
+      - ".webm"
+      - ".mp3"
+      - ".flac"
+      - ".ogg"
+      - ".txt"
+      - ".md"
+      - ".doc"
+      - ".docx"
+      - ".zip"
+      - ".tar.gz"
+    iqdisc: one_queue
+
+# Optional: Disable default mod_http_upload if present
+# mod_http_upload: []

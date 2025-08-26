@@ -1,0 +1,106 @@
+# HMAC File Server - Mobile Network Resilience Configuration
+# Optimized for WiFi ↔ LTE switching and device standby scenarios
+# Version: 3.2.2 Enhanced for Mobile Devices
+
+[server]
+# Network binding - CRITICAL: Use 0.0.0.0 to bind to all interfaces
+bind_ip = "0.0.0.0"
+listen_address = "8080"
+
+# Storage and basic settings
+storage_path = "./uploads"
+max_upload_size = "500MB"
+log_file = "/var/log/hmac-file-server.log"
+log_level = "info"
+
+# Network resilience - CRITICAL for mobile scenarios
+networkevents = true                        # Monitor network changes
+auto_adjust_workers = true                  # Adapt to network conditions
+
+[security]
+# HMAC secret - MUST match ejabberd module configuration
+secret = "mobile-network-resilience-secret-key"
+
+# Enhanced authentication for mobile devices
+bearer_tokens_enabled = true               # Enable Bearer token auth
+jwt_enabled = true                         # Enable JWT authentication
+hmac_enabled = true                        # Enable legacy HMAC
+
+# Extended validation periods for network switching
+token_grace_period = "8h"                  # 8 hours base grace period
+mobile_grace_period = "12h"                # 12 hours for mobile clients
+standby_grace_period = "24h"               # 24 hours for standby recovery
+ultra_max_grace = "72h"                    # 72 hours ultra-maximum for critical scenarios
+
+[uploads]
+# Upload resilience for network changes
+resumable_uploads_enabled = true           # CRITICAL: Enable upload resumption
+max_resumable_age = "72h"                  # Keep sessions for 3 days
+session_recovery_timeout = "600s"          # 10 minutes to recover from network change
+client_reconnect_window = "300s"           # 5 minutes for client to reconnect
+
+# Mobile-optimized chunking
+chunked_uploads_enabled = true
+chunk_size = "5MB"                         # Smaller chunks for mobile stability
+upload_timeout = "3600s"                   # 1 hour upload timeout
+
+# Network change handling
+allow_ip_changes = true                    # CRITICAL: Allow IP changes during uploads
+retry_failed_uploads = true                # Auto-retry failed uploads
+max_upload_retries = 8                     # More retries for mobile networks
+upload_pause_timeout = "10m"               # Pause uploads during network switch
+
+# File management
+allowed_extensions = [
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg",  # Images
+    ".mp4", ".mov", ".avi", ".mkv", ".webm", ".3gp",           # Videos
+    ".mp3", ".ogg", ".wav", ".m4a", ".aac", ".flac",           # Audio
+    ".pdf", ".txt", ".doc", ".docx", ".rtf", ".md",            # Documents
+    ".zip", ".rar", ".7z", ".tar.gz", ".tar", ".bz2"          # Archives
+]
+
+[timeouts]
+# Extended timeouts for mobile scenarios
+read_timeout = "600s"                      # 10 minutes read timeout (was 30s)
+write_timeout = "600s"                     # 10 minutes write timeout (was 30s)
+idle_timeout = "1200s"                     # 20 minutes idle timeout (was 60s)
+
+[logging]
+# Enhanced logging for mobile debugging
+level = "info"
+file = "/var/log/hmac-file-server-mobile.log"
+max_size = 100
+max_backups = 7
+max_age = 7
+compress = true
+
+# Log network events for debugging
+log_network_events = true
+log_ip_changes = true
+log_auth_failures = true
+log_token_validation = true
+
+[workers]
+# Optimized worker configuration
+num_workers = 10
+upload_queue_size = 500
+auto_scaling = true
+
+[metrics]
+# Monitoring for network performance
+enabled = true
+port = "9090"
+expose_upload_metrics = true
+track_network_changes = true
+
+# EJABBERD INTEGRATION SETTINGS
+[ejabberd]
+# Module compatibility settings
+module_type = "mod_http_upload_hmac_network_resilient"
+extended_compatibility = true
+payload_format_flexibility = true
+
+# XEP-0363 HTTP File Upload compliance
+xep0363_enabled = true
+max_file_size = "500MB"
+quota_per_user = "5GB"

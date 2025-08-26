@@ -1,0 +1,133 @@
+# 🌐 Network Resilience Configuration for HMAC File Server 3.2.2
+# Optimized for WiFi ↔ LTE switching and mobile device standby scenarios
+# Date: August 26, 2025
+
+[server]
+interface = "0.0.0.0"
+port = 8080
+upload_path = "./uploads"
+log_file = "/var/log/hmac-file-server.log"
+log_level = "info"
+
+# Network resilience - CRITICAL for mobile scenarios
+networkevents = true                        # REQUIRED: Monitor network changes
+bind_all_interfaces = true                  # Listen on all network interfaces
+allow_ip_changes = true                     # Allow clients to change IP addresses
+adapt_to_client_network = true             # Optimize based on client connection type
+
+[auth]
+shared_secret = "your-secure-secret-here"
+bearer_tokens_enabled = true               # REQUIRED for ejabberd integration
+jwt_enabled = true
+hmac_enabled = true
+
+# Extended token validity for network changes
+token_expiry = 86400                       # 24 hours (was 3600)
+grace_period = 7200                        # 2 hours grace period after expiry
+extended_validation = true                 # Validate expired tokens within grace period
+
+[uploads]
+# Upload resilience settings
+resumable_uploads_enabled = true           # CRITICAL: Enable upload resumption
+max_resumable_age = "72h"                  # Keep sessions for 3 days
+session_recovery_timeout = "600s"          # 10 minutes to recover from network change
+client_reconnect_window = "300s"           # 5 minutes for client to reconnect
+upload_slot_ttl = "86400s"                 # 24-hour upload slot validity
+
+# Network change handling
+allow_session_resume = true                # Resume from different IP addresses
+retry_failed_uploads = true                # Auto-retry failed uploads
+max_upload_retries = 8                     # More retries for mobile networks
+network_change_grace_period = "120s"       # 2 minutes grace during network switch
+
+# Mobile-optimized settings
+chunk_size = "5MB"                         # Smaller chunks for mobile stability
+max_upload_size = "1GB"                    # Per-file limit
+max_files_per_user = 1000                  # Per-user file limit
+upload_timeout = "3600s"                   # 1 hour upload timeout
+
+# Session persistence
+session_persistence = true                 # Persist sessions across server restarts
+session_storage_path = "./sessions"        # Store session data
+cleanup_expired_sessions = true            # Auto-cleanup old sessions
+
+[network_resilience]
+# Network change detection and handling
+enabled = true                             # Enable network resilience system
+fast_detection = true                      # 1-second detection (vs 5-second default)
+quality_monitoring = true                  # Monitor connection quality (RTT, packet loss)
+predictive_switching = true                # Switch proactively before network failure
+mobile_optimizations = true               # Use mobile-friendly thresholds
+
+# Timing parameters
+detection_interval = "1s"                  # Network change detection interval
+quality_check_interval = "5s"             # Connection quality check interval
+network_change_threshold = 3              # Switches to trigger network change event
+interface_stability_time = "10s"          # Time before marking interface stable
+
+# Upload resilience during network changes
+upload_resilience = true                   # Resume uploads across network changes
+upload_pause_timeout = "10m"              # Maximum pause time during network switch
+upload_retry_timeout = "20m"              # Maximum retry time after network change
+
+# Mobile network thresholds (cellular-friendly)
+rtt_warning_threshold = "500ms"            # RTT warning for cellular
+rtt_critical_threshold = "2000ms"          # RTT critical for cellular
+packet_loss_warning_threshold = 5.0       # 5% packet loss warning
+packet_loss_critical_threshold = 15.0     # 15% packet loss critical
+
+[downloads]
+chunkeddownloadsenabled = true
+chunksize = "5MB"                          # Mobile-friendly chunk size
+resume_downloads = true                    # Allow download resumption
+download_timeout = "1800s"                # 30 minutes download timeout
+
+[timeouts]
+# Extended timeouts for mobile scenarios
+readtimeout = "600s"                       # 10 minutes read timeout (was 30s)
+writetimeout = "600s"                      # 10 minutes write timeout (was 30s)
+idletimeout = "1200s"                      # 20 minutes idle timeout (was 60s)
+handshake_timeout = "120s"                 # 2 minutes for handshake
+keep_alive_timeout = "300s"                # 5 minutes keep-alive
+
+[logging]
+level = "INFO"
+file = "/var/log/hmac-file-server/network-resilience.log"
+max_size = 100
+max_backups = 5
+max_age = 7
+compress = true
+
+# Enhanced logging for network events
+log_network_events = true                  # Log all network change events
+log_upload_sessions = true                 # Log upload session lifecycle
+log_token_refresh = true                   # Log token refresh events
+log_ip_changes = true                      # Log client IP address changes
+
+[workers]
+numworkers = 20                            # More workers for concurrent uploads
+uploadqueuesize = 2000                     # Larger queue for mobile bursts
+autoscaling = true                         # Auto-scale workers based on load
+max_workers = 50                           # Maximum worker limit
+
+[metrics]
+enabled = true
+port = 9090
+expose_network_metrics = true              # Expose network resilience metrics
+track_session_recovery = true              # Track session recovery success rate
+track_network_switches = true              # Track network switching events
+
+[security]
+# Enhanced security for extended sessions
+rate_limiting = true
+max_requests_per_minute = 120              # Higher limit for mobile retries
+max_uploads_per_user_per_hour = 100       # Reasonable limit for mobile usage
+block_suspicious_ips = false               # Don't block for IP changes
+trust_proxy_headers = true                 # Trust X-Forwarded-For for mobile carriers
+
+[storage]
+# Storage management for longer session retention
+cleanup_interval = "6h"                    # Clean up every 6 hours
+retention_days = 7                         # Keep files for 7 days (was 30)
+cleanup_expired_sessions = true            # Remove expired upload sessions
+compress_old_logs = true                   # Compress logs older than 1 day
