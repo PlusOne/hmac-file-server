@@ -1,0 +1,77 @@
+# HMAC File Server 3.3.0 "Nexus Infinitum" - Multi-Architecture Dockerfile
+# Supports: AMD64, ARM64, ARM32v7
+
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
+
+# Build arguments for cross-compilation
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Copy Go modules first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build binary with cross-compilation support
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -ldflags="-w -s -X main.version=3.3.0" \
+    -a -installsuffix cgo \
+    -o hmac-file-server ./cmd/server/
+
+# Production stage - Multi-arch Alpine
+FROM --platform=$TARGETPLATFORM alpine:latest
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    tzdata \
+    curl \
+    shadow
+
+# Create non-root user for security
+RUN adduser -D -s /bin/sh -u 1011 appuser
+
+# Create application directories
+RUN mkdir -p /opt/hmac-file-server/{data/{uploads,duplicates,temp,logs},config} \
+    && chown -R appuser:appuser /opt/hmac-file-server \
+    && chmod 750 /opt/hmac-file-server/data/{uploads,duplicates,temp,logs}
+
+WORKDIR /opt/hmac-file-server
+
+# Copy binary from builder stage
+COPY --from=builder /build/hmac-file-server /usr/local/bin/hmac-file-server
+RUN chmod +x /usr/local/bin/hmac-file-server
+
+# Copy configuration templates
+COPY templates/config-docker.toml /opt/hmac-file-server/config/config.toml.example
+
+# Switch to non-root user
+USER appuser
+
+# Expose ports
+EXPOSE 8080 8888
+
+# Health check that works across architectures
+HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8888/health || exit 1
+
+# Add multi-arch labels
+LABEL org.opencontainers.image.title="HMAC File Server" \
+      org.opencontainers.image.description="Secure multi-architecture file server with XEP-0363 support" \
+      org.opencontainers.image.version="3.3.0" \
+      org.opencontainers.image.vendor="UUXO" \
+      org.opencontainers.image.source="https://git.uuxo.net/uuxo/hmac-file-server/" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.architecture="multi"
+
+# Entry point
+ENTRYPOINT ["/usr/local/bin/hmac-file-server"]
+CMD ["-config", "/opt/hmac-file-server/config/config.toml"]

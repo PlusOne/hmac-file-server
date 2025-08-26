@@ -4,13 +4,7 @@
 
 set -e
 
-# Type=simple
-Restart=always
-RestartSec=5
-EnvironmentFile=-/etc/default/hmac-file-server
-ExecStart=/usr/bin/hmac-file-server -config /etc/hmac-file-server/config.toml
-Documentation=https://git.uuxo.net/uuxo/hmac-file-server/
-User=hmac-file-serverutput
+# Colors for output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
