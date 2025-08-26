@@ -1,10 +1,16 @@
 #!/bin/bash
-# HMAC File Server v3.2 - Debian Package Builder
+# HMAC File Server v3.3 - Debian Package Builder
 # Creates .deb packages for AMD64 and ARM64 architectures
 
 set -e
 
-# Colors for output
+# Type=simple
+Restart=always
+RestartSec=5
+EnvironmentFile=-/etc/default/hmac-file-server
+ExecStart=/usr/bin/hmac-file-server -config /etc/hmac-file-server/config.toml
+Documentation=https://git.uuxo.net/uuxo/hmac-file-server/
+User=hmac-file-serverutput
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
@@ -32,7 +38,7 @@ PROJECT_DIR=$(pwd)
 BUILD_DIR=$PROJECT_DIR/build
 DEB_DIR=$PROJECT_DIR/debian
 PACKAGE_NAME="hmac-file-server"
-VERSION="3.2.0"
+VERSION="3.3.0"
 MAINTAINER="Alex Renz <renz@uuxo.net>"
 
 # Source files for compilation
@@ -100,8 +106,8 @@ Depends: redis-server, clamav, clamav-daemon
 Recommends: nginx
 Section: net
 Priority: optional
-Homepage: https://github.com/PlusOne/hmac-file-server
-Description: HMAC File Server v3.2 - Enterprise XMPP File Sharing
+Homepage: https://git.uuxo.net/uuxo/hmac-file-server/
+Description: HMAC File Server v3.3 - Enterprise XMPP File Sharing
  A lightweight, secure file server designed for XMPP environments with
  enterprise-grade features including:
  .
@@ -121,8 +127,8 @@ EOF
 print_info "Creating systemd service configuration..."
 cat <<EOF > $DEB_DIR/lib/systemd/system/hmac-file-server.service
 [Unit]
-Description=HMAC File Server 3.2
-Documentation=https://github.com/PlusOne/hmac-file-server
+Description=HMAC File Server 3.3
+Documentation=https://git.uuxo.net/uuxo/hmac-file-server/
 After=network.target
 Wants=network-online.target
 After=redis.service
@@ -161,8 +167,8 @@ EOF
 # Prepare example configuration file
 print_info "Creating example configuration..."
 cat <<EOF > $DEB_DIR/etc/hmac-file-server/config.toml
-# HMAC File Server v3.2 Configuration
-# Complete configuration reference: https://github.com/PlusOne/hmac-file-server/blob/main/WIKI.MD
+# HMAC File Server v3.3 Configuration
+# Complete configuration reference: https://git.uuxo.net/uuxo/hmac-file-server/blob/main/WIKI.MD
 
 [server]
 bind_ip = "127.0.0.1"
@@ -195,7 +201,7 @@ ttlenabled = false
 ttl = "168h"
 networkevents = true
 
-# Network Resilience Configuration (3.2 Enhanced Features)
+# Network Resilience Configuration (3.3 Enhanced Features)
 [network_resilience]
 enabled = true
 fast_detection = false                  # Standard detection for server deployment
@@ -279,16 +285,10 @@ systemctl daemon-reload
 systemctl enable hmac-file-server.service
 
 echo ""
-echo "HMAC File Server v3.2 installed successfully!"
+echo "Installation complete! Configure /etc/hmac-file-server/config.toml and start:"
+echo "sudo systemctl enable --now hmac-file-server"
 echo ""
-echo "Next steps:"
-echo "1. Edit /etc/hmac-file-server/config.toml (CHANGE THE SECRET!)"
-echo "2. Enable Redis/ClamAV if needed: systemctl enable redis-server clamav-daemon"
-echo "3. Start the service: systemctl start hmac-file-server"
-echo "4. Check status: systemctl status hmac-file-server"
-echo ""
-echo "Documentation: https://github.com/PlusOne/hmac-file-server"
-echo ""
+echo "Documentation: https://git.uuxo.net/uuxo/hmac-file-server/"
 EOF
 chmod 0755 $DEB_DIR/DEBIAN/postinst
 

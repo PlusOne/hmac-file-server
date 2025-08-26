@@ -82,7 +82,7 @@ check_feature "Configuration File" "config-mobile-resilient.toml exists and read
     '[ -r "config-mobile-resilient.toml" ]'
 
 check_feature "Server Version" "Server reports correct version" \
-    './hmac-file-server-network-fixed -version 2>/dev/null | grep -q "HMAC File Server\|v3.2"'
+    './hmac-file-server-network-fixed -version 2>/dev/null | grep -q "HMAC File Server\|v3.3"'
 
 # ========================================
 # SECTION 2: BEARER TOKEN VALIDATION CODE

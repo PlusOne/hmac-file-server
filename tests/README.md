@@ -1,6 +1,6 @@
 # HMAC File Server 3.2.2 Test Suite
 
-This directory contains comprehensive testing tools for the HMAC File Server 3.2.2 "Tremora del Terra".
+This directory contains comprehensive testing tools for the HMAC File Server 3.3.0 "Nexus Infinitum".
 
 ## 🚀 Quick Start
 
@@ -107,7 +107,7 @@ This comprehensive suite replaces these scattered root-level test files:
 - `comprehensive_upload_test.sh` → Replaced by this suite
 - Various monitor scripts → Health checks integrated
 
-## 🎉 3.2.2 "Tremora del Terra" Features Tested
+## 🎉 3.3.0 "Nexus Infinitum" Features Tested
 
 - ✅ **Enhanced Network Resilience**: 1-second detection
 - ✅ **Mobile Network Switching**: WLAN ↔ IPv6 5G seamless transitions

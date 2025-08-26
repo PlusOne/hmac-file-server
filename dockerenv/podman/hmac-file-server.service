@@ -3,8 +3,8 @@
 # For system-wide: /etc/systemd/system/hmac-file-server.service
 
 [Unit]
-Description=HMAC File Server 3.2 "Tremora del Terra" (Podman)
-Documentation=https://github.com/PlusOne/hmac-file-server
+Description=HMAC File Server 3.3 "Nexus Infinitum" (Podman)
+Documentation=https://git.uuxo.net/uuxo/hmac-file-server/
 Wants=network-online.target
 After=network-online.target
 RequiresMountsFor=%t/containers

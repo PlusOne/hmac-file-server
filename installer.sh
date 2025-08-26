@@ -1027,7 +1027,7 @@ create_systemd_service() {
     cat > /etc/systemd/system/hmac-file-server.service << EOF
 [Unit]
 Description=HMAC File Server 3.2
-Documentation=https://github.com/PlusOne/hmac-file-server
+Documentation=https://git.uuxo.net/uuxo/hmac-file-server/
 After=network.target
 Wants=network-online.target
 EOF
@@ -1329,9 +1329,9 @@ print_completion_info() {
     echo -e "5. Test file uploads with your XMPP client"
     echo ""
     echo -e "${BLUE}Documentation & Support:${NC}"
-    echo -e "  README: https://github.com/PlusOne/hmac-file-server/blob/main/README.MD"
-    echo -e "  Wiki:   https://github.com/PlusOne/hmac-file-server/blob/main/WIKI.MD"
-    echo -e "  Issues: https://github.com/PlusOne/hmac-file-server/issues"
+    echo -e "  README: https://git.uuxo.net/uuxo/hmac-file-server/blob/main/README.MD"
+    echo -e "  Wiki:   https://git.uuxo.net/uuxo/hmac-file-server/blob/main/WIKI.MD"
+    echo -e "  Issues: https://git.uuxo.net/uuxo/hmac-file-server/issues"
     echo ""
     echo -e "${GREEN}----------------------------------------------------------------${NC}"
     echo -e "${GREEN}    Thank you for choosing HMAC File Server for your XMPP setup! ${NC}"

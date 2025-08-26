@@ -5,7 +5,7 @@ This documentation provides detailed information on configuring, setting up, and
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [3.2.2 "Tremora del Terra" Revolutionary Features](#322-tremora-del-terra-revolutionary-features)
+2. [3.3.0 "Nexus Infinitum" Revolutionary Features](#330-nexus-infinitum-revolutionary-features)
 3. [Configuration](#configuration)
     - [Server Configuration](#server-configuration)
     - [Deduplication Settings](#deduplication-settings)
@@ -42,7 +42,7 @@ This documentation provides detailed information on configuring, setting up, and
 
 ## Introduction
 
-The **HMAC File Server 3.2.2 "Tremora del Terra"** is a revolutionary secure and efficient file management solution designed to handle file uploads, downloads, deduplication, and more. This major release brings **93% configuration reduction**, dramatically simplifying setup while maintaining enterprise-grade features.
+The **HMAC File Server 3.3.0 "Nexus Infinitum"** is a revolutionary secure and efficient file management solution designed to handle file uploads, downloads, deduplication, and more. This major release brings **93% configuration reduction**, dramatically simplifying setup while maintaining enterprise-grade features.
 
 **Version 3.2.2 Revolutionary Features:**
 - **93% Configuration Reduction**: Simplified setup with intelligent defaults
@@ -57,9 +57,9 @@ Built with a focus on security, scalability, and performance, it integrates seam
 
 ---
 
-## 3.2.2 "Tremora del Terra" Revolutionary Features
+## 3.3.0 "Nexus Infinitum" Revolutionary Features
 
-HMAC File Server 3.2.2 "Tremora del Terra" represents a revolutionary leap forward in file server technology, introducing breakthrough simplifications and advanced enterprise features:
+HMAC File Server 3.3.0 "Nexus Infinitum" represents a revolutionary leap forward in file server technology, introducing breakthrough simplifications and advanced enterprise features:
 
 ### 🚀 **93% Configuration Reduction**
 - **Simplified Setup**: Reduced configuration complexity by 93% through intelligent defaults
@@ -1490,7 +1490,7 @@ Podman is a daemonless container engine that's often preferred in enterprise env
 
 ```bash
 # Clone repository
-git clone https://github.com/PlusOne/hmac-file-server.git
+git clone https://git.uuxo.net/uuxo/hmac-file-server.git
 cd hmac-file-server/dockerenv/podman
 
 # One-command deployment
@@ -1893,7 +1893,7 @@ nc -zv localhost 8888
 
 ## Multi-Architecture Deployment
 
-HMAC File Server 3.2.2 "Tremora del Terra" provides comprehensive multi-architecture support for modern deployment scenarios.
+HMAC File Server 3.3.0 "Nexus Infinitum" provides comprehensive multi-architecture support for modern deployment scenarios.
 
 ### Supported Architectures
 
@@ -2149,7 +2149,7 @@ docker compose up -d
 
 ## Simplified Configuration Examples
 
-HMAC File Server 3.2.2 "Tremora del Terra" achieves **93% configuration reduction** through intelligent defaults. Here are minimal configurations for common scenarios:
+HMAC File Server 3.3.0 "Nexus Infinitum" achieves **93% configuration reduction** through intelligent defaults. Here are minimal configurations for common scenarios:
 
 ### Minimal Production Configuration (93% Simplified)
 
@@ -2206,6 +2206,6 @@ enabled = true
 max_file_size = "10GB"
 ```
 
-**Previous versions required 100+ configuration lines - 3.2 "Tremora del Terra" does it with just a few!**
+**Previous versions required 100+ configuration lines - 3.3 "Nexus Infinitum" does it with just a few!**
 
 ---

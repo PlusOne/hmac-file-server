@@ -1,4 +1,4 @@
-## HMAC File Server 3.2.2 - Enhanced MIME Types & XMPP Compatibility
+## HMAC File Server 3.3.0 - Enhanced MIME Types & XMPP Compatibility
 
 ### 🚀 New Features
 - **Enhanced MIME Types**: Added 80+ file format mappings (.flac, .webm, .epub, .docx, .py, .go, etc.)
@@ -14,10 +14,10 @@
 ### 📦 Deployment
 ```bash
 # Docker
-docker pull hmac-file-server:3.2.2
+docker pull hmac-file-server:3.3.0
 
 # Binary
-wget https://github.com/PlusOne/hmac-file-server/releases/download/v3.2.2/hmac-file-server-linux-amd64
+wget https://git.uuxo.net/uuxo/hmac-file-server/releases/download/v3.3.0/hmac-file-server-linux-amd64
 ```
 
 ### 🛡️ Security

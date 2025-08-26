@@ -1,7 +1,7 @@
 # HMAC File Server 3.2.2 Release Notes
 
 **Release Date**: August 24, 2025  
-**Codename**: Tremora del Terra  
+**Codename**: Nexus Infinitum  
 
 ## 🚀 New Features
 
@@ -43,7 +43,7 @@ docker pull hmac-file-server:3.2.2
 
 ### Binary Download
 ```bash
-wget https://github.com/PlusOne/hmac-file-server/releases/download/v3.2.2/hmac-file-server-linux-amd64
+wget https://git.uuxo.net/uuxo/hmac-file-server/releases/download/v3.2.2/hmac-file-server-linux-amd64
 ```
 
 ### Upgrade Notes
@@ -60,4 +60,4 @@ wget https://github.com/PlusOne/hmac-file-server/releases/download/v3.2.2/hmac-f
 
 ---
 
-**Full Changelog**: [3.2.1...3.2.2](https://github.com/PlusOne/hmac-file-server/compare/v3.2.1...v3.2.2)
+**Full Changelog**: [3.2.1...3.2.2](https://git.uuxo.net/uuxo/hmac-file-server/compare/v3.2.1...v3.2.2)

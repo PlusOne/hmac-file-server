@@ -1,4 +1,4 @@
-module github.com/PlusOne/hmac-file-server
+module git.uuxo.net/uuxo/hmac-file-server
 
 go 1.24.0
 

@@ -37,7 +37,7 @@ echo "=================================="
 
 test_feature "Server binary exists" "[ -x './hmac-file-server-network-fixed' ]"
 test_feature "Configuration exists" "[ -r 'config-mobile-resilient.toml' ]"
-test_feature "Server version" "./hmac-file-server-network-fixed -version | grep -q 'v3.2'"
+test_feature "Server version" "./hmac-file-server-network-fixed -version | grep -q 'v3.3'"
 
 echo ""
 echo "🔐 BEARER TOKEN VALIDATION TESTS"

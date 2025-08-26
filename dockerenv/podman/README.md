@@ -1,12 +1,12 @@
 # HMAC File Server - Podman Configuration Examples
 
-This directory contains Podman-specific deployment files for HMAC File Server 3.2.2 "Tremora del Terra".
+This directory contains Podman-specific deployment files for HMAC File Server 3.3.0 "Nexus Infinitum".
 
 ## 🚀 Quick Start
 
 ```bash
 # Clone repository
-git clone https://github.com/PlusOne/hmac-file-server.git
+git clone https://git.uuxo.net/uuxo/hmac-file-server.git
 cd hmac-file-server/dockerenv/podman
 
 # Deploy with single command
@@ -258,6 +258,6 @@ After deployment, verify everything works:
 ## 📚 Additional Resources
 
 - [Podman Official Documentation](https://docs.podman.io/)
-- [HMAC File Server GitHub](https://github.com/PlusOne/hmac-file-server)
+- [HMAC File Server Git Repository](https://git.uuxo.net/uuxo/hmac-file-server/)
 - [XEP-0363 Specification](https://xmpp.org/extensions/xep-0363.html)
 - [Container Security Best Practices](https://docs.podman.io/en/latest/markdown/podman-run.1.html#security-options)

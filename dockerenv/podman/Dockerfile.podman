@@ -1,5 +1,5 @@
 # Dockerfile.podman - Optimized for Podman deployment
-# HMAC File Server 3.2 "Tremora del Terra" - Podman Edition
+# HMAC File Server 3.3 "Nexus Infinitum" - Podman Edition
 
 FROM docker.io/golang:1.24-alpine AS builder
 
@@ -57,7 +57,7 @@ LABEL org.opencontainers.image.title="HMAC File Server" \
       org.opencontainers.image.description="Secure file server with XEP-0363 support" \
       org.opencontainers.image.version="3.2" \
       org.opencontainers.image.vendor="PlusOne" \
-      org.opencontainers.image.source="https://github.com/PlusOne/hmac-file-server" \
+      org.opencontainers.image.source="https://git.uuxo.net/uuxo/hmac-file-server/" \
       org.opencontainers.image.licenses="MIT"
 
 # Health check for container orchestration with network resilience awareness

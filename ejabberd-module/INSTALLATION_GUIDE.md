@@ -17,7 +17,7 @@ This module enables seamless file uploads in XMPP clients by integrating ejabber
 ### Step 1: Install HMAC File Server 3.2.2
 ```bash
 # Download and install HMAC File Server
-wget https://github.com/your-repo/hmac-file-server/releases/v3.2.2/hmac-file-server-linux-amd64
+wget https://git.uuxo.net/uuxo/hmac-file-server/releases/v3.3.0/hmac-file-server-linux-amd64
 chmod +x hmac-file-server-linux-amd64
 sudo mv hmac-file-server-linux-amd64 /usr/local/bin/hmac-file-server
 

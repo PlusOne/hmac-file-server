@@ -1,15 +1,15 @@
-# HMAC File Server 3.2.2 - Tremora del Terra
+# HMAC File Server 3.3.0 - Nexus Infinitum
 
-[![Version](https://img.shields.io/badge/version-3.2.2-blue.svg)](https://github.com/PlusOne/hmac-file-server)
+[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](https://git.uuxo.net/uuxo/hmac-file-server/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://golang.org/)
-[![Architecture](https://img.shields.io/badge/arch-AMD64%20%7C%20ARM64%20%7C%20ARM32v7-brightgreen.svg)](https://github.com/PlusOne/hmac-file-server)
+[![Architecture](https://img.shields.io/badge/arch-AMD64%20%7C%20ARM64%20%7C%20ARM32v7-brightgreen.svg)](https://git.uuxo.net/uuxo/hmac-file-server/)
 
 A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) with HMAC authentication, deduplication, and multi-architecture support.
 
 ---
 
-## What's New in 3.2.2 "Tremora del Terra"
+## What's New in 3.3.0 "Nexus Infinitum"
 
 ### Configuration Revolution
 - **93% Config Reduction**: From 112-line complex configs to 8-line minimal configs
@@ -40,8 +40,8 @@ A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) 
 
 ### Option 1: Minimal Configuration (Recommended)
 ```bash
-# Download HMAC File Server 3.2.2
-wget https://github.com/PlusOne/hmac-file-server/releases/download/v3.2.2/hmac-file-server-linux-amd64
+# Download HMAC File Server 3.3.0
+wget https://git.uuxo.net/uuxo/hmac-file-server/releases/download/v3.3.0/hmac-file-server-linux-amd64
 chmod +x hmac-file-server-linux-amd64
 
 # Generate minimal config
@@ -67,7 +67,7 @@ chmod +x hmac-file-server-linux-amd64
 
 ## Universal Installation Manager
 
-HMAC File Server 3.2.2 includes a comprehensive installation framework that supports all deployment methods:
+HMAC File Server 3.3.0 includes a comprehensive installation framework that supports all deployment methods:
 
 ### 🚀 **Automated Installation (All Methods)**
 ```bash
@@ -156,12 +156,12 @@ HMAC File Server 3.2.2 includes a comprehensive installation framework that supp
 
 ## Release Information
 
-### HMAC File Server 3.2.2 - Tremora del Terra
+### HMAC File Server 3.3.0 - Nexus Infinitum
 
-**Release Date**: August 24, 2025  
-**Codename**: Tremora del Terra (powerful, balanced, and ready to shake the ground)
+**Release Date**: August 26, 2025  
+**Codename**: Nexus Infinitum (infinite connectivity and boundless network reach)
 
-#### Latest Updates (3.2.2)
+#### Latest Updates (3.3.0)
 - **🚀 Enhanced MIME Types**: Added 80+ additional file format support
 - **🔧 XMPP Client Ecosystem**: Comprehensive compatibility analysis 
 - **🌐 Network Resilience**: Advanced mobile switching optimizations
@@ -196,7 +196,7 @@ HMAC File Server 3.2.2 includes a comprehensive installation framework that supp
 
 ## Mobile Network Resilience
 
-HMAC File Server 3.2.2 introduces enhanced network resilience specifically designed for mobile devices and network switching scenarios.
+HMAC File Server 3.3.0 introduces enhanced network resilience specifically designed for mobile devices and network switching scenarios.
 
 ### 📱 **Mobile Network Switching Support**
 
@@ -444,7 +444,7 @@ disable_keep_alives = false                # Disable HTTP keep-alives
 client_timeout = "300s"                    # Client request timeout
 restart_grace_period = "60s"               # Grace period after restart
 
-# Enhanced Network Resilience (v3.2.2+)
+# Enhanced Network Resilience (v3.3.0+)
 [network_resilience]
 enabled = true                              # Enable network resilience system
 fast_detection = true                       # Enable 1-second network change detection (vs 5-second default)
@@ -464,7 +464,7 @@ rtt_critical_threshold = "1000ms"          # RTT threshold for critical
 packet_loss_warning_threshold = 2.0        # Packet loss % for warning
 packet_loss_critical_threshold = 10.0      # Packet loss % for critical
 
-# Multi-Interface Support (v3.2.2+)
+# Multi-Interface Support (v3.3.0+)
 multi_interface_enabled = false            # Enable multi-interface management
 interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Interface priority order
 auto_switch_enabled = true                 # Enable automatic interface switching
@@ -474,7 +474,7 @@ quality_degradation_threshold = 0.5        # Quality degradation threshold
 max_switch_attempts = 3                    # Maximum switch attempts per detection
 switch_detection_interval = "10s"          # Switch detection interval
 
-# Client Network Support (v3.2.2+)
+# Client Network Support (v3.3.0+)
 [client_network_support]
 session_based_tracking = false             # Track sessions by ID instead of IP
 allow_ip_changes = true                    # Allow session continuation from different IPs
@@ -576,11 +576,11 @@ redishealthcheckinterval = "120s"         # Redis health check interval
 [workers]
 # Worker pool configuration
 numworkers = 4                            # Number of worker threads
-uploadqueuesize = 100                     # Upload queue size (doubled in 3.2.2)
+uploadqueuesize = 100                     # Upload queue size (doubled in 3.3.0)
 
 [build]
 # Build information
-version = "3.2.2"                          # Application version
+version = "3.3.0"                          # Application version
 ```
 
 ---
@@ -649,10 +649,10 @@ CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-w -s" -o hmac-file-server ./cmd/
 ### Docker Build
 ```bash
 # Build Docker image
-docker build -t hmac-file-server:3.2.2 .
+docker build -t hmac-file-server:3.3.0 .
 
 # Multi-platform Docker build
-docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t hmac-file-server:3.2.2 .
+docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t hmac-file-server:3.3.0 .
 ```
 
 ---
@@ -666,7 +666,7 @@ version: '3.8'
 
 services:
   hmac-file-server:
-    image: hmac-file-server:3.2.2
+    image: hmac-file-server:3.3.0
     container_name: hmac-file-server
     restart: unless-stopped
     ports:
@@ -694,7 +694,7 @@ version: '3.8'
 
 services:
   hmac-file-server:
-    image: hmac-file-server:3.2.2
+    image: hmac-file-server:3.3.0
     container_name: hmac-file-server
     restart: unless-stopped
     depends_on:
@@ -791,7 +791,7 @@ version: '3.8'
 
 services:
   hmac-file-server:
-    image: hmac-file-server:3.2.2
+    image: hmac-file-server:3.3.0
     container_name: hmac-file-server
     restart: unless-stopped
     depends_on:
@@ -839,7 +839,7 @@ Podman is a daemonless container engine that's often preferred in enterprise env
 #### Build Container Image with Podman
 ```bash
 # Clone repository
-git clone https://github.com/PlusOne/hmac-file-server.git
+git clone https://git.uuxo.net/uuxo/hmac-file-server.git
 cd hmac-file-server
 
 # Build image with Podman
@@ -857,7 +857,7 @@ WORKDIR /build
 RUN apk add --no-cache git ca-certificates tzdata
 
 # Clone and build HMAC File Server
-RUN git clone https://github.com/PlusOne/hmac-file-server.git .
+RUN git clone https://git.uuxo.net/uuxo/hmac-file-server.git .
 RUN go mod download
 RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o hmac-file-server ./cmd/server/
 
@@ -1024,7 +1024,7 @@ echo "🔍 Health check: curl -f http://localhost:${listen_port}/health"
 # ~/.config/systemd/user/hmac-file-server.service
 [Unit]
 Description=HMAC File Server (Podman)
-Documentation=https://github.com/PlusOne/hmac-file-server
+Documentation=https://git.uuxo.net/uuxo/hmac-file-server/
 Wants=network-online.target
 After=network-online.target
 RequiresMountsFor=%t/containers
@@ -2300,11 +2300,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Links
 
-- **GitHub**: https://github.com/PlusOne/hmac-file-server
+- **Git Repository**: https://git.uuxo.net/uuxo/hmac-file-server/
 - **Documentation**: https://hmac-file-server.readthedocs.io
-- **Issues**: https://github.com/PlusOne/hmac-file-server/issues
-- **Releases**: https://github.com/PlusOne/hmac-file-server/releases
+- **Issues**: https://git.uuxo.net/uuxo/hmac-file-server/issues
+- **Releases**: https://git.uuxo.net/uuxo/hmac-file-server/releases
 
 ---
 
-*HMAC File Server 3.2 "Tremora del Terra" - Where enterprise power meets user simplicity*
+*HMAC File Server 3.3 "Nexus Infinitum" - Where enterprise power meets user simplicity*

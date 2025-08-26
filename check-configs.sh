@@ -185,7 +185,7 @@ generate_standard_config() {
     mkdir -p "$(dirname "$config_file")"
     
     cat > "$config_file" << EOF
-# HMAC File Server 3.2 "Tremora del Terra" Configuration
+# HMAC File Server 3.3 "Nexus Infinitum" Configuration
 # Generated for: $deployment_type deployment
 # Generated on: $(date)
 

@@ -285,7 +285,8 @@ sudo systemctl start ejabberd
 ### Development Setup
 ```bash
 # Clone repository
-git clone https://github.com/PlusOne/hmac-file-server.git
+```bash
+git clone https://git.uuxo.net/uuxo/hmac-file-server.git
 cd hmac-file-server/ejabberd-module
 
 # Test compilation
@@ -301,8 +302,8 @@ Same as HMAC File Server - see main repository LICENSE file.
 
 ## 🆘 Support
 
-- **Issues**: [GitHub Issues](https://github.com/PlusOne/hmac-file-server/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/PlusOne/hmac-file-server/discussions)  
+- **Issues**: [Git Issues](https://git.uuxo.net/uuxo/hmac-file-server/issues)
+- **Discussions**: [Git Discussions](https://git.uuxo.net/uuxo/hmac-file-server/discussions)  
 - **XMPP Chat**: `hmac-support@conference.example.org`
 
 ---

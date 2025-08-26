@@ -30,7 +30,7 @@ log_step() { echo -e "${CYAN}[STEP]${NC} $1"; }
 show_main_menu() {
     clear
     echo -e "${MAGENTA}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${MAGENTA}║${NC}         ${BLUE}HMAC File Server 3.2 'Tremora del Terra'${NC}         ${MAGENTA}║${NC}"
+    echo -e "${MAGENTA}║${NC}         ${BLUE}HMAC File Server 3.3 'Nexus Infinitum'${NC}         ${MAGENTA}║${NC}"
     echo -e "${MAGENTA}║${NC}              ${CYAN}Universal Installation Manager${NC}              ${MAGENTA}║${NC}"
     echo -e "${MAGENTA}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
