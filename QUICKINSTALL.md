@@ -7,7 +7,12 @@
 ## 🚀 **Super Quick Start (30 seconds)**
 
 ```bash
-# Download and start immediately
+# Option A: Use pre-built local binaries (if available)
+cd hmac-file-server
+./builds/hmac-file-server-linux-amd64 -genconfig > config.toml
+./builds/hmac-file-server-linux-amd64 -config config.toml
+
+# Option B: Download from releases (when available)
 wget https://git.uuxo.net/uuxo/hmac-file-server/releases/download/v3.3.0/hmac-file-server-linux-amd64
 chmod +x hmac-file-server-linux-amd64
 ./hmac-file-server-linux-amd64 -genconfig > config.toml
@@ -22,12 +27,20 @@ chmod +x hmac-file-server-linux-amd64
 
 ### 1. **Binary Download** (Recommended)
 ```bash
-# Download for your architecture
+# Option A: Use local builds (if cloned from git)
+cd hmac-file-server
+./builds/hmac-file-server-linux-amd64 -genconfig > config.toml
+# Available: builds/hmac-file-server-linux-{amd64,arm64,arm}
+# Also: builds/hmac-file-server-darwin-{amd64,arm64}
+
+# Option B: Download from releases
 wget https://git.uuxo.net/uuxo/hmac-file-server/releases/download/v3.3.0/hmac-file-server-linux-amd64
 # ARM64: hmac-file-server-linux-arm64  
 # ARM32: hmac-file-server-linux-arm
 
 chmod +x hmac-file-server-linux-amd64
+
+# Generate configuration
 ./hmac-file-server-linux-amd64 -genconfig > config.toml
 
 # Edit these 3 essential settings in config.toml:
@@ -50,16 +63,26 @@ docker run -d --name hmac-server \
 
 ### 3. **Automated Installer** (Full Setup)
 ```bash
-# Download and run installer
-wget https://raw.githubusercontent.com/uuxo/hmac-file-server/main/installer.sh
+# Download and run installer (when available)
+wget https://git.uuxo.net/uuxo/hmac-file-server/raw/main/installer.sh
 chmod +x installer.sh
+sudo ./installer.sh
+
+# Or use local installer if cloned
 sudo ./installer.sh
 ```
 
 ### 4. **Build from Source** (Developers)
 ```bash
+# Clone and build
 git clone https://git.uuxo.net/uuxo/hmac-file-server.git
 cd hmac-file-server
+
+# Option A: Interactive multi-arch builder
+./build-multi-arch.sh
+# Then use: ./builds/hmac-file-server-linux-amd64
+
+# Option B: Quick single build  
 go build -o hmac-file-server ./cmd/server/
 ./hmac-file-server -genconfig > config.toml
 ./hmac-file-server -config config.toml
@@ -111,8 +134,42 @@ desktop_grace_hours = 48
 
 ## 🔧 **Quick Configuration Options**
 
+### Using Pre-Built Binaries
+
+If you cloned the repository, you'll find ready-to-use binaries in the `builds/` directory:
+
+```bash
+# List available architectures
+ls builds/
+# hmac-file-server-darwin-amd64    # macOS Intel
+# hmac-file-server-darwin-arm64    # macOS Apple Silicon  
+# hmac-file-server-linux-386       # Linux 32-bit
+# hmac-file-server-linux-amd64     # Linux 64-bit (most common)
+# hmac-file-server-linux-arm       # Linux ARM 32-bit (Raspberry Pi 3)
+# hmac-file-server-linux-arm64     # Linux ARM 64-bit (Raspberry Pi 4+)
+
+# Use the appropriate one for your system
+./builds/hmac-file-server-linux-amd64 -genconfig > config.toml
+```
+
+### Build More Architectures
+
+```bash
+# Interactive builder for all platforms
+./build-multi-arch.sh
+
+# Quick Docker multi-arch build
+./docker-multiarch-build.sh --local
+```
+
 ### Generate Configuration Templates
 ```bash
+# Using local builds
+./builds/hmac-file-server-linux-amd64 -genconfig > config.toml              # Basic config
+./builds/hmac-file-server-linux-amd64 -genconfig-mobile > mobile.toml       # Mobile-optimized  
+./builds/hmac-file-server-linux-amd64 -genconfig-enterprise > enterprise.toml # Enterprise config
+
+# Or using downloaded binary
 ./hmac-file-server -genconfig > config.toml              # Basic config
 ./hmac-file-server -genconfig-mobile > mobile.toml       # Mobile-optimized  
 ./hmac-file-server -genconfig-enterprise > enterprise.toml # Enterprise config
@@ -161,7 +218,10 @@ Component "upload.yourdomain.com" "http_upload"
 # Test server is running
 curl http://localhost:8080/health
 
-# Check version
+# Check version (using local builds)
+./builds/hmac-file-server-linux-amd64 -version
+
+# Or using downloaded binary
 ./hmac-file-server -version
 
 # View configuration
