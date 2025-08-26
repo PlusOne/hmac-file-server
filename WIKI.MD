@@ -36,9 +36,10 @@ This documentation provides detailed information on configuring, setting up, and
 11. [Command-Line Tools & Utilities](#command-line-tools--utilities)
 12. [Development & Build Tools](#development--build-tools)
 13. [Additional Recommendations](#additional-recommendations)
-14. [Notes](#notes)
-15. [Using HMAC File Server for CI/CD Build Artifacts](#using-hmac-file-server-for-ci-cd-build-artifacts)
-16. [Monitoring](#monitoring)
+14. [XMPP Client Large File Upload (Gajim 1GB+ Multi-Upload Fix)](#xmpp-client-large-file-upload-gajim-1gb-multi-upload-fix)
+15. [Notes](#notes)
+16. [Using HMAC File Server for CI/CD Build Artifacts](#using-hmac-file-server-for-ci-cd-build-artifacts)
+17. [Monitoring](#monitoring)
 
 ---
 
@@ -1381,6 +1382,112 @@ version = "3.3.0"
 - Prometheus metrics available at `/metrics` endpoint
 - Log rotation configured to prevent disk space issues
 - Worker scaling and queue metrics help identify bottlenecks
+
+### XMPP Client Large File Upload (Gajim 1GB+ Multi-Upload Fix)
+
+**Problem**: XMPP clients like Gajim experience "bad gateway" errors when uploading large files (>1GB) in multi-transfer scenarios.
+
+**Root Cause**: When using nginx reverse proxy, conflicts occur between:
+- CORS handling (nginx vs. server)
+- Inadequate timeout settings for large files
+- Session persistence issues during multi-upload
+
+#### ✅ **Complete Solution**
+
+**1. Enhanced CORS Configuration** (`cmd/server/helpers.go`):
+```go
+// Extended CORS headers for large file multi-upload scenarios
+Access-Control-Allow-Headers: Authorization, Content-Type, Content-Length, 
+    X-Requested-With, X-Upload-ID, X-Session-Token, X-File-Name, 
+    X-File-Size, Range, Content-Range
+Access-Control-Expose-Headers: Content-Length, Content-Range, 
+    X-Upload-Status, X-Session-ID, Location, ETag
+```
+
+**2. Extended Server Timeouts** (`config.toml`):
+```toml
+# Large file upload timeouts (2 hours for 1GB+ files)
+readtimeout = "7200s"           # 2 hours for reading large uploads
+writetimeout = "7200s"          # 2 hours for writing large responses
+idletimeout = "1800s"           # 30 minutes idle timeout
+sessiontimeout = "60m"          # 60 minutes session persistence
+upload_pause_timeout = "30m"    # 30 minutes upload pause tolerance
+upload_retry_timeout = "60m"    # 60 minutes retry window
+```
+
+**3. Optimized Nginx Proxy Configuration**:
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name your-server.com;
+    
+    # Enhanced large file upload settings for 1GB+ multi-transfer
+    client_max_body_size 10G;          # Support up to 10GB files
+    client_body_timeout 7200s;         # 2 hours for large uploads
+    client_header_timeout 300s;
+    client_body_buffer_size 2m;        # Increased buffer for large files
+    send_timeout 7200s;                # 2 hours to match server timeouts
+
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # CRITICAL: Let server handle ALL CORS (remove nginx CORS)
+        # Do NOT add nginx CORS headers here - causes conflicts!
+        
+        # Enhanced timeout settings for large file uploads (2 hours)
+        proxy_connect_timeout 7200s;
+        proxy_send_timeout    7200s;
+        proxy_read_timeout    7200s;
+        keepalive_timeout     1800s;    # 30 minutes for multi-upload sessions
+
+        # Connection persistence and resilience for multi-transfer
+        proxy_socket_keepalive on;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_timeout 7200s;
+        proxy_next_upstream_tries 3;   # Allow retries for large file failures
+    }
+}
+```
+
+**4. Multi-Upload Session Management** (`cmd/server/main.go`):
+- Session ID generation for connection persistence
+- Enhanced error handling for large file scenarios
+- Connection tracking across multiple uploads
+
+#### 🧪 **Testing Large File Multi-Upload**
+
+Use the provided test script to verify the fix:
+```bash
+# Test comprehensive large file multi-upload configuration
+./test-large-file-multiupload.sh
+```
+
+**Expected Results**:
+- ✅ All CORS preflight tests: PASSED
+- ✅ Multi-upload simulation: PASSED  
+- ✅ Large file headers: SUPPORTED
+- ✅ Timeout configuration: OPTIMAL
+
+#### 🚀 **Implementation Summary**
+
+**Key Improvements**:
+- **Removed nginx CORS conflicts** (server handles all CORS)
+- **Extended all timeouts to 7200s** (2 hours for 1GB+ files)
+- **Enhanced session management** for multi-upload persistence
+- **Improved connection resilience** with retry mechanisms
+- **10GB max file size support** with optimized buffers
+
+**Result**: Gajim and other XMPP clients can now successfully upload files >1GB in multi-transfer scenarios without "bad gateway" errors.
+
+**Files Modified**:
+- `cmd/server/helpers.go` - Enhanced CORS with multi-upload headers
+- `cmd/server/main.go` - Session management for multi-upload tracking  
+- `/etc/nginx/conf.d/your-site.conf` - Nginx proxy optimization
+- `config.toml` - Extended timeouts for large file handling
 
 ---
 

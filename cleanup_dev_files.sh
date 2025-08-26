@@ -35,12 +35,18 @@ KEEP_FILES=(
     "installer.sh"                     # Alternative installer
     "builddebian.sh"                   # Debian package builder
     "builddocker.sh"                   # Docker builder
+    "build-multi-arch.sh"              # Multi-architecture builder
+    "docker-multiarch-build.sh"       # Docker multi-arch builder
     "fix_xmpp_clients.sh"              # Client troubleshooting tool
     "verify_network_resilience.sh"     # Network verification tool
     "NETWORK_RESILIENCE_COMPLETE.md"   # Network feature documentation
     "DESKTOP_XMPP_CLIENT_FIX.md"       # Desktop client fix documentation
     "XMPP_CLIENT_ECOSYSTEM_ANALYSIS.md" # Client analysis
     "xmpp_client_upload_diagnosis.ipynb" # Diagnostic notebook
+    "test-large-file-multiupload.sh"   # Large file multi-upload test
+    "test-large-file-async-processing.sh" # Async processing test
+    "large-file-performance-fix-summary.sh" # Performance fix summary
+    "compilation_summary.sh"           # Build compilation summary
 )
 
 # Directories to keep
@@ -61,6 +67,13 @@ REMOVE_FILES=(
     "hmac-file-server-ejabberd"        # Development binary
     "hmac-file-server-fixed"           # Old fixed binary
     "hmac-file-server-mobile-resilient" # Development binary
+    "hmac-file-server-3.3.0-enhanced" # Development binary
+    "hmac-file-server-3.3.0-test"     # Test binary
+    "hmac-file-server-enhanced-security" # Development binary
+    "hmac-file-server-gajim-fix"       # Development binary
+    "hmac-file-server-gajim-fix-v2"    # Development binary
+    "hmac-file-server-gajim-multiupload-fix" # Development binary
+    "hmac-file-server-test"            # Test binary
     "monitor"                          # Test monitor
     "server"                           # Test server
     "quick-test"                       # Development test
@@ -97,10 +110,14 @@ REMOVE_SCRIPTS=(
     "monitor_uploads.sh"              # Development monitor
     "test-network-resilience.sh"      # Development test
     "test_network_resilience_complete.sh" # Development test
+    "test_network_switching.sh"       # Development test
+    "test_build_network_switching.sh" # Development test
+    "test_enhanced_security.sh"       # Development test
+    "test-gajim-cors-fix.sh"          # Development test
+    "test-gajim-multiupload-fix.sh"   # Development test
     "simple_revalidation.sh"          # Development validation
     "revalidate_all_features.sh"      # Development validation
     "check-configs.sh"                # Development check
-    "build-multi-arch.sh"             # Development build script
 )
 
 # Documentation to remove (outdated/development docs)

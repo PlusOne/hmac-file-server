@@ -674,17 +674,20 @@ func updateSystemMetrics(ctx context.Context) {
 func setupRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 	
-	// Add CORS middleware wrapper
+	// Add CORS middleware wrapper - Enhanced for multi-upload scenarios
 	corsWrapper := func(handler http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			// Set CORS headers for all responses
+			// Enhanced CORS headers for Gajim multi-upload support
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS, HEAD")
-			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Content-Length, X-Requested-With")
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Content-Length, X-Requested-With, X-Upload-ID, X-Session-Token, X-File-Name, X-File-Size, Range, Content-Range")
+			w.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Range, X-Upload-Status, X-Session-ID, Location, ETag")
 			w.Header().Set("Access-Control-Max-Age", "86400")
+			w.Header().Set("Access-Control-Allow-Credentials", "false")
 			
 			// Handle OPTIONS preflight for all endpoints
 			if r.Method == http.MethodOptions {
+				log.Infof("🔍 CORS DEBUG: OPTIONS preflight for %s from origin %s", r.URL.Path, r.Header.Get("Origin"))
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -709,15 +712,17 @@ func setupRouter() *http.ServeMux {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Infof("🔍 ROUTER DEBUG: Catch-all handler called - method:%s path:%s query:%s", r.Method, r.URL.Path, r.URL.RawQuery)
 		
-		// Add CORS headers for all responses
+		// Enhanced CORS headers for all responses - Multi-upload compatible
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS, HEAD")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Content-Length, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Content-Length, X-Requested-With, X-Upload-ID, X-Session-Token, X-File-Name, X-File-Size, Range, Content-Range")
+		w.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Range, X-Upload-Status, X-Session-ID, Location, ETag")
 		w.Header().Set("Access-Control-Max-Age", "86400")
+		w.Header().Set("Access-Control-Allow-Credentials", "false")
 		
 		// Handle CORS preflight requests (fix for Gajim "bad gateway" error)
 		if r.Method == http.MethodOptions {
-			log.Info("🔍 ROUTER DEBUG: Handling CORS preflight (OPTIONS) request")
+			log.Infof("🔍 ROUTER DEBUG: Handling CORS preflight (OPTIONS) request for %s", r.URL.Path)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
