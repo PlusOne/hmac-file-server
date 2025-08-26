@@ -62,7 +62,7 @@ func (s *UploadSessionStore) CreateSession(filename string, totalSize int64, cli
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	
-	sessionID := generateSessionID()
+	sessionID := generateSessionID("", filename)
 	tempDir := filepath.Join(s.tempDir, sessionID)
 	os.MkdirAll(tempDir, 0755)
 	

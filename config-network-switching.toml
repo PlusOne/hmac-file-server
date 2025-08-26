@@ -1,0 +1,143 @@
+# HMAC File Server - Network Switching Resilient Configuration
+# Optimized for 5G ↔ WiFi switching with session persistence
+# Version: 3.3.0 "Nexus Infinitum" - Network Switching Solution
+
+[server]
+# Network binding - CRITICAL: Use 0.0.0.0 to bind to all interfaces
+bind_ip = "0.0.0.0"
+listen_address = "8080"
+
+# Storage and basic settings
+storage_path = "./uploads"
+max_upload_size = "500MB"
+log_file = "/var/log/hmac-file-server.log"
+log_level = "info"
+
+# Network resilience - CRITICAL for mobile scenarios
+networkevents = true                        # Monitor network changes
+auto_adjust_workers = true                  # Adapt to network conditions
+
+[security]
+# HMAC secret - MUST match ejabberd module configuration
+secret = "network-switching-resilience-secret-key"
+
+# Enhanced authentication for mobile devices
+bearer_tokens_enabled = true               # Enable Bearer token auth
+jwt_enabled = true                         # Enable JWT authentication
+hmac_enabled = true                        # Enable legacy HMAC
+
+# Extended validation periods for network switching
+token_grace_period = "8h"                  # 8 hours base grace period
+mobile_grace_period = "12h"                # 12 hours for mobile clients
+standby_grace_period = "24h"               # 24 hours for standby recovery
+ultra_max_grace = "72h"                    # 72 hours ultra-maximum for critical scenarios
+
+[session_store]
+# Session persistence for network resilience - NEW in 3.3.0
+enabled = true                             # CRITICAL: Enable session store
+backend = "memory"                         # "memory" or "redis"
+max_sessions = 50000                       # Maximum concurrent sessions
+cleanup_interval = "30m"                  # Session cleanup frequency
+max_session_age = "72h"                    # Maximum session lifetime
+redis_url = ""                             # Optional: "redis://localhost:6379/0"
+
+# Session recovery settings
+max_token_refreshes = 10                   # Maximum token refreshes per session
+session_recovery_enabled = true           # Enable cross-network session recovery
+upload_resumption_enabled = true          # Enable upload resumption
+
+[uploads]
+# Upload resilience for network changes
+resumable_uploads_enabled = true           # CRITICAL: Enable upload resumption
+max_resumable_age = "72h"                  # Keep sessions for 3 days
+session_recovery_timeout = "600s"          # 10 minutes to recover from network change
+client_reconnect_window = "300s"           # 5 minutes for client to reconnect
+
+# Mobile-optimized chunking
+chunked_uploads_enabled = true
+chunk_size = "5MB"                         # Smaller chunks for mobile stability
+upload_timeout = "3600s"                   # 1 hour upload timeout
+
+# Network change handling
+allow_ip_changes = true                    # CRITICAL: Allow IP changes during uploads
+allow_session_resume = true               # Resume from different IP addresses
+retry_failed_uploads = true               # Auto-retry failed uploads
+max_upload_retries = 8                    # More retries for mobile networks
+network_change_grace_period = "120s"      # 2 minutes grace during network switch
+
+# File management
+allowed_extensions = [".txt", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".zip", ".tar", ".gz", ".7z", ".mp4", ".webm", ".ogg", ".mp3", ".wav", ".flac", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp"]
+max_file_size = "100MB"
+ttl_enabled = false
+ttl = "168h"
+networkevents = true
+
+[network_resilience]
+# Network change detection and handling - Enhanced for mobile
+enabled = true                             # Enable network resilience system
+fast_detection = true                      # 1-second detection (vs 5-second default)
+quality_monitoring = true                  # Monitor connection quality (RTT, packet loss)
+predictive_switching = true                # Switch before network failure
+mobile_optimizations = true               # Cellular-friendly settings
+upload_resilience = true                   # Resume uploads across network changes
+
+# Timing parameters
+detection_interval = "1s"                  # Network change detection interval
+quality_check_interval = "5s"             # Connection quality check interval
+network_change_threshold = 3              # Switches to trigger network change event
+max_detection_interval = "10s"            # Maximum detection interval
+quality_degradation_threshold = 5.0       # Packet loss % threshold
+
+# Client support
+session_based_tracking = true             # Track by session ID, not IP
+allow_ip_changes = true                   # Allow IP changes within session
+max_ip_changes_per_session = 20           # Maximum IP changes per session
+session_migration_timeout = "10m"        # Time to complete migration
+
+[timeouts]
+# Extended timeouts for mobile networks
+read_timeout = "600s"                     # 10 minutes read timeout
+write_timeout = "600s"                    # 10 minutes write timeout
+idle_timeout = "1200s"                    # 20 minutes idle timeout
+handshake_timeout = "120s"                # 2 minutes for handshake
+keep_alive_timeout = "300s"               # 5 minutes keep-alive
+shutdown_timeout = "30s"                  # Graceful shutdown
+
+[logging]
+level = "INFO"
+file = "/var/log/hmac-file-server/network-switching.log"
+max_size = 100                            # MB
+max_backups = 5
+max_age = 7                               # days
+compress = true
+
+# Enhanced logging for network events
+log_network_events = true                 # Log all network change events
+log_upload_sessions = true                # Log upload session lifecycle
+log_token_refresh = true                  # Log token refresh events
+log_ip_changes = true                     # Log client IP address changes
+log_session_recovery = true               # Log session recovery attempts
+
+[workers]
+num_workers = 20                          # More workers for concurrent uploads
+upload_queue_size = 2000                  # Larger queue for mobile bursts
+autoscaling = true                        # Auto-scale workers based on load
+max_workers = 50                          # Maximum worker limit
+
+[metrics]
+enabled = true
+port = 9090
+expose_network_metrics = true             # Expose network resilience metrics
+track_session_recovery = true             # Track session recovery success rate
+track_network_switches = true             # Track network switching events
+
+[client_network]
+# Client network support configuration
+session_based_tracking = true            # Track clients by session, not IP
+allow_ip_changes = true                   # Allow IP changes within session
+max_ip_changes_per_session = 20          # Maximum IP changes allowed
+adapt_to_client_network = true           # Adapt server behavior to client network
+session_migration_timeout = "10m"       # Migration timeout
+
+[build]
+version = "3.3.0"

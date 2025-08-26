@@ -613,8 +613,12 @@ func monitorNetwork(ctx context.Context) {
 				if iface.Flags&net.FlagUp != 0 && iface.Flags&net.FlagLoopback == 0 {
 					select {
 					case networkEvents <- NetworkEvent{
-						Type:    "interface_up",
-						Details: fmt.Sprintf("Interface %s is up", iface.Name),
+						Timestamp:   time.Now(),
+						EventType:   "interface_up",
+						ToNetwork:   iface.Name,
+						FromNetwork: "unknown",
+						ClientIP:    "",
+						UserAgent:   "",
 					}:
 					default:
 						// Channel full, skip
@@ -635,7 +639,7 @@ func handleNetworkEvents(ctx context.Context) {
 			log.Info("Network event handler stopped")
 			return
 		case event := <-networkEvents:
-			log.Debugf("Network event: %s - %s", event.Type, event.Details)
+			log.Debugf("Network event: %s - From: %s To: %s", event.EventType, event.FromNetwork, event.ToNetwork)
 		}
 	}
 }

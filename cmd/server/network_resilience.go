@@ -98,15 +98,6 @@ type AdaptiveTicker struct {
 	done           chan bool
 }
 
-// UploadContext tracks active upload state
-type UploadContext struct {
-	SessionID    string
-	PauseChan    chan bool
-	ResumeChan   chan bool
-	CancelChan   chan bool
-	IsPaused     bool
-}
-
 // NewNetworkResilienceManager creates a new network resilience manager with enhanced capabilities
 func NewNetworkResilienceManager() *NetworkResilienceManager {
 	// Get configuration from global config, with sensible defaults

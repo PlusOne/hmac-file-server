@@ -708,7 +708,7 @@ func handleUploadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 
 	// Use adaptive streaming engine
 	clientIP := getClientIP(r)
-	sessionID := generateSessionID()
+	sessionID := generateSessionID("", "")
 	
 	written, err := globalStreamingEngine.StreamWithAdaptation(
 		dst,
@@ -804,7 +804,7 @@ func handleDownloadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 
 	// Use adaptive streaming engine
 	clientIP := getClientIP(r)
-	sessionID := generateSessionID()
+	sessionID := generateSessionID("", "")
 	
 	n, err := globalStreamingEngine.StreamWithAdaptation(
 		w,
