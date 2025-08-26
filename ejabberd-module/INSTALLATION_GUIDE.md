@@ -2,7 +2,7 @@
 ## Ejabberd Module for HMAC File Server Integration
 
 ### 🎯 Overview
-This module enables seamless file uploads in XMPP clients by integrating ejabberd with HMAC File Server 3.2.2. Users get zero-configuration file sharing with automatic authentication.
+This module enables seamless file uploads in XMPP clients by integrating ejabberd with HMAC File Server 3.3.0. Users get zero-configuration file sharing with automatic authentication.
 
 ---
 
@@ -11,10 +11,10 @@ This module enables seamless file uploads in XMPP clients by integrating ejabber
 ### Prerequisites
 - **ejabberd server** (version 20.01 or later)
 - **Erlang/OTP** (version 22 or later)  
-- **HMAC File Server 3.2.2** with Bearer token support
+- **HMAC File Server 3.3.0** with Bearer token support
 - **Network connectivity** between ejabberd and HMAC server
 
-### Step 1: Install HMAC File Server 3.2.2
+### Step 1: Install HMAC File Server 3.3.0
 ```bash
 # Download and install HMAC File Server
 wget https://git.uuxo.net/uuxo/hmac-file-server/releases/v3.3.0/hmac-file-server-linux-amd64
@@ -55,7 +55,7 @@ sudo chown hmac:hmac /var/lib/hmac-uploads
 # Create systemd service
 sudo cat > /etc/systemd/system/hmac-file-server.service << EOF
 [Unit]
-Description=HMAC File Server 3.2.2
+Description=HMAC File Server 3.3.0
 After=network.target
 
 [Service]
@@ -356,4 +356,4 @@ log_modules_fully: [mod_http_upload_hmac]
 ---
 
 *Last updated: August 25, 2025*  
-*Version: HMAC File Server 3.2.2 + ejabberd integration*
+*Version: HMAC File Server 3.3.0 + ejabberd integration*

@@ -28,7 +28,7 @@ networkevents = true
 clean_upon_exit = true
 precaching = true
 
-# Enhanced Performance Configuration (v3.2 Features)
+# Enhanced Performance Configuration (v3.3 Features)
 [performance]
 # Adaptive buffer management
 adaptive_buffers = true
@@ -62,7 +62,7 @@ resumableuploadsenabled = true
 sessiontimeout = "60m"
 maxretries = 3
 
-# Adaptive chunking parameters (v3.2 Enhancement)
+# Adaptive chunking parameters (v3.3 Enhancement)
 min_chunk_size = "256KB"
 max_chunk_size = "10MB"
 chunk_adaptation_algorithm = "predictive"  # "fixed", "adaptive", "predictive"
@@ -84,12 +84,12 @@ chunkeddownloadsenabled = true
 chunksize = "8KB"
 resumable_downloads_enabled = true
 
-# Adaptive download optimization (v3.2 Enhancement)
+# Adaptive download optimization (v3.3 Enhancement)
 adaptive_chunk_sizing = true
 connection_aware_buffering = true
 range_request_optimization = true
 
-# Enhanced Network Resilience Configuration (v3.2 Features)
+# Enhanced Network Resilience Configuration (v3.3 Features)
 [network_resilience]
 enabled = true
 fast_detection = true
@@ -108,7 +108,7 @@ rtt_critical_threshold = "1000ms"
 packet_loss_warning_threshold = 2.0
 packet_loss_critical_threshold = 10.0
 
-# Multi-Interface Management (v3.2 NEW)
+# Multi-Interface Management (v3.3 NEW)
 [network_interfaces]
 multi_interface_enabled = true
 primary_interface = "auto"
@@ -126,7 +126,7 @@ interface_priorities = [
     { name = "wwan*", priority = 4, type = "cellular" }
 ]
 
-# Network handoff configuration (v3.2 NEW)
+# Network handoff configuration (v3.3 NEW)
 [handoff]
 enabled = true
 handoff_strategy = "quality_based"  # "priority_based", "quality_based", "hybrid"
@@ -200,4 +200,4 @@ uploadqueuesize = 100
 [file]
 
 [build]
-version = "3.2"
+version = "3.3.0"

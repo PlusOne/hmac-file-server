@@ -4,7 +4,7 @@
 
 **Date:** August 26, 2025  
 **Status:** ✅ **100% COMPLETE** - All network switching issues resolved  
-**Version:** HMAC File Server 3.2.2 with Enhanced Network Resilience  
+**Version:** HMAC File Server 3.3.0 with Enhanced Network Resilience  
 
 ---
 
@@ -21,7 +21,7 @@
 ### 🔧 **Server Binary:** `hmac-file-server-network-fixed`
 - **Built from:** Enhanced `cmd/server/main.go` with comprehensive network resilience
 - **Status:** Ready for production deployment
-- **Version:** 3.2.2 with network switching support
+- **Version:** 3.3.0 with network switching support
 
 ### ⚙️ **Configuration:** `config-mobile-resilient.toml`
 - **Purpose:** Optimized for mobile XMPP client scenarios
@@ -224,4 +224,4 @@ Conversations Android → Dino Desktop → Gajim Linux
 ---
 
 *Network resilience implementation complete - August 26, 2025*  
-*HMAC File Server 3.2.2 Enhanced Edition*
+*HMAC File Server 3.3.0 Enhanced Edition*

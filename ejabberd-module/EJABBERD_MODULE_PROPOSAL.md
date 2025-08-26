@@ -214,5 +214,5 @@ An ejabberd module would **dramatically improve** the HMAC File Server ecosystem
 **This is definitely worth implementing!** It would make HMAC File Server the most user-friendly XEP-0363 solution available.
 
 ---
-*HMAC File Server 3.2.2 + Ejabberd Integration Proposal*  
+*HMAC File Server 3.3.0 + Ejabberd Integration Proposal*  
 *Date: August 25, 2025*

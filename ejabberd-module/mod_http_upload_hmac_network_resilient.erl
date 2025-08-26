@@ -2,7 +2,7 @@
 %%% File    : mod_http_upload_hmac_network_resilient.erl  
 %%% Author  : HMAC File Server Team
 %%% Purpose : Network-Resilient XEP-0363 HTTP File Upload with HMAC Integration
-%%% Version : 3.2.2 Network Resilience Edition
+%%% Version : 3.3.0 Network Resilience Edition
 %%% Created : 26 Aug 2025
 %%%----------------------------------------------------------------------
 

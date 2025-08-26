@@ -42,7 +42,7 @@ resumableuploadsenabled = true
 sessiontimeout = "60m"
 maxretries = 3
 
-# Enhanced Network Resilience Configuration (v3.2 Compatible)
+# Enhanced Network Resilience Configuration (v3.3 Compatible)
 [network_resilience]
 enabled = true
 fast_detection = true
@@ -61,7 +61,7 @@ rtt_critical_threshold = "1000ms"
 packet_loss_warning_threshold = 2.0
 packet_loss_critical_threshold = 10.0
 
-# Client Multi-Interface Support Configuration (v3.2 NEW)
+# Client Multi-Interface Support Configuration (v3.3 NEW)
 [client_network_support]
 session_based_tracking = true              # Track uploads by session, not IP
 allow_ip_changes = true                    # Allow same session from different IPs
@@ -140,4 +140,4 @@ uploadqueuesize = 100
 [file]
 
 [build]
-version = "3.2"
+version = "3.3.0"

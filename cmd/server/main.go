@@ -788,7 +788,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Printf("HMAC File Server v3.2\n")
+		fmt.Printf("HMAC File Server v3.3.0\n")
 		os.Exit(0)
 	}
 
@@ -1112,7 +1112,7 @@ func main() {
 		go monitorWorkerPerformance(ctx, &conf.Server, &conf.Workers, &conf.ClamAV)
 	}
 
-	versionString = "3.2" // Set a default version for now
+	versionString = "3.3.0" // Set a default version for now
 	if conf.Build.Version != "" {
 		versionString = conf.Build.Version
 	}
@@ -1240,7 +1240,7 @@ uploadqueuesize = 50
 # Add file-specific configurations here
 
 [build]
-version = "3.2"
+version = "3.3.0"
 `)
 }
 
@@ -1355,7 +1355,7 @@ uploadqueuesize = 50
 # Add file-specific configurations here
 
 [build]
-version = "3.2"
+version = "3.3.0"
 `
 }
 

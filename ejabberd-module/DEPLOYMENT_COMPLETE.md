@@ -149,5 +149,5 @@ URL: /upload/uuid/file.ext?token=<token>&user=user@domain&expiry=<timestamp>
 
 **Ready to deploy and enjoy hassle-free XMPP file uploads! 🎉**
 
-*HMAC File Server 3.2.2 + Ejabberd Integration*  
+*HMAC File Server 3.3.0 + Ejabberd Integration*  
 *Developed: August 25, 2025*

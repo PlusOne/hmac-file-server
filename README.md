@@ -175,14 +175,14 @@ HMAC File Server 3.3.0 includes a comprehensive installation framework that supp
 - **Multi-Architecture Support**: Native builds for AMD64, ARM64, ARM32v7
 - **Developer Experience**: Minimal config-first approach with comprehensive defaults
 
-#### Critical Fixes (3.2.1)
-- **🔧 XMPP Integration**: Fixed MP4 upload failures for Conversations/Gajim clients
-- **🔧 Configuration Loading**: Resolved TOML key mismatch causing extension validation errors
-- **🔧 Network Resilience**: Restored seamless WLAN ↔ IPv6 5G mobile switching
-- **🔧 Testing Framework**: Comprehensive test suite with 100% pass rate validation
+#### Network Switching Enhancements (3.3.0)
+- **🔧 Session Persistence**: Advanced session-based authentication for 5G/WiFi switching
+- **🔧 XEP-0363 Enhancement**: Bearer token refresh mechanism with up to 10 refreshes
+- **🔧 Network Change Detection**: Real-time network transition logging and handling
+- **🔧 Upload Resumption**: Interrupted transfer recovery across network changes
 
 #### Migration Notes
-- **Backward Compatible**: All existing 3.1.x configs work unchanged
+- **Backward Compatible**: All existing 3.2.x configs work unchanged
 - **Performance Boost**: Automatic optimizations with existing configurations
 - **Optional Migration**: Users can optionally migrate to simplified 8-line configs
 

@@ -115,7 +115,7 @@ func DefaultConfig() *Config {
 		},
 		File: FileConfig{},
 		Build: BuildConfig{
-			Version: "3.2",
+			Version: "3.3.0",
 		},
 	}
 }
@@ -344,7 +344,7 @@ redishealthcheckinterval = "120s"
 numworkers = 4
 uploadqueuesize = 100
 
-# Network Resilience Configuration (v3.2+)
+# Network Resilience Configuration (v3.3+)
 [network_resilience]
 enabled = true                              # Enable network resilience system
 fast_detection = true                       # Enable 1-second network change detection
@@ -364,7 +364,7 @@ rtt_critical_threshold = "1000ms"          # RTT threshold for critical
 packet_loss_warning_threshold = 2.0        # Packet loss % for warning
 packet_loss_critical_threshold = 10.0      # Packet loss % for critical
 
-# Multi-Interface Support (v3.2+)
+# Multi-Interface Support (v3.3+)
 multi_interface_enabled = false            # Enable multi-interface management
 interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Interface priority order
 auto_switch_enabled = true                 # Enable automatic interface switching
@@ -374,7 +374,7 @@ quality_degradation_threshold = 0.5        # Quality degradation threshold
 max_switch_attempts = 3                    # Maximum switch attempts per detection
 switch_detection_interval = "10s"          # Switch detection interval
 
-# Client Network Support (v3.2+)
+# Client Network Support (v3.3+)
 [client_network_support]
 session_based_tracking = false             # Track sessions by ID instead of IP
 allow_ip_changes = true                    # Allow session continuation from different IPs
@@ -384,6 +384,6 @@ client_connection_detection = false        # Detect client network type
 adapt_to_client_network = false           # Optimize parameters based on client connection
 
 [build]
-version = "3.2"
+version = "3.3.0"
 `
 }

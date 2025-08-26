@@ -3,7 +3,7 @@
 set -e
 
 # Enhanced Container Build Script - Supports Docker & Podman
-# HMAC File Server 3.2.1 - Universal Container Support
+# HMAC File Server 3.3.0 - Universal Container Support
 
 IMAGE_NAME="hmac-file-server"
 DOCKERFILE_PATH="dockerenv/dockerbuild/Dockerfile"
@@ -174,7 +174,7 @@ start_services() {
 # Main execution
 main() {
     echo -e "${BLUE}🐳 HMAC File Server - Universal Container Builder${NC}"
-    echo "Version: 3.2.1 - Docker & Podman Support"
+    echo "Version: 3.3.0 - Docker & Podman Support"
     echo
 
     # Select container engine
