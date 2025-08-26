@@ -1,4 +1,4 @@
-This documentation provides detailed information on configuring, setting up, and maintaining the HMAC File Server. Whether you're a developer, system administrator, or an enthusiast, this guide will help you navigate through the server's features and configurations effectively.
+This documentation provides detailed information on configuring, setting up, and maintaining the HMAC File Server 3.3.0 "Nexus Infinitum". Whether you're a developer, system administrator, or an enthusiast, this guide will help you navigate through the server's features and configurations effectively.
 
 ---
 
@@ -30,24 +30,28 @@ This documentation provides detailed information on configuring, setting up, and
     - [4. Systemd Service Setup](#4-systemd-service-setup)
 6. [Running with Docker & Docker Compose](#running-with-docker--docker-compose)
 7. [Running with Podman](#running-with-podman)
-8. [Building for Different Architectures](#building-for-different-architectures)
+8. [Multi-Architecture Build System](#multi-architecture-build-system)
 9. [Network Resilience & Queue Optimization](#network-resilience--queue-optimization)
 10. [Multi-Architecture Deployment](#multi-architecture-deployment)
-11. [Additional Recommendations](#additional-recommendations)
-8. [Notes](#notes)
-9. [Using HMAC File Server for CI/CD Build Artifacts](#using-hmac-file-server-for-ci-cd-build-artifacts)
-10. [Monitoring](#monitoring)
+11. [Command-Line Tools & Utilities](#command-line-tools--utilities)
+12. [Development & Build Tools](#development--build-tools)
+13. [Additional Recommendations](#additional-recommendations)
+14. [Notes](#notes)
+15. [Using HMAC File Server for CI/CD Build Artifacts](#using-hmac-file-server-for-ci-cd-build-artifacts)
+16. [Monitoring](#monitoring)
 
 ---
 
 ## Introduction
 
-The **HMAC File Server 3.3.0 "Nexus Infinitum"** is a revolutionary secure and efficient file management solution designed to handle file uploads, downloads, deduplication, and more. This major release brings **93% configuration reduction**, dramatically simplifying setup while maintaining enterprise-grade features.
+The **HMAC File Server 3.3.0 "Nexus Infinitum"** is a revolutionary secure and efficient file management solution designed for infinite connectivity and boundless network resilience. This major release brings **Desktop XMPP Client Revolution**, **Network Resilience Perfection**, and **Mobile Client Optimization**.
 
-**Version 3.2.2 Revolutionary Features:**
-- **93% Configuration Reduction**: Simplified setup with intelligent defaults
-- **Network Resilience**: Advanced connection recovery and stability
-- **Queue Optimization**: Enhanced dynamic worker scaling (40%/10% thresholds)
+**Version 3.3.0 "Nexus Infinitum" Revolutionary Features:**
+- **Desktop XMPP Client Revolution**: 48-hour session restoration for Dino and Gajim
+- **Network Resilience Perfection**: WiFi ↔ LTE switching with zero interruption  
+- **Mobile Client Optimization**: 72-hour ultra-grace periods for critical scenarios
+- **Multi-Architecture Excellence**: Native builds for AMD64, ARM64, ARM32v7
+- **Infinite Connectivity**: Boundless network topology adaptation
 - **Extended Timeouts**: 4800s timeouts for seamless large file transfers
 - **Multi-Architecture Support**: Native AMD64, ARM64, ARM32v7 builds
 - **XEP-0363 XMPP Integration**: Full XMPP file sharing protocol support
@@ -644,7 +648,7 @@ rtt_critical_threshold = "1000ms"          # RTT threshold for critical
 packet_loss_warning_threshold = 2.0        # Packet loss % for warning
 packet_loss_critical_threshold = 10.0      # Packet loss % for critical
 
-# Multi-Interface Support (v3.2.2+)
+# Multi-Interface Support (v3.3.0+)
 multi_interface_enabled = false            # Enable multi-interface management
 interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Interface priority order
 auto_switch_enabled = true                 # Enable automatic interface switching
@@ -859,7 +863,7 @@ Before starting the service, verify:
 
 ## Configuration Validation
 
-The HMAC File Server v3.2.2 includes a comprehensive configuration validation system with specialized command-line flags for different validation scenarios.
+The HMAC File Server v3.3.0 includes a comprehensive configuration validation system with specialized command-line flags for different validation scenarios.
 
 ### Available Validation Flags
 
@@ -987,7 +991,215 @@ livenessProbe:
   periodSeconds: 60
 ```
 
-The enhanced command-line validation system provides comprehensive coverage with 50+ validation checks across all configuration areas, making HMAC File Server v3.2.2 production-ready with enterprise-grade configuration management.
+The enhanced command-line validation system provides comprehensive coverage with 50+ validation checks across all configuration areas, making HMAC File Server v3.3.0 production-ready with enterprise-grade configuration management.
+
+---
+
+## Command-Line Tools & Utilities
+
+HMAC File Server 3.3.0 "Nexus Infinitum" includes a comprehensive suite of command-line tools and utilities for development, debugging, and maintenance.
+
+### Core Server Options
+
+```bash
+# Basic operations
+./hmac-file-server -config config.toml                    # Start server
+./hmac-file-server -genconfig                             # Generate default config
+./hmac-file-server -version                               # Show version info
+./hmac-file-server -help                                  # Show help
+
+# Configuration validation
+./hmac-file-server -config config.toml --validate        # Validate config
+./hmac-file-server -config config.toml --validate-quiet  # Silent validation
+./hmac-file-server -config config.toml --check           # Check configuration
+```
+
+### Diagnostic & Debugging Tools
+
+```bash
+# XMPP Client Troubleshooting (NEW in 3.3.0)
+./fix_xmpp_clients.sh                    # Fix desktop client upload issues
+./fix_xmpp_clients.sh --clear-cache     # Clear XMPP client caches
+./fix_xmpp_clients.sh --dino            # Fix Dino-specific issues
+./fix_xmpp_clients.sh --gajim           # Fix Gajim-specific issues
+
+# Network Resilience Verification (NEW in 3.3.0)
+./verify_network_resilience.sh          # Test network switching scenarios
+./verify_network_resilience.sh --mobile # Test mobile network scenarios
+./verify_network_resilience.sh --wifi   # Test WiFi scenarios
+```
+
+### Build & Development Tools
+
+```bash
+# Multi-Architecture Building (NEW in 3.3.0)
+./build-multi-arch.sh                   # Interactive multiarch builder
+./build-multi-arch.sh --help           # Show build options
+
+# Docker Multi-Architecture (NEW in 3.3.0)  
+./docker-multiarch-build.sh --local    # Build for local testing
+./docker-multiarch-build.sh --push     # Build and push to registry
+./docker-multiarch-build.sh --help     # Show Docker build options
+
+# Debian Package Building
+./builddebian.sh                       # Build .deb packages (AMD64 + ARM64)
+./builddebian.sh --help               # Show packaging options
+
+# Docker Standard Building
+./builddocker.sh                      # Build standard Docker image
+```
+
+### Installation & Setup Tools
+
+```bash
+# Automated Installation
+./installer.sh                        # Interactive installer
+./installer.sh --help                # Show installation options
+
+# Installation Manager (NEW in 3.3.0)
+./install-manager.sh                 # Advanced installation management
+./install-manager.sh --upgrade       # Upgrade existing installation
+./install-manager.sh --uninstall     # Clean uninstallation
+```
+
+### Configuration Generation
+
+```bash
+# Generate configuration templates
+./hmac-file-server -genconfig > config.toml              # Basic config
+./hmac-file-server -genconfig-mobile > mobile.toml       # Mobile-optimized
+./hmac-file-server -genconfig-enterprise > enterprise.toml # Enterprise config
+./hmac-file-server -genconfig-minimal > minimal.toml     # Minimal config
+
+# Configuration examples available:
+# - config-mobile-resilient.toml        # Mobile resilience optimized
+# - config-production-enhanced.toml     # Production deployment
+# - config-production-validated.toml    # Validated production config
+```
+
+### Environment Variables
+
+```bash
+# Common environment variables
+export HMAC_SECRET="your-secret-key"           # HMAC authentication secret
+export STORAGE_PATH="/data/uploads"            # Upload storage directory
+export LISTEN_PORT="8080"                      # Server listen port
+export LOG_LEVEL="info"                        # Logging level
+export PROMETHEUS_PORT="9090"                  # Metrics port
+
+# Development mode
+export HMAC_DEV_MODE="true"                    # Enable development features
+export HMAC_DEBUG="true"                       # Enable debug logging
+export HMAC_TRACE="true"                       # Enable trace logging
+```
+
+---
+
+## Development & Build Tools
+
+### Multi-Architecture Build System
+
+HMAC File Server 3.3.0 features a comprehensive multi-architecture build system supporting 13+ platforms.
+
+#### Interactive Builder
+
+```bash
+./build-multi-arch.sh
+```
+
+**Menu Options:**
+1. **All supported platforms** - Complete multiarch build (Linux, macOS, Windows, FreeBSD)
+2. **Linux only** - AMD64, ARM64, ARM32v7 for server deployment
+3. **Cross-platform** - Linux, macOS, Windows for desktop distribution  
+4. **Custom selection** - Choose specific platforms
+5. **Quick build** - Linux AMD64 only for rapid development
+
+#### Supported Platforms
+
+| Platform | Architecture | Use Case |
+|----------|-------------|----------|
+| `linux/amd64` | x86-64 | Data centers, cloud instances |
+| `linux/arm64` | ARM 64-bit | Apple Silicon, AWS Graviton, Pi 4+ |
+| `linux/arm` | ARM 32-bit | Raspberry Pi 3, IoT devices |
+| `linux/386` | x86 32-bit | Legacy systems |
+| `darwin/amd64` | Intel Mac | macOS Intel development |
+| `darwin/arm64` | Apple Silicon | macOS M1/M2/M3 development |
+| `windows/amd64` | Windows 64-bit | Windows server deployment |
+| `windows/386` | Windows 32-bit | Legacy Windows systems |
+| `freebsd/amd64` | FreeBSD | BSD server deployment |
+| `openbsd/amd64` | OpenBSD | Security-focused deployment |
+
+#### Docker Multi-Architecture
+
+```bash
+# Local development
+./docker-multiarch-build.sh --local
+
+# Production deployment  
+./docker-multiarch-build.sh --registry your-registry.com --push
+```
+
+**Features:**
+- **Docker Buildx integration** - Native multi-platform support
+- **Platform targeting** - `linux/amd64,linux/arm64,linux/arm/v7`
+- **Registry push** - Automated multi-arch image distribution
+- **Local testing** - Build and load for immediate testing
+
+#### Manual Build Commands
+
+```bash
+# Linux AMD64 (Primary)
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o builds/hmac-file-server-linux-amd64 ./cmd/server/
+
+# Linux ARM64 (Apple Silicon, Graviton)
+GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o builds/hmac-file-server-linux-arm64 ./cmd/server/
+
+# Linux ARM32v7 (Raspberry Pi)
+GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-w -s" -o builds/hmac-file-server-linux-arm ./cmd/server/
+
+# macOS Universal
+GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o builds/hmac-file-server-darwin-amd64 ./cmd/server/
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o builds/hmac-file-server-darwin-arm64 ./cmd/server/
+
+# Windows
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o builds/hmac-file-server-windows-amd64.exe ./cmd/server/
+```
+
+### Debian Package System
+
+```bash
+./builddebian.sh
+```
+
+**Features:**
+- **Multi-architecture packages** - AMD64 and ARM64 .deb files
+- **Systemd integration** - Complete service configuration
+- **Dependency management** - Automatic dependency resolution
+- **Configuration templates** - Production-ready configs included
+
+**Generated Packages:**
+- `hmac-file-server_3.3.0_amd64.deb` - AMD64 Debian package
+- `hmac-file-server_3.3.0_arm64.deb` - ARM64 Debian package
+
+### Container Build Tools
+
+#### Standard Docker Build
+```bash
+./builddocker.sh                    # Standard single-arch Docker build
+```
+
+#### Podman Support
+```bash
+# Clone repository
+git clone https://git.uuxo.net/uuxo/hmac-file-server.git
+cd hmac-file-server/dockerenv/podman
+
+# One-command deployment
+./deploy-podman.sh
+
+# Check status
+./deploy-podman.sh status
+```
 
 ---
 
@@ -1094,7 +1306,7 @@ redishealthcheckinterval = "120s"
 numworkers = 4
 uploadqueuesize = 50
 
-# Network Resilience (v3.2.2+)
+# Network Resilience (v3.3.0+)
 [network_resilience]
 enabled = true
 fast_detection = true
@@ -1120,7 +1332,7 @@ auto_switch_enabled = true
 switch_threshold_latency = "500ms"
 switch_threshold_packet_loss = 5.0
 
-# Client Network Support (v3.2.2+)
+# Client Network Support (v3.3.0+)
 [client_network_support]
 session_based_tracking = false             # Standard IP-based tracking for servers
 allow_ip_changes = true                    # Allow for client network changes
@@ -1133,7 +1345,7 @@ adapt_to_client_network = false
 # Add file-specific configurations here
 
 [build]
-version = "3.2.2"
+version = "3.3.0"
 ```
 
 ---
@@ -1186,7 +1398,7 @@ To install the HMAC File Server, follow these steps:
 
 2. Build the server:
     ```sh
-    go build -o hmac-file-server ./cmd/server/main.go
+    go build -o hmac-file-server ./cmd/server/
     ```
 
 3. Create the necessary directories:
@@ -1472,7 +1684,7 @@ services:
 
 ## Running with Podman
 
-Podman is a daemonless container engine that's often preferred in enterprise environments for enhanced security and rootless capabilities. HMAC File Server 3.2.2 provides complete Podman support with optimized deployment scripts.
+Podman is a daemonless container engine that's often preferred in enterprise environments for enhanced security and rootless capabilities. HMAC File Server 3.3.0 provides complete Podman support with optimized deployment scripts.
 
 ### Why Choose Podman?
 
@@ -1918,23 +2130,34 @@ HMAC File Server 3.3.0 "Nexus Infinitum" provides comprehensive multi-architectu
 ### Build Commands
 
 ```bash
-# Build for all architectures
+# Interactive Multi-Architecture Builder (NEW in 3.3.0)
 ./build-multi-arch.sh
 
-# Build specific architecture
-GOOS=linux GOARCH=amd64 go build -o hmac-file-server-linux-amd64 ./cmd/server/main.go
-GOOS=linux GOARCH=arm64 go build -o hmac-file-server-linux-arm64 ./cmd/server/main.go
-GOOS=linux GOARCH=arm GOARM=7 go build -o hmac-file-server-linux-arm32v7 ./cmd/server/main.go
+# Quick options:
+# 1) All supported platforms (recommended)
+# 2) Linux only (AMD64, ARM64, ARM32v7)  
+# 3) Cross-platform (Linux, macOS, Windows)
+# 4) Custom selection
+# 5) Quick build (Linux AMD64 only)
+
+# Manual build commands
+GOOS=linux GOARCH=amd64 go build -o hmac-file-server-linux-amd64 ./cmd/server/
+GOOS=linux GOARCH=arm64 go build -o hmac-file-server-linux-arm64 ./cmd/server/
+GOOS=linux GOARCH=arm GOARM=7 go build -o hmac-file-server-linux-arm ./cmd/server/
 ```
 
 ### Docker Multi-Architecture
 
 ```bash
-# Build multi-platform Docker images
-docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t hmac-file-server:3.2.2 .
+# Build multi-platform Docker images (NEW in 3.3.0)
+./docker-multiarch-build.sh --local    # Local testing
+./docker-multiarch-build.sh --push     # Push to registry
+
+# Manual Docker buildx (advanced)
+docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t hmac-file-server:3.3.0 .
 
 # Run platform-specific image
-docker run --platform linux/arm64 hmac-file-server:3.2.2
+docker run --platform linux/arm64 hmac-file-server:3.3.0
 ```
 
 ### Architecture-Specific Optimizations
@@ -1958,7 +2181,7 @@ docker run --platform linux/arm64 hmac-file-server:3.2.2
 
 ## Network Resilience & Queue Optimization
 
-HMAC File Server 3.2.2 introduces advanced network resilience and queue optimization systems designed for enterprise-grade reliability.
+HMAC File Server 3.3.0 introduces advanced network resilience and queue optimization systems designed for enterprise-grade reliability.
 
 ### Network Resilience Features
 
@@ -2020,7 +2243,7 @@ RUN apk add --no-cache git
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o hmac-file-server ./cmd/server/main.go
+RUN CGO_ENABLED=0 go build -o hmac-file-server ./cmd/server/
 
 # Stage 2: Runtime
 FROM alpine:latest
@@ -2131,7 +2354,7 @@ uploadqueuesize = 50
 # Add file-specific configurations here
 
 [build]
-version = "3.2.2"
+version = "3.3.0"
 ```
 
 ### Quickstart with Docker Compose
