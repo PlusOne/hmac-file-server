@@ -202,3 +202,11 @@ nginx-share-fixed.conf
 cleanup_dev_files.sh
 check-configs.sh
 install-manager.sh
+
+# Compiled binaries (use releases for distribution)
+builds/
+*.beam
+
+# Runtime directories
+dedup_store/
+uploads/
