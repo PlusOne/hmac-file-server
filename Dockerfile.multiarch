@@ -40,9 +40,16 @@ RUN apk add --no-cache \
 RUN adduser -D -s /bin/sh -u 1011 appuser
 
 # Create application directories
-RUN mkdir -p /opt/hmac-file-server/{data/{uploads,duplicates,temp,logs},config} \
+RUN mkdir -p /opt/hmac-file-server/data/uploads \
+             /opt/hmac-file-server/data/duplicates \
+             /opt/hmac-file-server/data/temp \
+             /opt/hmac-file-server/data/logs \
+             /opt/hmac-file-server/config \
     && chown -R appuser:appuser /opt/hmac-file-server \
-    && chmod 750 /opt/hmac-file-server/data/{uploads,duplicates,temp,logs}
+    && chmod 750 /opt/hmac-file-server/data/uploads \
+    && chmod 750 /opt/hmac-file-server/data/duplicates \
+    && chmod 750 /opt/hmac-file-server/data/temp \
+    && chmod 750 /opt/hmac-file-server/data/logs
 
 WORKDIR /opt/hmac-file-server
 
