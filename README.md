@@ -11,34 +11,34 @@ A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) 
 
 ## What's New in 3.3.0 "Nexus Infinitum"
 
-### 🔧 XMPP Client Compatibility
-- **✅ Gajim "Bad Gateway" Fix**: Full CORS support resolves intermittent upload errors
-- **✅ Universal XMPP Support**: Tested with Dino, Gajim, Conversations, Monal
-- **✅ Web Client Ready**: CORS headers for Converse.js and browser-based clients
-- **✅ Standards Compliant**: W3C CORS + XEP-0363 HTTP File Upload
+### XMPP Client Compatibility
+- Full CORS support resolves intermittent upload errors
+- Tested with Dino, Gajim, Conversations, Monal
+- CORS headers for Converse.js and browser-based clients
+- W3C CORS + XEP-0363 HTTP File Upload standards compliant
 
 ### Configuration Revolution
-- **93% Config Reduction**: From 112-line complex configs to 8-line minimal configs
-- **Smart Defaults**: Production-ready settings built into the application
-- **Auto-Generation**: `--genconfig` creates minimal configs instantly
-- **Zero Breaking Changes**: Existing configs continue working
+- 93% reduction in required configuration (from 112-line to 8-line configs)
+- Production-ready settings built into the application
+- Automatic generation of minimal configs with `--genconfig`
+- Backward compatibility with existing configurations
 
 ### Enhanced Performance
-- **Fixed Deduplication**: Existing files return success instead of "file not found"
-- **Queue Optimization**: Doubled capacity (50 to 100), faster scaling (80% to 40% threshold)
-- **Extended Timeouts**: 4800s defaults for large file reliability
-- **Session Persistence**: 60-minute timeouts for enterprise transfers
+- Fixed deduplication returning success instead of "file not found" for existing files
+- Doubled queue capacity (50 to 100) with faster scaling (80% to 40% threshold)
+- Extended timeouts of 4800s for large file reliability
+- 60-minute session persistence for enterprise transfers
 
 ### Multi-Architecture Support
-- **Cross-Platform**: AMD64, ARM64, ARM32v7 with native performance
-- **Interactive Builder**: Easy architecture targeting with menu system
-- **Production Ready**: All platforms enterprise-grade
+- Native performance across AMD64, ARM64, ARM32v7 platforms
+- Interactive build script with architecture selection menu
+- Enterprise-grade support for all platforms
 
 ### Container Support
-- **Docker & Podman**: Full support for both container engines
-- **Enterprise Ready**: Podman deployment tested and verified ✅
-- **Security Hardened**: Rootless, daemonless operation with SELinux integration
-- **XMPP Optimized**: Pod networking for multi-service deployments
+- Full support for both Docker and Podman container engines
+- Podman deployment tested and verified
+- Security hardened with rootless operation and SELinux integration
+- Optimized pod networking for multi-service XMPP deployments
 
 ---
 
@@ -107,14 +107,14 @@ go build -o hmac-file-server ./cmd/server/
 
 HMAC File Server 3.3.0 includes a comprehensive installation framework that supports all deployment methods:
 
-### 🚀 **Automated Installation (All Methods)**
+### Automated Installation (All Methods)
 ```bash
 # Interactive menu - choose your deployment method
 ./install-manager.sh
 
 # Direct method selection
 ./install-manager.sh systemd    # Native SystemD installation
-./install-manager.sh docker     # Docker deployment  
+./install-manager.sh docker     # Docker deployment
 ./install-manager.sh podman     # Podman deployment
 ./install-manager.sh debian     # Debian package
 
@@ -122,14 +122,14 @@ HMAC File Server 3.3.0 includes a comprehensive installation framework that supp
 ./install-manager.sh --test
 ```
 
-### ✅ **Supported Deployment Methods**
-- **✅ SystemD**: Native installation with service integration
-- **✅ Docker**: Full containerized deployment with compose files  
-- **✅ Podman**: Rootless container deployment (tested & verified)
-- **✅ Debian**: Package-based installation with dependency management
-- **✅ Multi-Architecture**: AMD64, ARM64, ARM32v7 support for all methods
+### Supported Deployment Methods
+- SystemD: Native installation with service integration
+- Docker: Full containerized deployment with compose files
+- Podman: Rootless container deployment (tested and verified)
+- Debian: Package-based installation with dependency management
+- Multi-Architecture: AMD64, ARM64, ARM32v7 support for all methods
 
-### 🧪 **Comprehensive Testing Suite**
+### Comprehensive Testing Suite
 ```bash
 # Run all functionality tests
 ./test
@@ -142,9 +142,9 @@ HMAC File Server 3.3.0 includes a comprehensive installation framework that supp
 ./test clean    # Clean up test files
 ```
 
-### 🐳 **Enhanced Container Build Script**
+### Enhanced Container Build Script
 ```bash
-# Universal container builder - auto-detects Docker & Podman
+# Universal container builder - auto-detects Docker and Podman
 ./builddocker.sh
 
 # Use specific container engine
@@ -159,19 +159,19 @@ HMAC File Server 3.3.0 includes a comprehensive installation framework that supp
 ./builddocker.sh --help
 ```
 
-**Features:**
-- ✅ **Auto-Detection**: Automatically finds available container engines (Docker/Podman)
-- ✅ **Engine Selection**: Interactive menu for multiple engines or force specific engine
-- ✅ **Compose Support**: Uses appropriate compose files (docker-compose.yml / podman-compose.yml)
-- ✅ **Podman Optimized**: SELinux labels, rootless support, security optimizations
-- ✅ **Build & Deploy**: Combined build and optional service startup in one command
+Features:
+- Auto-Detection: Automatically finds available container engines (Docker/Podman)
+- Engine Selection: Interactive menu for multiple engines or force specific engine
+- Compose Support: Uses appropriate compose files (docker-compose.yml / podman-compose.yml)
+- Podman Optimized: SELinux labels, rootless support, security optimizations
+- Build and Deploy: Combined build and optional service startup in one command
 
-**Test Coverage:**
-- ✅ HMAC Authentication & File Upload Validation
-- ✅ XMPP Integration (MP4 uploads for Conversations/Gajim)
-- ✅ Network Resilience & Mobile Switching Features  
-- ✅ Large File Support & Extension Validation
-- ✅ Security Testing (Invalid HMAC rejection)
+Test Coverage:
+- HMAC Authentication and File Upload Validation
+- XMPP Integration (MP4 uploads for Conversations/Gajim)
+- Network Resilience and Mobile Switching Features
+- Large File Support and Extension Validation
+- Security Testing (Invalid HMAC rejection)
 
 ---
 
@@ -182,7 +182,7 @@ HMAC File Server 3.3.0 includes a comprehensive installation framework that supp
 - [Configuration Documentation](#configuration-documentation)
 - [Build Options](#build-options)
 - [Docker Compose Examples](#docker-compose-examples)
-- [Podman Deployment](#podman-deployment) ⭐ **NEW: Tested & Verified**
+- [Podman Deployment](#podman-deployment)
 - [Nginx Reverse Proxy](#nginx-reverse-proxy)
 - [Apache2 Reverse Proxy](#apache2-reverse-proxy)
 - [Prosody XMPP Integration](#prosody-xmpp-integration)
@@ -196,39 +196,39 @@ HMAC File Server 3.3.0 includes a comprehensive installation framework that supp
 
 ### HMAC File Server 3.3.0 - Nexus Infinitum
 
-**Release Date**: August 26, 2025  
-**Codename**: Nexus Infinitum (infinite connectivity and boundless network reach)
+Release Date: August 26, 2025
+Codename: Nexus Infinitum (infinite connectivity and boundless network reach)
 
 #### Latest Updates (3.3.0)
-- **🚀 Enhanced MIME Types**: Added 80+ additional file format support
-- **🔧 XMPP Client Ecosystem**: Comprehensive compatibility analysis 
-- **🌐 Network Resilience**: Advanced mobile switching optimizations
-- **📊 Documentation**: Complete client compatibility matrix
-- **🔒 Security**: HMAC core functions remain untouched and secure
+- Enhanced MIME Types: Added 80+ additional file format support
+- XMPP Client Ecosystem: Comprehensive compatibility analysis
+- Network Resilience: Advanced mobile switching optimizations
+- Documentation: Complete client compatibility matrix
+- Security: HMAC core functions remain untouched and secure
 
 #### Key Improvements
-- **Configuration Simplification**: 93% reduction in required configuration
-- **Enhanced Deduplication**: Fixed "file not found" errors for existing files
-- **Performance Optimization**: Doubled queue capacity, optimized worker scaling
-- **Multi-Architecture Support**: Native builds for AMD64, ARM64, ARM32v7
-- **Developer Experience**: Minimal config-first approach with comprehensive defaults
+- Configuration Simplification: 93% reduction in required configuration
+- Enhanced Deduplication: Fixed "file not found" errors for existing files
+- Performance Optimization: Doubled queue capacity, optimized worker scaling
+- Multi-Architecture Support: Native builds for AMD64, ARM64, ARM32v7
+- Developer Experience: Minimal config-first approach with comprehensive defaults
 
 #### Network Switching Enhancements (3.3.0)
-- **🔧 Session Persistence**: Advanced session-based authentication for 5G/WiFi switching
-- **🔧 XEP-0363 Enhancement**: Bearer token refresh mechanism with up to 10 refreshes
-- **🔧 Network Change Detection**: Real-time network transition logging and handling
-- **🔧 Upload Resumption**: Interrupted transfer recovery across network changes
+- Session Persistence: Advanced session-based authentication for 5G/WiFi switching
+- XEP-0363 Enhancement: Bearer token refresh mechanism with up to 10 refreshes
+- Network Change Detection: Real-time network transition logging and handling
+- Upload Resumption: Interrupted transfer recovery across network changes
 
 #### Migration Notes
-- **Backward Compatible**: All existing 3.2.x configs work unchanged
-- **Performance Boost**: Automatic optimizations with existing configurations
-- **Optional Migration**: Users can optionally migrate to simplified 8-line configs
+- Backward Compatible: All existing 3.2.x configs work unchanged
+- Performance Boost: Automatic optimizations with existing configurations
+- Optional Migration: Users can optionally migrate to simplified 8-line configs
 
 #### System Requirements
-- **Memory**: 512MB minimum, 2GB+ recommended for large files
-- **Storage**: 100MB application + user data storage
-- **Network**: Standard TCP/IP connectivity
-- **OS**: Linux (primary), Windows/macOS (experimental)
+- Memory: 512MB minimum, 2GB+ recommended for large files
+- Storage: 100MB application + user data storage
+- Network: Standard TCP/IP connectivity
+- OS: Linux (primary), Windows/macOS (experimental)
 
 ---
 
@@ -236,17 +236,16 @@ HMAC File Server 3.3.0 includes a comprehensive installation framework that supp
 
 HMAC File Server 3.3.0 introduces enhanced network resilience specifically designed for mobile devices and network switching scenarios.
 
-### 📱 **Mobile Network Switching Support**
+### Mobile Network Switching Support
 
-#### **Scenario 1: WLAN ↔ IPv6 5G Switching**
+#### Scenario 1: WLAN to IPv6 5G Switching
 Perfect for mobile devices that switch between WiFi and cellular networks:
 
-```toml
 ```toml
 [uploads]
 networkevents = true                        # REQUIRED: Enable network monitoring
 
-[network_resilience] 
+[network_resilience]
 enabled = true                              # Enable network resilience system
 fast_detection = true                       # 1-second detection vs 5-second default
 quality_monitoring = true                   # Monitor connection quality
@@ -267,7 +266,7 @@ writetimeout = "600s"                       # Handle cellular upload delays
 idletimeout = "1200s"                       # 20-minute tolerance
 ```
 
-#### **Scenario 2: Multi-Interface Devices (Ethernet + WiFi + LTE)**
+#### Scenario 2: Multi-Interface Devices (Ethernet + WiFi + LTE)
 For devices with multiple network interfaces:
 
 ```toml
@@ -282,7 +281,7 @@ predictive_switching = true                 # Use best available interface
 
 # System automatically selects best interface based on:
 # - RTT (latency)
-# - Packet loss percentage  
+# - Packet loss percentage
 # - Connection stability
 # - Interface priority (ethernet > wifi > cellular)
 
@@ -292,20 +291,20 @@ allow_ip_changes = true                    # Allow IP changes during uploads
 adapt_to_client_network = true            # Optimize for client connection type
 ```
 
-### **Benefits for Mobile Scenarios**
+### Benefits for Mobile Scenarios
 
 | Feature | Standard Detection | Enhanced Mobile Detection |
 |---------|-------------------|---------------------------|
-| **Detection Speed** | 5 seconds | **1 second** |
-| **Network Quality** | Interface status only | **RTT + packet loss monitoring** |
-| **Switching Logic** | Reactive (after failure) | **Proactive (before failure)** |
-| **Mobile Tolerance** | Fixed thresholds | **Cellular-optimized thresholds** |
-| **Session Recovery** | 2-minute window | **10-minute window** |
-| **Upload Resumption** | Basic retry | **Smart retry with backoff** |
+| Detection Speed | 5 seconds | 1 second |
+| Network Quality | Interface status only | RTT + packet loss monitoring |
+| Switching Logic | Reactive (after failure) | Proactive (before failure) |
+| Mobile Tolerance | Fixed thresholds | Cellular-optimized thresholds |
+| Session Recovery | 2-minute window | 10-minute window |
+| Upload Resumption | Basic retry | Smart retry with backoff |
 
-### **Configuration Examples**
+### Configuration Examples
 
-**Ultra-Fast Mobile Detection**:
+Ultra-Fast Mobile Detection:
 ```toml
 [network_resilience]
 enabled = true
@@ -315,7 +314,7 @@ mobile_optimizations = true               # Lenient cellular thresholds
 upload_resilience = true                  # Resume uploads on network changes
 ```
 
-**Conservative Stable Network**:
+Conservative Stable Network:
 ```toml
 [network_resilience]
 enabled = true
@@ -325,7 +324,7 @@ predictive_switching = false              # React only to hard failures
 mobile_optimizations = false             # Use strict thresholds
 ```
 
-**Multi-Interface Optimized**:
+Multi-Interface Optimized:
 ```toml
 [network_resilience]
 enabled = true
@@ -346,7 +345,7 @@ switch_threshold_packet_loss = 3.0       # 3% packet loss trigger
 ./hmac-file-server -genconfig > config.toml
 ```
 
-**Output Example:**
+Output Example:
 ```toml
 # HMAC File Server - Minimal Configuration
 [server]
@@ -394,34 +393,34 @@ file = "/var/log/hmac-file-server.log"
 ./hmac-file-server -check-performance -config config.toml
 ```
 
-### ⚠️ Configuration Troubleshooting
+### Configuration Troubleshooting
 
-**Common Issue**: Service fails with `storage path is required` or `permission denied`
+Common Issue: Service fails with `storage path is required` or `permission denied`
 
 ```bash
-# ❌ WRONG - Field names without underscores
+# WRONG - Field names without underscores
 [server]
 storagepath = "/opt/hmac-file-server/data/uploads"
 listenport = "8080"
 
-# ✅ CORRECT - Use underscores in TOML field names  
+# CORRECT - Use underscores in TOML field names
 [server]
 storage_path = "/opt/hmac-file-server/data/uploads"
 listen_address = "8080"
 ```
 
-### 🔧 XMPP Client Issues
+### XMPP Client Issues
 
-**Gajim "Bad Gateway" Error**: Fixed in 3.3.0 with full CORS support
+Gajim "Bad Gateway" Error: Fixed in 3.3.0 with full CORS support
 ```bash
 # Verify CORS functionality
 curl -X OPTIONS http://your-server:8080/ -v
 # Should return HTTP 200 with Access-Control headers
 ```
 
-📖 **See**: [GAJIM_BAD_GATEWAY_FIX.md](GAJIM_BAD_GATEWAY_FIX.md) for complete details
+See [GAJIM_BAD_GATEWAY_FIX.md](GAJIM_BAD_GATEWAY_FIX.md) for complete details
 
-**Quick Fix Commands:**
+Quick Fix Commands:
 ```bash
 # Test configuration
 ./hmac-file-server --validate-config
@@ -642,13 +641,13 @@ version = "3.3.0"                          # Application version
 ./build-multi-arch.sh
 ```
 
-**Menu Options:**
+Menu Options:
 ```
 HMAC File Server Multi-Architecture Builder
 ==========================================
 1) Build for current platform (auto-detect)
 2) Build for Linux AMD64
-3) Build for Linux ARM64  
+3) Build for Linux ARM64
 4) Build for Linux ARM32v7
 5) Build for Windows AMD64
 6) Build for macOS AMD64 (Intel)
@@ -1024,8 +1023,8 @@ readtimeout = "3600s"
 writetimeout = "3600s"
 idletimeout = "3600s"
 EOF
-    
-    echo "⚠️  IMPORTANT: Edit ${app_data}/config/config.toml and change the secrets!"
+
+    echo "IMPORTANT: Edit ${app_data}/config/config.toml and change the secrets!"
 fi
 
 # Build image if it doesn't exist
@@ -1060,12 +1059,12 @@ podman run -d \
     --health-start-period=40s \
     "${ctr_image}" -config /app/config.toml
 
-echo "✅ HMAC File Server deployed successfully!"
-echo "🌐 Server available at: http://localhost:${listen_port}"
-echo "📊 Metrics available at: http://localhost:${metrics_port}/metrics"
-echo "📋 Container status: podman ps"
-echo "📝 View logs: podman logs ${ctr_name}"
-echo "🔍 Health check: curl -f http://localhost:${listen_port}/health"
+echo "HMAC File Server deployed successfully!"
+echo "Server available at: http://localhost:${listen_port}"
+echo "Metrics available at: http://localhost:${metrics_port}/metrics"
+echo "Container status: podman ps"
+echo "View logs: podman logs ${ctr_name}"
+echo "Health check: curl -f http://localhost:${listen_port}/health"
 ```
 
 #### Podman Systemd Service (Rootless)
@@ -1178,62 +1177,62 @@ podman ps --pod
 
 | Feature | Docker | Podman |
 |---------|--------|--------|
-| **Daemon** | Requires Docker daemon | Daemonless architecture |
-| **Root Access** | Requires root for Docker daemon | Can run completely rootless |
-| **Security** | Good, but daemon runs as root | Enhanced security, no privileged daemon |
-| **Systemd Integration** | Via Docker service | Native systemd integration |
-| **Pod Support** | Requires docker-compose or swarm | Native Kubernetes-style pods |
-| **Image Compatibility** | Docker images | Compatible with Docker images |
-| **Enterprise Use** | Popular in startups/mid-size | Preferred in enterprise environments |
-| **SELinux** | Basic support | Excellent SELinux integration |
+| Daemon | Requires Docker daemon | Daemonless architecture |
+| Root Access | Requires root for Docker daemon | Can run completely rootless |
+| Security | Good, but daemon runs as root | Enhanced security, no privileged daemon |
+| Systemd Integration | Via Docker service | Native systemd integration |
+| Pod Support | Requires docker-compose or swarm | Native Kubernetes-style pods |
+| Image Compatibility | Docker images | Compatible with Docker images |
+| Enterprise Use | Popular in startups/mid-size | Preferred in enterprise environments |
+| SELinux | Basic support | Excellent SELinux integration |
 
 ### Podman Benefits for HMAC File Server
 
-1. **Enhanced Security**: No privileged daemon, better isolation
-2. **Rootless Operation**: Can run without root privileges
-3. **SELinux Integration**: Better compliance in enterprise environments
-4. **Systemd Native**: Better integration with system services
-5. **Pod Support**: Natural clustering with XMPP servers
-6. **Resource Efficiency**: Lower overhead without daemon
+1. Enhanced Security: No privileged daemon, better isolation
+2. Rootless Operation: Can run without root privileges
+3. SELinux Integration: Better compliance in enterprise environments
+4. Systemd Native: Better integration with system services
+5. Pod Support: Natural clustering with XMPP servers
+6. Resource Efficiency: Lower overhead without daemon
 
-### Testing Results & Verification
+### Testing Results and Verification
 
 The Podman deployment has been fully tested and verified:
 
-#### ✅ **Installation Success**
-- **Docker Removal**: Complete removal of Docker packages and dependencies
-- **Podman Installation**: Podman 4.3.1 installed with all dependencies (`fuse-overlayfs`, `slirp4netns`, `uidmap`)
-- **Image Build**: Successfully built `localhost/hmac-file-server:latest` with security optimizations
+#### Installation Success
+- Docker Removal: Complete removal of Docker packages and dependencies
+- Podman Installation: Podman 4.3.1 installed with all dependencies (fuse-overlayfs, slirp4netns, uidmap)
+- Image Build: Successfully built localhost/hmac-file-server:latest with security optimizations
 
-#### ✅ **Container Deployment Success**
-- **Security Hardened**: Running as non-root user (UID 1011) with `--cap-drop=ALL`, `--read-only`, `--no-new-privileges`
-- **Health Checks**: Built-in health monitoring and status reporting
-- **Volume Mounting**: Proper SELinux labeling with `:Z` flags
+#### Container Deployment Success
+- Security Hardened: Running as non-root user (UID 1011) with --cap-drop=ALL, --read-only, --no-new-privileges
+- Health Checks: Built-in health monitoring and status reporting
+- Volume Mounting: Proper SELinux labeling with :Z flags
 
-#### ✅ **Functional Verification**
+#### Functional Verification
 ```bash
 # Health endpoint test
 curl -f http://localhost:8888/health
-# Response: OK ✅
+# Response: OK
 
-# Metrics endpoint test  
+# Metrics endpoint test
 curl -s http://localhost:9090/metrics | head -5
-# Response: Prometheus metrics ✅
+# Response: Prometheus metrics
 
 # Container status
 podman ps
-# Status: Up and running ✅
+# Status: Up and running
 
 # Configuration validation
 podman logs hmac-file-server
-# Result: All settings validated ✅
+# Result: All settings validated
 ```
 
-#### ✅ **Production Ready Features**
-- **XMPP Integration**: Pod networking for multi-service XMPP deployments
-- **Configuration Management**: Auto-generated secure configs with random secrets
-- **Service Management**: Native systemd integration for both rootless and system-wide deployment
-- **Enterprise Security**: Enhanced security features preferred in enterprise environments
+#### Production Ready Features
+- XMPP Integration: Pod networking for multi-service XMPP deployments
+- Configuration Management: Auto-generated secure configs with random secrets
+- Service Management: Native systemd integration for both rootless and system-wide deployment
+- Enterprise Security: Enhanced security features preferred in enterprise environments
 
 ### Quick Start Commands
 
@@ -1250,19 +1249,19 @@ podman run -d --name hmac-file-server \
   localhost/hmac-file-server:latest -config /app/config.toml
 
 # Health verification
-curl -f http://localhost:8888/health && echo " - Server is healthy! ✅"
+curl -f http://localhost:8888/health && echo " - Server is healthy!"
 ```
 
-### Manual Setup: Paths, Ownership & Permissions
+### Manual Setup: Paths, Ownership and Permissions
 
 When setting up Podman or Docker manually, proper path ownership is crucial:
 
-#### **Container User Configuration**
-- **Container User**: `appuser` (UID: 1011, GID: 1011)
-- **Security**: Non-root user for enhanced security
-- **Compatibility**: Works with both rootless and rootful containers
+#### Container User Configuration
+- Container User: appuser (UID: 1011, GID: 1011)
+- Security: Non-root user for enhanced security
+- Compatibility: Works with both rootless and rootful containers
 
-#### **Required Directory Structure**
+#### Required Directory Structure
 ```bash
 # Create base directory structure
 mkdir -p /opt/podman/hmac-file-server/{config,data,deduplication,logs}
@@ -1279,16 +1278,16 @@ chmod 755 /opt/podman/hmac-file-server/{config,data,deduplication,logs}
 chmod 644 /opt/podman/hmac-file-server/config/config.toml  # Read-only config
 ```
 
-#### **Path Mapping Reference**
+#### Path Mapping Reference
 
 | Host Path | Container Path | Purpose | Required Permissions |
 |-----------|----------------|---------|---------------------|
-| `/opt/podman/hmac-file-server/config/config.toml` | `/app/config.toml` | Configuration file | `644` (read-only) |
-| `/opt/podman/hmac-file-server/data/` | `/data/` | File uploads/storage | `755` (read-write) |
-| `/opt/podman/hmac-file-server/deduplication/` | `/deduplication/` | Deduplication cache | `755` (read-write) |
-| `/opt/podman/hmac-file-server/logs/` | `/logs/` | Application logs | `755` (read-write) |
+| /opt/podman/hmac-file-server/config/config.toml | /app/config.toml | Configuration file | 644 (read-only) |
+| /opt/podman/hmac-file-server/data/ | /data/ | File uploads/storage | 755 (read-write) |
+| /opt/podman/hmac-file-server/deduplication/ | /deduplication/ | Deduplication cache | 755 (read-write) |
+| /opt/podman/hmac-file-server/logs/ | /logs/ | Application logs | 755 (read-write) |
 
-#### **SELinux Labels (Important for RHEL/CentOS/Fedora)**
+#### SELinux Labels (Important for RHEL/CentOS/Fedora)
 ```bash
 # Add SELinux labels for Podman volume mounts
 podman run -d --name hmac-file-server \
@@ -1298,18 +1297,18 @@ podman run -d --name hmac-file-server \
   -v /opt/podman/hmac-file-server/logs:/logs:rw,Z \
   localhost/hmac-file-server:latest
 
-# Note: The `:Z` flag relabels content and should be used for private volumes
-# Use `:z` for shared volumes between multiple containers
+# Note: The :Z flag relabels content and should be used for private volumes
+# Use :z for shared volumes between multiple containers
 ```
 
-#### **Common Ownership Issues & Solutions**
+#### Common Ownership Issues and Solutions
 
-**❌ Problem**: Container fails with permission errors
+Problem: Container fails with permission errors
 ```bash
 # Logs show: "permission denied: open /data/.write_test"
 ```
 
-**✅ Solution**: Fix ownership and verify
+Solution: Fix ownership and verify
 ```bash
 # Fix ownership
 chown -R 1011:1011 /opt/podman/hmac-file-server
@@ -1323,12 +1322,12 @@ sudo -u "#1011" touch /opt/podman/hmac-file-server/data/test.txt
 # Should succeed without errors
 ```
 
-**❌ Problem**: SELinux blocking container access  
+Problem: SELinux blocking container access
 ```bash
 # Logs show: "SELinux is preventing access"
 ```
 
-**✅ Solution**: Correct SELinux labeling
+Solution: Correct SELinux labeling
 ```bash
 # Option 1: Use :Z labels in volume mounts (recommended)
 -v /path/to/data:/data:rw,Z
@@ -1338,16 +1337,16 @@ sudo setsebool -P container_manage_cgroup on
 sudo restorecon -R /opt/podman/hmac-file-server
 ```
 
-#### **Docker vs Podman Ownership Differences**
+#### Docker vs Podman Ownership Differences
 
 | Scenario | Docker | Podman Rootless | Podman Rootful |
 |----------|--------|-----------------|----------------|
-| **Host UID** | 1011:1011 | 1011:1011 | 1011:1011 |
-| **Container UID** | 1011:1011 | 1011:1011 | 1011:1011 |
-| **Volume Ownership** | `chown 1011:1011` | `podman unshare chown 1011:1011` | `chown 1011:1011` |
-| **SELinux Labels** | `:Z` or `:z` | `:Z` or `:z` | `:Z` or `:z` |
+| Host UID | 1011:1011 | 1011:1011 | 1011:1011 |
+| Container UID | 1011:1011 | 1011:1011 | 1011:1011 |
+| Volume Ownership | chown 1011:1011 | podman unshare chown 1011:1011 | chown 1011:1011 |
+| SELinux Labels | :Z or :z | :Z or :z | :Z or :z |
 
-#### **Verification Commands**
+#### Verification Commands
 ```bash
 # Check container user
 podman exec hmac-file-server id
@@ -1382,7 +1381,7 @@ server {
 server {
     listen 443 ssl http2;
     server_name files.example.com;
-    
+
     # SSL Configuration
     ssl_certificate /etc/ssl/certs/files.example.com.crt;
     ssl_certificate_key /etc/ssl/private/files.example.com.key;
@@ -1390,32 +1389,32 @@ server {
     ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
     ssl_prefer_server_ciphers off;
     ssl_session_cache shared:SSL:10m;
-    
+
     # File upload limits
     client_max_body_size 10G;
     client_body_timeout 300s;
     client_header_timeout 300s;
-    
+
     # Proxy settings for large files
     proxy_connect_timeout 300s;
     proxy_send_timeout 300s;
     proxy_read_timeout 300s;
     proxy_request_buffering off;
     proxy_buffering off;
-    
+
     location / {
         proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # WebSocket support (if needed)
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
-    
+
     # Metrics endpoint (optional - restrict access)
     location /metrics {
         proxy_pass http://127.0.0.1:9090;
@@ -1424,7 +1423,7 @@ server {
         allow 192.168.0.0/16;
         deny all;
     }
-    
+
     # Health check
     location /health {
         proxy_pass http://127.0.0.1:8080;
@@ -1446,18 +1445,18 @@ upstream hmac_backend {
 server {
     listen 443 ssl http2;
     server_name files.example.com;
-    
+
     # Security headers
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Frame-Options DENY always;
     add_header X-Content-Type-Options nosniff always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
+
     # Rate limiting
     limit_req_zone $binary_remote_addr zone=upload:10m rate=10r/m;
     limit_req_zone $binary_remote_addr zone=download:10m rate=100r/m;
-    
+
     location /upload {
         limit_req zone=upload burst=5 nodelay;
         proxy_pass http://hmac_backend;
@@ -1466,7 +1465,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    
+
     location /download {
         limit_req zone=download burst=20 nodelay;
         proxy_pass http://hmac_backend;
@@ -1475,7 +1474,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    
+
     location / {
         proxy_pass http://hmac_backend;
         proxy_set_header Host $host;
@@ -1500,7 +1499,7 @@ server {
 
 <VirtualHost *:443>
     ServerName files.example.com
-    
+
     # SSL Configuration
     SSLEngine on
     SSLCertificateFile /etc/ssl/certs/files.example.com.crt
@@ -1509,32 +1508,32 @@ server {
     SSLCipherSuite ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305
     SSLHonorCipherOrder off
     SSLSessionTickets off
-    
+
     # Security Headers
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
     Header always set X-Frame-Options DENY
     Header always set X-Content-Type-Options nosniff
     Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    
+
     # File upload limits
     LimitRequestBody 10737418240  # 10GB
-    
+
     # Proxy configuration
     ProxyPreserveHost On
     ProxyRequests Off
-    
+
     # Main proxy
     ProxyPass / http://127.0.0.1:8080/
     ProxyPassReverse / http://127.0.0.1:8080/
-    
+
     # Set headers for the backend
     ProxyPassReverse / http://127.0.0.1:8080/
     ProxySetEnv proxy-initial-not-pooled 1
-    
+
     # Timeout settings
     ProxyTimeout 300
-    
+
     # Metrics endpoint (restricted)
     <Location "/metrics">
         ProxyPass http://127.0.0.1:9090/
@@ -1543,7 +1542,7 @@ server {
         Require ip 172.16.0.0/12
         Require ip 192.168.0.0/16
     </Location>
-    
+
     # Logging
     ErrorLog ${APACHE_LOG_DIR}/hmac-file-server_error.log
     CustomLog ${APACHE_LOG_DIR}/hmac-file-server_access.log combined
@@ -1564,23 +1563,23 @@ server {
 
 <VirtualHost *:443>
     ServerName files.example.com
-    
+
     # SSL Configuration (same as basic)
     SSLEngine on
     SSLCertificateFile /etc/ssl/certs/files.example.com.crt
     SSLCertificateKeyFile /etc/ssl/private/files.example.com.key
-    
+
     # Rate limiting (requires mod_evasive)
     DOSHashTableSize    8192
     DOSPageCount        3
     DOSPageInterval     1
     DOSEmailNotify      admin@example.com
-    
+
     # Proxy to load balancer
     ProxyPreserveHost On
     ProxyPass / balancer://hmac-cluster/
     ProxyPassReverse / balancer://hmac-cluster/
-    
+
     # Balancer manager (restrict access)
     <Location "/balancer-manager">
         SetHandler balancer-manager
@@ -1588,7 +1587,7 @@ server {
         Require ip 10.0.0.0/8
     </Location>
     ProxyPass /balancer-manager !
-    
+
     # Health check
     <Location "/health">
         ProxyPass http://127.0.0.1:8080/health
@@ -1625,7 +1624,7 @@ modules_enabled = {
     "time";
     "ping";
     "admin_adhoc";
-    
+
     -- HTTP file upload
     "http_upload_external";
 }
@@ -1633,19 +1632,19 @@ modules_enabled = {
 -- VirtualHost configuration
 VirtualHost "example.com"
     enabled = true
-    
+
     -- SSL configuration
     ssl = {
         key = "/etc/prosody/certs/example.com.key";
         certificate = "/etc/prosody/certs/example.com.crt";
     }
-    
+
     -- HTTP file upload configuration
     http_upload_external_base_url = "https://files.example.com"
     http_upload_external_secret = "your-very-secret-hmac-key"
     http_upload_external_file_size_limit = 10737418240  -- 10GB
     http_upload_external_quota = 1073741824000          -- 1TB per user
-    
+
     -- Custom upload URL patterns (for HMAC File Server)
     http_upload_external_put_url = "https://files.example.com/upload/{filename}"
     http_upload_external_get_url = "https://files.example.com/download/{filename}"
@@ -1655,7 +1654,7 @@ Component "upload.example.com" "http_upload_external"
     http_upload_external_base_url = "https://files.example.com"
     http_upload_external_secret = "your-very-secret-hmac-key"
     http_upload_external_file_size_limit = 10737418240
-    
+
 -- Logging
 log = {
     info = "/var/log/prosody/prosody.log";
@@ -1690,39 +1689,39 @@ function handle_upload_request(event)
     local filename = stanza:get_child_text("filename", "urn:xmpp:http:upload:0");
     local filesize = tonumber(stanza:get_child_text("size", "urn:xmpp:http:upload:0"));
     local content_type = stanza:get_child_text("content-type", "urn:xmpp:http:upload:0") or "application/octet-stream";
-    
+
     if not filename or not filesize then
         return st.error_reply(stanza, "modify", "bad-request", "Missing filename or size");
     end
-    
+
     if filesize > file_size_limit then
         return st.error_reply(stanza, "modify", "not-acceptable", "File too large");
     end
-    
+
     -- Generate HMAC authentication
     local timestamp = os.time();
     local upload_id = uuid();
     local message = filename .. filesize .. timestamp .. upload_id;
     local signature = base64.encode(hmac_sha256(external_secret, message));
-    
+
     -- Construct URLs
     local put_url = string.format("%s/upload?filename=%s&timestamp=%d&uploadid=%s&signature=%s",
-        external_base_url, 
+        external_base_url,
         filename,
         timestamp,
         upload_id,
         signature
     );
-    
+
     local get_url = string.format("%s/download/%s", external_base_url, filename);
-    
+
     -- Return slot
     local reply = st.reply(stanza)
         :tag("slot", {xmlns="urn:xmpp:http:upload:0"})
             :tag("put", {url=put_url}):up()
             :tag("get", {url=get_url}):up()
         :up();
-    
+
     return reply;
 end
 
@@ -1748,12 +1747,12 @@ listen:
     module: ejabberd_c2s
     starttls: true
     certfile: "/etc/ejabberd/certs/example.com.pem"
-    
+
   -
     port: 5269
     ip: "::"
     module: ejabberd_s2s_in
-    
+
   -
     port: 5443
     ip: "::"
@@ -1882,13 +1881,13 @@ process_iq(#iq{type = get, sub_els = [#upload_request{filename = Filename,
                                                      size = Size,
                                                      'content-type' = ContentType}]} = IQ) ->
     Host = ejabberd_config:get_myname(),
-    
+
     % Get configuration
     PutURL = gen_mod:get_module_opt(Host, ?MODULE, put_url),
     GetURL = gen_mod:get_module_opt(Host, ?MODULE, get_url),
     Secret = gen_mod:get_module_opt(Host, ?MODULE, external_secret),
     MaxSize = gen_mod:get_module_opt(Host, ?MODULE, max_size),
-    
+
     % Validate file size
     case Size =< MaxSize of
         true ->
@@ -1898,14 +1897,14 @@ process_iq(#iq{type = get, sub_els = [#upload_request{filename = Filename,
             Message = <<Filename/binary, (integer_to_binary(Size))/binary,
                        (integer_to_binary(Timestamp))/binary, UploadId/binary>>,
             Signature = base64:encode(crypto:mac(hmac, sha256, Secret, Message)),
-            
+
             % Construct URLs
             PutURLFinal = <<PutURL/binary, "?filename=", Filename/binary,
                            "&timestamp=", (integer_to_binary(Timestamp))/binary,
                            "&uploadid=", UploadId/binary,
                            "&signature=", Signature/binary>>,
             GetURLFinal = <<GetURL/binary, "/", Filename/binary>>,
-            
+
             % Return slot
             Slot = #upload_slot{get = GetURLFinal, put = PutURLFinal},
             xmpp:make_iq_result(IQ, Slot);
@@ -1938,11 +1937,11 @@ HMAC File Server implements [XEP-0363: HTTP File Upload](https://xmpp.org/extens
 
 #### Protocol Flow
 
-1. **Discovery**: Client discovers upload service
-2. **Request Slot**: Client requests upload/download URLs
-3. **Upload**: Client uploads file to provided PUT URL
-4. **Share**: Client shares GET URL with contacts
-5. **Download**: Recipients download using GET URL
+1. Discovery: Client discovers upload service
+2. Request Slot: Client requests upload/download URLs
+3. Upload: Client uploads file to provided PUT URL
+4. Share: Client shares GET URL with contacts
+5. Download: Recipients download using GET URL
 
 #### Implementation Details
 
@@ -2035,9 +2034,9 @@ HMAC File Server supports multiple API versions to ensure compatibility with dif
 
 ### V1 API (Legacy Support)
 
-**Endpoint**: `/api/v1/upload`  
-**Authentication**: Basic HMAC  
-**Usage**: Legacy XMPP clients, basic integrations
+Endpoint: `/api/v1/upload`
+Authentication: Basic HMAC
+Usage: Legacy XMPP clients, basic integrations
 
 ```bash
 # V1 Upload
@@ -2057,9 +2056,9 @@ curl -X POST "https://files.example.com/api/v1/upload" \
 
 ### V2 API (Enhanced)
 
-**Endpoint**: `/api/v2/upload`  
-**Authentication**: Enhanced HMAC with timestamps  
-**Usage**: Modern XMPP clients, advanced features
+Endpoint: `/api/v2/upload`
+Authentication: Enhanced HMAC with timestamps
+Usage: Modern XMPP clients, advanced features
 
 ```bash
 # V2 Upload with metadata
@@ -2092,10 +2091,10 @@ curl -X POST "https://files.example.com/api/v2/upload" \
 
 ### V3 API (Custom/Experimental)
 
-**Endpoint**: `/api/v3/upload`  
-**Authentication**: JWT or Enhanced HMAC  
-**Usage**: Custom clients, experimental features  
-**Note**: V3 is not a defined standard - custom implementation
+Endpoint: `/api/v3/upload`
+Authentication: JWT or Enhanced HMAC
+Usage: Custom clients, experimental features
+Note: V3 is not a defined standard - custom implementation
 
 ```bash
 # V3 Upload with JWT
@@ -2131,7 +2130,7 @@ curl -X POST "https://files.example.com/api/v3/upload" \
   "websocket_url": "wss://files.example.com/api/v3/progress/sess_550e8400-e29b-41d4-a716-446655440000",
   "capabilities": [
     "chunked_upload",
-    "resumable_upload", 
+    "resumable_upload",
     "deduplication",
     "encryption",
     "compression",
@@ -2186,17 +2185,17 @@ class HMACFileClient {
     this.baseUrl = baseUrl;
     this.secret = secret;
   }
-  
+
   async upload(file, metadata = {}) {
     const timestamp = Math.floor(Date.now() / 1000);
     const uploadId = this.generateUUID();
     const message = `POST/api/v2/upload${timestamp}${uploadId}${file.name}${file.size}`;
     const signature = await this.hmacSHA256(this.secret, message);
-    
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('metadata', JSON.stringify(metadata));
-    
+
     const response = await fetch(`${this.baseUrl}/api/v2/upload`, {
       method: 'POST',
       headers: {
@@ -2206,23 +2205,23 @@ class HMACFileClient {
       },
       body: formData
     });
-    
+
     return response.json();
   }
-  
+
   async hmacSHA256(key, message) {
     const encoder = new TextEncoder();
     const keyData = encoder.encode(key);
     const messageData = encoder.encode(message);
-    
+
     const cryptoKey = await crypto.subtle.importKey(
       'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
     );
-    
+
     const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
     return btoa(String.fromCharCode(...new Uint8Array(signature)));
   }
-  
+
   generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
       const r = Math.random() * 16 | 0;
@@ -2244,7 +2243,7 @@ class HMACFileClientV3:
     def __init__(self, base_url, jwt_secret):
         self.base_url = base_url
         self.jwt_secret = jwt_secret
-    
+
     def generate_token(self, user_id, scopes=['upload', 'download']):
         payload = {
             'iss': 'hmac-file-server',
@@ -2255,15 +2254,15 @@ class HMACFileClientV3:
             'scope': scopes
         }
         return jwt.encode(payload, self.jwt_secret, algorithm='HS256')
-    
+
     def upload(self, filename, content_type, size, user_id='anonymous'):
         token = self.generate_token(user_id)
-        
+
         headers = {
             'Authorization': f'Bearer {token}',
             'Content-Type': 'application/json'
         }
-        
+
         data = {
             'filename': filename,
             'content_type': content_type,
@@ -2273,13 +2272,13 @@ class HMACFileClientV3:
                 'resumable': True
             }
         }
-        
+
         response = requests.post(
             f'{self.base_url}/api/v3/upload',
             headers=headers,
             json=data
         )
-        
+
         return response.json()
 ```
 
@@ -2301,7 +2300,7 @@ class HMACFileClientV3:
 # Build for multiple architectures
 ./build-multi-arch.sh
 
-# Podman deployment (tested and verified ✅)
+# Podman deployment (tested and verified)
 cd dockerenv/podman && ./deploy-podman.sh
 ```
 
@@ -2349,8 +2348,8 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## Repository
 
-**Primary Repository (Gitea):** [git.uuxo.net/UUXO/hmac-file-server](https://git.uuxo.net/UUXO/hmac-file-server)  
-**GitHub Mirror:** [github.com/PlusOne/hmac-file-server](https://github.com/PlusOne/hmac-file-server)
+Primary Repository (Gitea): [git.uuxo.net/UUXO/hmac-file-server](https://git.uuxo.net/UUXO/hmac-file-server)
+GitHub Mirror: [github.com/PlusOne/hmac-file-server](https://github.com/PlusOne/hmac-file-server)
 
 Issues and contributions welcome on both platforms.
 
@@ -2358,15 +2357,15 @@ Issues and contributions welcome on both platforms.
 
 ## Links
 
-- **Primary Repository (Gitea):** https://git.uuxo.net/UUXO/hmac-file-server
-- **GitHub Mirror:** https://github.com/PlusOne/hmac-file-server
-- **Documentation:** https://git.uuxo.net/UUXO/hmac-file-server/wiki
-- **Issues (Gitea):** https://git.uuxo.net/UUXO/hmac-file-server/issues
-- **Issues (GitHub):** https://github.com/PlusOne/hmac-file-server/issues
-- **Releases (Gitea):** https://git.uuxo.net/UUXO/hmac-file-server/releases
-- **Releases (GitHub):** https://github.com/PlusOne/hmac-file-server/releases
-- **Website:** https://uuxo.net
+- Primary Repository (Gitea): https://git.uuxo.net/UUXO/hmac-file-server
+- GitHub Mirror: https://github.com/PlusOne/hmac-file-server
+- Documentation: https://git.uuxo.net/UUXO/hmac-file-server/wiki
+- Issues (Gitea): https://git.uuxo.net/UUXO/hmac-file-server/issues
+- Issues (GitHub): https://github.com/PlusOne/hmac-file-server/issues
+- Releases (Gitea): https://git.uuxo.net/UUXO/hmac-file-server/releases
+- Releases (GitHub): https://github.com/PlusOne/hmac-file-server/releases
+- Website: https://uuxo.net
 
-*HMAC File Server 3.3 "Nexus Infinitum" - Where enterprise power meets user simplicity*
+HMAC File Server 3.3 "Nexus Infinitum" - Where enterprise power meets user simplicity
 
 ---
