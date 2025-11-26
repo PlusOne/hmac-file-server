@@ -191,3 +191,14 @@ ENHANCEMENTS_COMPLETED.md
 # Large test files (excluded for GitHub)
 tests/test_*.bin
 test_*.bin
+
+# Development and validation scripts
+verify_network_resilience.sh
+verify_version_update.sh
+test-large-file-async-processing.sh
+security_enhancement_analysis.sh
+revalidate_all_features.sh
+nginx-share-fixed.conf
+cleanup_dev_files.sh
+check-configs.sh
+install-manager.sh
