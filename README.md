@@ -234,7 +234,25 @@ Codename: Nexus Infinitum (infinite connectivity and boundless network reach)
 
 ## Mobile Network Resilience
 
-HMAC File Server 3.3.0 introduces enhanced network resilience specifically designed for mobile devices and network switching scenarios.
+HMAC File Server 3.3.0 includes comprehensive network resilience features designed to handle mobile network switching, device standby scenarios, and IP address changes during file uploads.
+
+### Key Features
+
+**Problem Solved:** WiFi ↔ LTE switching with 404 errors, device standby authentication loss, and IP address changes during uploads.
+
+**Solution Highlights:**
+- **Ultra-Flexible Grace Periods:** 8h base, 12h mobile, 72h ultra-maximum for device standby
+- **Mobile Client Detection:** Automatic recognition of Conversations, Dino, Gajim, and Android XMPP clients
+- **IP Change Handling:** Seamless transition via X-Forwarded-For and X-Real-IP headers
+- **Session Persistence:** Upload continuation across network changes and IP switches
+- **Bearer Token Validation:** 5 different HMAC payload formats for maximum compatibility
+
+### Real-World Scenarios Handled
+
+1. **WiFi → LTE Switch:** Authentication persists, uploads continue seamlessly
+2. **Device Standby:** 72-hour grace period keeps authentication valid after sleep
+3. **Carrier IP Change:** Proxy header detection handles mobile carrier IP reassignment
+4. **Network Interruption:** Upload resumption and session recovery across network changes
 
 ### Mobile Network Switching Support
 
