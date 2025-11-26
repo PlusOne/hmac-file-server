@@ -240,7 +240,7 @@ HMAC File Server 3.3.0 includes comprehensive network resilience features design
 
 **Problem Solved:** WiFi ↔ LTE switching with 404 errors, device standby authentication loss, and IP address changes during uploads.
 
-**Solution Highlights:**
+**Built-in Solutions (Works Automatically):**
 - **Ultra-Flexible Grace Periods:** 8h base, 12h mobile, 72h ultra-maximum for device standby
 - **Mobile Client Detection:** Automatic recognition of Conversations, Dino, Gajim, and Android XMPP clients
 - **IP Change Handling:** Seamless transition via X-Forwarded-For and X-Real-IP headers
@@ -254,104 +254,9 @@ HMAC File Server 3.3.0 includes comprehensive network resilience features design
 3. **Carrier IP Change:** Proxy header detection handles mobile carrier IP reassignment
 4. **Network Interruption:** Upload resumption and session recovery across network changes
 
-### Mobile Network Switching Support
+### Configuration
 
-#### Scenario 1: WLAN to IPv6 5G Switching
-Perfect for mobile devices that switch between WiFi and cellular networks:
-
-```toml
-[uploads]
-networkevents = true                        # REQUIRED: Enable network monitoring
-
-[network_resilience]
-enabled = true                              # Enable network resilience system
-fast_detection = true                       # 1-second detection vs 5-second default
-quality_monitoring = true                   # Monitor connection quality
-predictive_switching = true                 # Switch before network fails
-mobile_optimizations = true                # Cellular-friendly settings
-upload_resilience = true                    # Resume uploads across network changes
-
-[uploads]
-session_recovery_timeout = "600s"           # 10-minute recovery window for IP changes
-client_reconnect_window = "300s"            # 5-minute reconnection window
-max_resumable_age = "72h"                   # Extended session retention
-max_upload_retries = 8                     # More retries for cellular
-networkevents = true                        # Enable network event monitoring
-
-[timeouts]
-readtimeout = "600s"                        # Extended for cellular latency
-writetimeout = "600s"                       # Handle cellular upload delays
-idletimeout = "1200s"                       # 20-minute tolerance
-```
-
-#### Scenario 2: Multi-Interface Devices (Ethernet + WiFi + LTE)
-For devices with multiple network interfaces:
-
-```toml
-[network_resilience]
-enabled = true                              # Enable network resilience
-multi_interface_enabled = true             # Enable multi-interface management
-interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Priority order
-auto_switch_enabled = true                 # Automatic interface switching
-fast_detection = true                       # Quick interface change detection
-quality_monitoring = true                   # Monitor all connections
-predictive_switching = true                 # Use best available interface
-
-# System automatically selects best interface based on:
-# - RTT (latency)
-# - Packet loss percentage
-# - Connection stability
-# - Interface priority (ethernet > wifi > cellular)
-
-[client_network_support]
-session_based_tracking = true              # Track sessions by ID, not IP
-allow_ip_changes = true                    # Allow IP changes during uploads
-adapt_to_client_network = true            # Optimize for client connection type
-```
-
-### Benefits for Mobile Scenarios
-
-| Feature | Standard Detection | Enhanced Mobile Detection |
-|---------|-------------------|---------------------------|
-| Detection Speed | 5 seconds | 1 second |
-| Network Quality | Interface status only | RTT + packet loss monitoring |
-| Switching Logic | Reactive (after failure) | Proactive (before failure) |
-| Mobile Tolerance | Fixed thresholds | Cellular-optimized thresholds |
-| Session Recovery | 2-minute window | 10-minute window |
-| Upload Resumption | Basic retry | Smart retry with backoff |
-
-### Configuration Examples
-
-Ultra-Fast Mobile Detection:
-```toml
-[network_resilience]
-enabled = true
-detection_interval = "500ms"               # Sub-second detection
-quality_check_interval = "2s"             # Frequent quality checks
-mobile_optimizations = true               # Lenient cellular thresholds
-upload_resilience = true                  # Resume uploads on network changes
-```
-
-Conservative Stable Network:
-```toml
-[network_resilience]
-enabled = true
-detection_interval = "10s"                # Slower detection
-quality_monitoring = false                # Disable quality checks
-predictive_switching = false              # React only to hard failures
-mobile_optimizations = false             # Use strict thresholds
-```
-
-Multi-Interface Optimized:
-```toml
-[network_resilience]
-enabled = true
-multi_interface_enabled = true           # Enable interface management
-interface_priority = ["eth0", "wlan0", "wwan0"]  # Preference order
-auto_switch_enabled = true               # Automatic switching
-switch_threshold_latency = "300ms"       # Switch threshold
-switch_threshold_packet_loss = 3.0       # 3% packet loss trigger
-```
+Network resilience features are enabled by default with sensible settings. For advanced tuning, see configuration examples in `examples/config-mobile-resilient.toml` and `examples/config-network-switching.toml`.
 
 ---
 
