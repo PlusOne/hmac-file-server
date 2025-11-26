@@ -1,7 +1,7 @@
 # HMAC File Server 3.3.0 - Nexus Infinitum
 
 [![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](https://git.uuxo.net/uuxo/hmac-file-server/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://golang.org/)
 [![Architecture](https://img.shields.io/badge/arch-AMD64%20%7C%20ARM64%20%7C%20ARM32v7-brightgreen.svg)](https://git.uuxo.net/uuxo/hmac-file-server/)
 

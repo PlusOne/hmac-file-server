@@ -58,7 +58,7 @@ LABEL org.opencontainers.image.title="HMAC File Server" \
       org.opencontainers.image.version="3.3.0" \
       org.opencontainers.image.vendor="PlusOne" \
       org.opencontainers.image.source="https://git.uuxo.net/uuxo/hmac-file-server/" \
-      org.opencontainers.image.licenses="MIT"
+      org.opencontainers.image.licenses="Apache-2.0"
 
 # Health check for container orchestration with network resilience awareness
 HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
