@@ -187,3 +187,7 @@ dist/
 # Documentation that shouldn't be public
 DOCUMENTATION_VERIFICATION_REPORT.md
 ENHANCEMENTS_COMPLETED.md
+
+# Large test files (excluded for GitHub)
+tests/test_*.bin
+test_*.bin
