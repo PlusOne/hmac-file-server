@@ -42,16 +42,48 @@ A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) 
 
 ---
 
+## Installation
+
+### Download Binary
+
+**From Gitea (Primary):**
+```bash
+wget https://git.uuxo.net/UUXO/hmac-file-server/releases/download/v3.3.0/hmac-file-server-linux-amd64
+chmod +x hmac-file-server-linux-amd64
+sudo mv hmac-file-server-linux-amd64 /usr/local/bin/hmac-file-server
+```
+
+**From GitHub (Mirror):**
+```bash
+wget https://github.com/PlusOne/hmac-file-server/releases/download/v3.3.0/hmac-file-server-linux-amd64
+chmod +x hmac-file-server-linux-amd64
+sudo mv hmac-file-server-linux-amd64 /usr/local/bin/hmac-file-server
+```
+
+### Build from Source
+
+**Clone from Gitea:**
+```bash
+git clone https://git.uuxo.net/UUXO/hmac-file-server.git
+cd hmac-file-server
+go build -o hmac-file-server ./cmd/server/
+```
+
+**Clone from GitHub:**
+```bash
+git clone https://github.com/PlusOne/hmac-file-server.git
+cd hmac-file-server
+go build -o hmac-file-server ./cmd/server/
+```
+
+---
+
 ## Quick Start
 
 ### Option 1: Minimal Configuration (Recommended)
 ```bash
-# Download HMAC File Server 3.3.0
-wget https://git.uuxo.net/uuxo/hmac-file-server/releases/download/v3.3.0/hmac-file-server-linux-amd64
-chmod +x hmac-file-server-linux-amd64
-
 # Generate minimal config
-./hmac-file-server-linux-amd64 -genconfig > config.toml
+./hmac-file-server -genconfig > config.toml
 
 # Edit 3 essential settings:
 # - listen_address = "8080"
@@ -59,13 +91,13 @@ chmod +x hmac-file-server-linux-amd64
 # - secret = "your-secure-secret"
 
 # Start server
-./hmac-file-server-linux-amd64 -config config.toml
+./hmac-file-server -config config.toml
 ```
 
 ### Option 2: Zero-Config Startup
 ```bash
 # Auto-creates minimal config
-./hmac-file-server-linux-amd64
+./hmac-file-server
 # Follow prompts to customize settings
 ```
 
@@ -2315,13 +2347,26 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## Links
+## Repository
 
-- **Git Repository**: https://git.uuxo.net/uuxo/hmac-file-server/
-- **Documentation**: https://hmac-file-server.readthedocs.io
-- **Issues**: https://git.uuxo.net/uuxo/hmac-file-server/issues
-- **Releases**: https://git.uuxo.net/uuxo/hmac-file-server/releases
+**Primary Repository (Gitea):** [git.uuxo.net/UUXO/hmac-file-server](https://git.uuxo.net/UUXO/hmac-file-server)  
+**GitHub Mirror:** [github.com/PlusOne/hmac-file-server](https://github.com/PlusOne/hmac-file-server)
+
+Issues and contributions welcome on both platforms.
 
 ---
 
+## Links
+
+- **Primary Repository (Gitea):** https://git.uuxo.net/UUXO/hmac-file-server
+- **GitHub Mirror:** https://github.com/PlusOne/hmac-file-server
+- **Documentation:** https://git.uuxo.net/UUXO/hmac-file-server/wiki
+- **Issues (Gitea):** https://git.uuxo.net/UUXO/hmac-file-server/issues
+- **Issues (GitHub):** https://github.com/PlusOne/hmac-file-server/issues
+- **Releases (Gitea):** https://git.uuxo.net/UUXO/hmac-file-server/releases
+- **Releases (GitHub):** https://github.com/PlusOne/hmac-file-server/releases
+- **Website:** https://uuxo.net
+
 *HMAC File Server 3.3 "Nexus Infinitum" - Where enterprise power meets user simplicity*
+
+---
