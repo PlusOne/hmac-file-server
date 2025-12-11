@@ -96,10 +96,9 @@ func (cct *ClientConnectionTracker) DetectClientConnectionType(r *http.Request) 
 	}
 	
 	// Check for specific network indicators in headers
-	if xForwardedFor := r.Header.Get("X-Forwarded-For"); xForwardedFor != "" {
-		// This might indicate the client is behind a mobile carrier NAT
-		// Additional logic could be added here
-	}
+	// X-Forwarded-For might indicate client is behind a mobile carrier NAT
+	// This is noted for future enhancement
+	_ = r.Header.Get("X-Forwarded-For")
 	
 	// Check connection patterns (this would need more sophisticated logic)
 	clientIP := getClientIP(r)

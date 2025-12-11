@@ -49,7 +49,7 @@ func NewUploadSessionStore(tempDir string) *UploadSessionStore {
 	}
 	
 	// Create temp directory if it doesn't exist
-	os.MkdirAll(tempDir, 0755)
+	_ = os.MkdirAll(tempDir, 0755)
 	
 	// Start cleanup routine
 	go store.cleanupExpiredSessions()
@@ -64,7 +64,7 @@ func (s *UploadSessionStore) CreateSession(filename string, totalSize int64, cli
 	
 	sessionID := generateSessionID("", filename)
 	tempDir := filepath.Join(s.tempDir, sessionID)
-	os.MkdirAll(tempDir, 0755)
+	_ = os.MkdirAll(tempDir, 0755)
 	
 	session := &ChunkedUploadSession{
 		ID:           sessionID,
@@ -245,7 +245,7 @@ func (s *UploadSessionStore) persistSession(session *ChunkedUploadSession) {
 		// Fallback to disk persistence
 		sessionFile := filepath.Join(s.tempDir, session.ID+".session")
 		data, _ := json.Marshal(session)
-		os.WriteFile(sessionFile, data, 0644)
+		_ = os.WriteFile(sessionFile, data, 0644)
 	}
 }
 
@@ -289,18 +289,15 @@ func (s *UploadSessionStore) cleanupExpiredSessions() {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 	
-	for {
-		select {
-		case <-ticker.C:
-			s.mutex.Lock()
-			now := time.Now()
-			for sessionID, session := range s.sessions {
-				if now.Sub(session.LastActivity) > 24*time.Hour {
-					s.CleanupSession(sessionID)
-				}
+	for range ticker.C {
+		s.mutex.Lock()
+		now := time.Now()
+		for sessionID, session := range s.sessions {
+			if now.Sub(session.LastActivity) > 24*time.Hour {
+				s.CleanupSession(sessionID)
 			}
-			s.mutex.Unlock()
 		}
+		s.mutex.Unlock()
 	}
 }
 
@@ -315,6 +312,8 @@ func getChunkSize() int64 {
 	return 5 * 1024 * 1024 // 5MB default
 }
 
+// randomString generates a random string of given length
+// nolint:unused
 func randomString(n int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, n)
@@ -324,6 +323,8 @@ func randomString(n int) string {
 	return string(b)
 }
 
+// copyFileContent copies content from src to dst file
+// nolint:unused
 func copyFileContent(dst, src *os.File) (int64, error) {
 	// Use the existing buffer pool for efficiency
 	bufPtr := bufferPool.Get().(*[]byte)

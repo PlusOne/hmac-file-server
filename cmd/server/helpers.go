@@ -29,11 +29,11 @@ import (
 
 // WorkerPool represents a pool of workers
 type WorkerPool struct {
-	workers    int
-	taskQueue  chan UploadTask
-	scanQueue  chan ScanTask
-	ctx        context.Context
-	cancel     context.CancelFunc
+	workers   int
+	taskQueue chan UploadTask
+	scanQueue chan ScanTask
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 // NewWorkerPool creates a new worker pool
@@ -148,37 +148,37 @@ func handleDeduplication(ctx context.Context, absFilename string) error {
 	confMutex.RLock()
 	dedupEnabled := conf.Server.DeduplicationEnabled && conf.Deduplication.Enabled
 	confMutex.RUnlock()
-	
+
 	if !dedupEnabled {
 		log.Debugf("Deduplication disabled, skipping for file: %s", absFilename)
 		return nil
 	}
-	
+
 	// Check file size and skip deduplication for very large files (performance optimization)
 	fileInfo, err := os.Stat(absFilename)
 	if err != nil {
 		log.Warnf("Failed to get file size for deduplication: %v", err)
 		return nil // Don't fail upload, just skip deduplication
 	}
-	
+
 	// Parse maxsize from config, default to 500MB if not set
 	confMutex.RLock()
 	maxDedupSizeStr := conf.Deduplication.MaxSize
 	confMutex.RUnlock()
-	
+
 	maxDedupSize := int64(500 * 1024 * 1024) // Default 500MB
 	if maxDedupSizeStr != "" {
 		if parsedSize, parseErr := parseSize(maxDedupSizeStr); parseErr == nil {
 			maxDedupSize = parsedSize
 		}
 	}
-	
+
 	if fileInfo.Size() > maxDedupSize {
-		log.Infof("File %s (%d bytes) exceeds deduplication size limit (%d bytes), skipping deduplication", 
+		log.Infof("File %s (%d bytes) exceeds deduplication size limit (%d bytes), skipping deduplication",
 			absFilename, fileInfo.Size(), maxDedupSize)
 		return nil
 	}
-	
+
 	log.Infof("Starting deduplication for file %s (%d bytes)", absFilename, fileInfo.Size())
 
 	checksum, err := computeSHA256(ctx, absFilename)
@@ -215,18 +215,20 @@ func handleDeduplication(ctx context.Context, absFilename string) error {
 	}
 
 	if err := os.Link(existingPath, absFilename); err != nil {
-		log.Warnf("Failed to create link after deduplication: %v", err) 
+		log.Warnf("Failed to create link after deduplication: %v", err)
 		// Try to restore original file
 		if restoreErr := os.Rename(existingPath, absFilename); restoreErr != nil {
 			log.Errorf("Failed to restore file after deduplication error: %v", restoreErr)
 		}
 		return nil // Don't fail upload
 	}
-	
+
 	log.Infof("Successfully deduplicated file %s", absFilename)
 	return nil
 }
 
+// handleISOContainer handles ISO container operations
+// nolint:unused
 func handleISOContainer(absFilename string) error {
 	isoPath := filepath.Join(conf.ISO.MountPoint, "container.iso")
 	if err := CreateISOContainer([]string{absFilename}, isoPath, conf.ISO.Size, conf.ISO.Charset); err != nil {
@@ -329,9 +331,9 @@ func logSystemInfo() {
 	if err != nil {
 		log.Warnf("Failed to get memory stats: %v", err)
 	} else {
-		log.Infof("System Memory: Total=%s, Available=%s, Used=%.1f%%", 
-			formatBytes(int64(memStats.Total)), 
-			formatBytes(int64(memStats.Available)), 
+		log.Infof("System Memory: Total=%s, Available=%s, Used=%.1f%%",
+			formatBytes(int64(memStats.Total)),
+			formatBytes(int64(memStats.Available)),
 			memStats.UsedPercent)
 	}
 
@@ -342,7 +344,7 @@ func logSystemInfo() {
 		log.Infof("CPU: %s, Cores=%d", cpuStats[0].ModelName, len(cpuStats))
 	}
 
-	log.Infof("Go Runtime: Version=%s, NumCPU=%d, NumGoroutine=%d", 
+	log.Infof("Go Runtime: Version=%s, NumCPU=%d, NumGoroutine=%d",
 		runtime.Version(), runtime.NumCPU(), runtime.NumGoroutine())
 }
 
@@ -479,30 +481,30 @@ func scanFileWithClamAV(filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get file size: %w", err)
 	}
-	
+
 	// Parse maxscansize from config, default to 200MB if not set
 	confMutex.RLock()
 	maxScanSizeStr := conf.ClamAV.MaxScanSize
 	confMutex.RUnlock()
-	
+
 	maxScanSize := int64(200 * 1024 * 1024) // Default 200MB
 	if maxScanSizeStr != "" {
 		if parsedSize, parseErr := parseSize(maxScanSizeStr); parseErr == nil {
 			maxScanSize = parsedSize
 		}
 	}
-	
+
 	if fileInfo.Size() > maxScanSize {
-		log.Infof("File %s (%d bytes) exceeds ClamAV scan limit (%d bytes), skipping scan", 
+		log.Infof("File %s (%d bytes) exceeds ClamAV scan limit (%d bytes), skipping scan",
 			filename, fileInfo.Size(), maxScanSize)
 		return nil
 	}
-	
+
 	// Also check file extension - only scan configured dangerous types
 	confMutex.RLock()
 	scanExtensions := conf.ClamAV.ScanFileExtensions
 	confMutex.RUnlock()
-	
+
 	if len(scanExtensions) > 0 {
 		ext := strings.ToLower(filepath.Ext(filename))
 		shouldScan := false
@@ -519,14 +521,14 @@ func scanFileWithClamAV(filename string) error {
 	}
 
 	log.Infof("Scanning file %s (%d bytes) with ClamAV", filename, fileInfo.Size())
-	
+
 	result, err := clamClient.ScanFile(filename)
 	if err != nil {
 		return fmt.Errorf("ClamAV scan failed: %w", err)
 	}
 
 	// Handle the result channel with timeout based on file size
-	timeout := 10 * time.Second // Base timeout
+	timeout := 10 * time.Second         // Base timeout
 	if fileInfo.Size() > 10*1024*1024 { // 10MB+
 		timeout = 30 * time.Second
 	}
@@ -558,7 +560,7 @@ func initClamAV(socketPath string) (*clamd.Clamd, error) {
 	}
 
 	client := clamd.NewClamd(socketPath)
-	
+
 	// Test connection
 	err := client.Ping()
 	if err != nil {
@@ -591,6 +593,7 @@ func initRedis() {
 }
 
 // monitorNetwork monitors network events
+// nolint:unused
 func monitorNetwork(ctx context.Context) {
 	log.Info("Starting network monitoring")
 	ticker := time.NewTicker(30 * time.Second)
@@ -630,9 +633,10 @@ func monitorNetwork(ctx context.Context) {
 }
 
 // handleNetworkEvents handles network events
+// nolint:unused
 func handleNetworkEvents(ctx context.Context) {
 	log.Info("Starting network event handler")
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -673,7 +677,7 @@ func updateSystemMetrics(ctx context.Context) {
 // setupRouter sets up HTTP routes
 func setupRouter() *http.ServeMux {
 	mux := http.NewServeMux()
-	
+
 	// Add CORS middleware wrapper - Enhanced for multi-upload scenarios
 	corsWrapper := func(handler http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -684,23 +688,23 @@ func setupRouter() *http.ServeMux {
 			w.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Range, X-Upload-Status, X-Session-ID, Location, ETag")
 			w.Header().Set("Access-Control-Max-Age", "86400")
 			w.Header().Set("Access-Control-Allow-Credentials", "false")
-			
+
 			// Handle OPTIONS preflight for all endpoints
 			if r.Method == http.MethodOptions {
 				log.Infof("🔍 CORS DEBUG: OPTIONS preflight for %s from origin %s", r.URL.Path, r.Header.Get("Origin"))
 				w.WriteHeader(http.StatusOK)
 				return
 			}
-			
+
 			handler(w, r)
 		}
 	}
-	
+
 	mux.HandleFunc("/upload", corsWrapper(handleUpload))
 	mux.HandleFunc("/download/", corsWrapper(handleDownload))
 	mux.HandleFunc("/health", corsWrapper(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 
 	if conf.Server.MetricsEnabled {
@@ -711,7 +715,7 @@ func setupRouter() *http.ServeMux {
 	// This must be added last as it matches all paths
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Infof("🔍 ROUTER DEBUG: Catch-all handler called - method:%s path:%s query:%s", r.Method, r.URL.Path, r.URL.RawQuery)
-		
+
 		// Enhanced CORS headers for all responses - Multi-upload compatible
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS, HEAD")
@@ -719,41 +723,41 @@ func setupRouter() *http.ServeMux {
 		w.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Range, X-Upload-Status, X-Session-ID, Location, ETag")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 		w.Header().Set("Access-Control-Allow-Credentials", "false")
-		
+
 		// Handle CORS preflight requests (fix for Gajim "bad gateway" error)
 		if r.Method == http.MethodOptions {
 			log.Infof("🔍 ROUTER DEBUG: Handling CORS preflight (OPTIONS) request for %s", r.URL.Path)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
+
 		// Handle PUT requests for all upload protocols
 		if r.Method == http.MethodPut {
 			query := r.URL.Query()
-			
-			log.Infof("🔍 ROUTER DEBUG: Query parameters - v:%s v2:%s v3:%s token:%s expires:%s", 
+
+			log.Infof("🔍 ROUTER DEBUG: Query parameters - v:%s v2:%s v3:%s token:%s expires:%s",
 				query.Get("v"), query.Get("v2"), query.Get("v3"), query.Get("token"), query.Get("expires"))
-			
+
 			// Check if this is a v3 request (mod_http_upload_external)
 			if query.Get("v3") != "" && query.Get("expires") != "" {
 				log.Info("🔍 ROUTER DEBUG: Routing to handleV3Upload")
 				handleV3Upload(w, r)
 				return
 			}
-			
+
 			// Check if this is a legacy protocol request (v, v2, token)
 			if query.Get("v") != "" || query.Get("v2") != "" || query.Get("token") != "" {
 				log.Info("🔍 ROUTER DEBUG: Routing to handleLegacyUpload")
 				handleLegacyUpload(w, r)
 				return
 			}
-			
+
 			// Handle regular PUT uploads (non-XMPP) - route to general upload handler
 			log.Info("🔍 ROUTER DEBUG: PUT request with no protocol parameters - routing to handlePutUpload")
 			handlePutUpload(w, r)
 			return
 		}
-		
+
 		// Handle GET/HEAD requests for downloads
 		if r.Method == http.MethodGet || r.Method == http.MethodHead {
 			// Only handle download requests if the path looks like a file
@@ -763,13 +767,13 @@ func setupRouter() *http.ServeMux {
 				return
 			}
 		}
-		
+
 		// For all other requests, return 404
 		http.NotFound(w, r)
 	})
 
 	log.Info("HTTP router configured successfully with full protocol support (v, v2, token, v3)")
-	
+
 	return mux
 }
 
@@ -831,7 +835,7 @@ func NewProgressWriter(dst io.Writer, total int64, filename string) *ProgressWri
 				percentage := float64(written) / float64(total) * 100
 				sizeMiB := float64(written) / (1024 * 1024)
 				totalMiB := float64(total) / (1024 * 1024)
-				log.Infof("Upload progress for %s: %.1f%% (%.1f/%.1f MiB)", 
+				log.Infof("Upload progress for %s: %.1f%% (%.1f/%.1f MiB)",
 					filepath.Base(filename), percentage, sizeMiB, totalMiB)
 			}
 		},
@@ -845,38 +849,38 @@ func (pw *ProgressWriter) Write(p []byte) (int, error) {
 	if err != nil {
 		return n, err
 	}
-	
+
 	pw.written += int64(n)
-	
+
 	// Report progress every 30 seconds or every 50MB for large files
 	now := time.Now()
 	shouldReport := false
-	
+
 	if pw.total > 100*1024*1024 { // Files larger than 100MB
-		shouldReport = now.Sub(pw.lastReport) > 30*time.Second || 
-					  (pw.written%(50*1024*1024) == 0 && pw.written > 0)
+		shouldReport = now.Sub(pw.lastReport) > 30*time.Second ||
+			(pw.written%(50*1024*1024) == 0 && pw.written > 0)
 	} else if pw.total > 10*1024*1024 { // Files larger than 10MB
 		shouldReport = now.Sub(pw.lastReport) > 10*time.Second ||
-					  (pw.written%(10*1024*1024) == 0 && pw.written > 0)
+			(pw.written%(10*1024*1024) == 0 && pw.written > 0)
 	}
-	
+
 	if shouldReport && pw.onProgress != nil {
 		pw.onProgress(pw.written, pw.total, pw.filename)
 		pw.lastReport = now
 	}
-	
+
 	return n, err
 }
 
 // copyWithProgress copies data from src to dst with progress reporting
 func copyWithProgress(dst io.Writer, src io.Reader, total int64, filename string) (int64, error) {
 	progressWriter := NewProgressWriter(dst, total, filename)
-	
+
 	// Use a pooled buffer for efficient copying
 	bufPtr := bufferPool.Get().(*[]byte)
 	defer bufferPool.Put(bufPtr)
 	buf := *bufPtr
-	
+
 	return io.CopyBuffer(progressWriter, src, buf)
 }
 
@@ -930,7 +934,7 @@ func handlePutUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if r.ContentLength > maxSizeBytes {
-			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s", 
+			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s",
 				formatBytes(r.ContentLength), conf.Server.MaxUploadSize), http.StatusRequestEntityTooLarge)
 			uploadErrorsTotal.Inc()
 			return
@@ -1007,7 +1011,7 @@ func handlePutUpload(w http.ResponseWriter, r *http.Request) {
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Errorf("Failed to encode response: %v", err)
 	}
@@ -1016,6 +1020,6 @@ func handlePutUpload(w http.ResponseWriter, r *http.Request) {
 	requestDuration := time.Since(startTime)
 	uploadDuration.Observe(requestDuration.Seconds())
 	uploadsTotal.Inc()
-	
+
 	log.Infof("PUT upload completed: %s (%d bytes) in %v", filename, written, requestDuration)
 }

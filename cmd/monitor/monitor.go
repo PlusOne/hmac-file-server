@@ -474,10 +474,11 @@ func countHmacErrors() (int, error) {
 	}
 
 	// Limit to last 1MB for large log files
-	var startPos int64 = 0
 	if stat.Size() > 1024*1024 {
-		startPos = stat.Size() - 1024*1024
-		file.Seek(startPos, io.SeekStart)
+		startPos := stat.Size() - 1024*1024
+		if _, err := file.Seek(startPos, io.SeekStart); err != nil {
+			return 0, err
+		}
 	}
 
 	scanner := bufio.NewScanner(file)

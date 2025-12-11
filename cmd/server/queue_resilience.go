@@ -35,7 +35,7 @@ type RobustQueue struct {
 	lowPriority     chan QueueItem
 	
 	// Worker management
-	workers         []*QueueWorker
+	workers         []*QueueWorker //nolint:unused
 	workerHealth    map[int]*WorkerHealth
 	healthMutex     sync.RWMutex
 	
@@ -108,10 +108,10 @@ type WorkerHealth struct {
 // QueueWorker represents a queue worker
 type QueueWorker struct {
 	ID       int
-	queue    *RobustQueue
-	health   *WorkerHealth
-	ctx      context.Context
-	cancel   context.CancelFunc
+	queue    *RobustQueue     //nolint:unused
+	health   *WorkerHealth    //nolint:unused
+	ctx      context.Context  //nolint:unused
+	cancel   context.CancelFunc //nolint:unused
 }
 
 // NewRobustQueue creates a new robust queue with timeout resilience
@@ -383,7 +383,7 @@ func (q *RobustQueue) ageSpecificQueue(source, target chan QueueItem, now time.T
 					case source <- item:
 					default:
 						// Both queues full, move to spillover
-						q.spilloverEnqueue(item)
+						_ = q.spilloverEnqueue(item)
 					}
 				}
 			} else {
@@ -391,7 +391,7 @@ func (q *RobustQueue) ageSpecificQueue(source, target chan QueueItem, now time.T
 				select {
 				case source <- item:
 				default:
-					q.spilloverEnqueue(item)
+					_ = q.spilloverEnqueue(item)
 				}
 			}
 		default:

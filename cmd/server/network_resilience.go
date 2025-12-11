@@ -388,11 +388,8 @@ func (m *NetworkResilienceManager) monitorNetworkQuality() {
 	
 	log.Info("Starting network quality monitoring")
 	
-	for {
-		select {
-		case <-ticker.C:
-			m.updateNetworkQuality()
-		}
+	for range ticker.C {
+		m.updateNetworkQuality()
 	}
 }
 
@@ -629,27 +626,24 @@ func (m *NetworkResilienceManager) monitorNetworkChanges() {
 	// Get initial interface state
 	m.lastInterfaces, _ = net.Interfaces()
 	
-	for {
-		select {
-		case <-ticker.C:
-			currentInterfaces, err := net.Interfaces()
-			if err != nil {
-				log.Warnf("Failed to get network interfaces: %v", err)
-				continue
-			}
-			
-			if m.hasNetworkChanges(m.lastInterfaces, currentInterfaces) {
-				log.Info("Network change detected")
-				m.PauseAllUploads()
-				
-				// Wait for network stabilization
-				time.Sleep(2 * time.Second)
-				
-				m.ResumeAllUploads()
-			}
-			
-			m.lastInterfaces = currentInterfaces
+	for range ticker.C {
+		currentInterfaces, err := net.Interfaces()
+		if err != nil {
+			log.Warnf("Failed to get network interfaces: %v", err)
+			continue
 		}
+		
+		if m.hasNetworkChanges(m.lastInterfaces, currentInterfaces) {
+			log.Info("Network change detected")
+			m.PauseAllUploads()
+			
+			// Wait for network stabilization
+			time.Sleep(2 * time.Second)
+			
+			m.ResumeAllUploads()
+		}
+		
+		m.lastInterfaces = currentInterfaces
 	}
 }
 

@@ -81,7 +81,7 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if totalSize > maxSizeBytes {
-				http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s", 
+				http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s",
 					formatBytes(totalSize), conf.Server.MaxUploadSize), http.StatusRequestEntityTooLarge)
 				uploadErrorsTotal.Inc()
 				return
@@ -115,7 +115,7 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 				uploadsTotal.Inc()
 				uploadSizeBytes.Observe(float64(existingFileInfo.Size()))
 				filesDeduplicatedTotal.Inc()
-				
+
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
 				response := map[string]interface{}{
@@ -126,8 +126,8 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 					"message":   "File already exists (deduplication hit)",
 				}
 				writeJSONResponse(w, response)
-				
-				log.Infof("Chunked upload deduplication hit: file %s already exists (%s), returning success immediately", 
+
+				log.Infof("Chunked upload deduplication hit: file %s already exists (%s), returning success immediately",
 					filename, formatBytes(existingFileInfo.Size()))
 				return
 			}
@@ -141,9 +141,9 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		response := map[string]interface{}{
-			"session_id":    session.ID,
-			"chunk_size":    session.ChunkSize,
-			"total_chunks":  (totalSize + session.ChunkSize - 1) / session.ChunkSize,
+			"session_id":   session.ID,
+			"chunk_size":   session.ChunkSize,
+			"total_chunks": (totalSize + session.ChunkSize - 1) / session.ChunkSize,
 		}
 		writeJSONResponse(w, response)
 		return
@@ -207,18 +207,18 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 	// Get updated session for completion check
 	session, _ = uploadSessionStore.GetSession(sessionID)
 	progress := float64(session.UploadedBytes) / float64(session.TotalSize)
-	
+
 	// Debug logging for large files
 	if session.TotalSize > 50*1024*1024 { // Log for files > 50MB
-		log.Debugf("Chunk %d uploaded for %s: %d/%d bytes (%.1f%%)", 
+		log.Debugf("Chunk %d uploaded for %s: %d/%d bytes (%.1f%%)",
 			chunkNumber, session.Filename, session.UploadedBytes, session.TotalSize, progress*100)
 	}
 
 	// Check if upload is complete
 	isComplete := uploadSessionStore.IsSessionComplete(sessionID)
-	log.Printf("DEBUG: Session %s completion check: %v (uploaded: %d, total: %d, progress: %.1f%%)", 
+	log.Printf("DEBUG: Session %s completion check: %v (uploaded: %d, total: %d, progress: %.1f%%)",
 		sessionID, isComplete, session.UploadedBytes, session.TotalSize, progress*100)
-	
+
 	if isComplete {
 		log.Printf("DEBUG: Starting file assembly for session %s", sessionID)
 		// Assemble final file
@@ -257,8 +257,8 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 			"completed": true,
 		}
 		writeJSONResponse(w, response)
-		
-		log.Infof("Successfully completed chunked upload %s (%s) in %s", 
+
+		log.Infof("Successfully completed chunked upload %s (%s) in %s",
 			session.Filename, formatBytes(session.TotalSize), duration)
 	} else {
 		// Return partial success
@@ -365,12 +365,12 @@ func getClientIP(r *http.Request) string {
 		parts := strings.Split(xff, ",")
 		return strings.TrimSpace(parts[0])
 	}
-	
+
 	// Check X-Real-IP header
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
 		return xri
 	}
-	
+
 	// Fall back to remote address
 	host, _, _ := strings.Cut(r.RemoteAddr, ":")
 	return host
@@ -379,7 +379,7 @@ func getClientIP(r *http.Request) string {
 func writeJSONResponse(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	if jsonBytes, err := json.Marshal(data); err == nil {
-		w.Write(jsonBytes)
+		_, _ = w.Write(jsonBytes)
 	} else {
 		http.Error(w, "Error encoding JSON response", http.StatusInternalServerError)
 	}

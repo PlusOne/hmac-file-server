@@ -20,11 +20,11 @@ import (
 
 // AdaptiveBufferPool manages multiple buffer pools of different sizes
 type AdaptiveBufferPool struct {
-	pools              map[int]*sync.Pool
-	metrics           *NetworkMetrics
-	currentOptimalSize int
-	mutex             sync.RWMutex
-	lastOptimization  time.Time
+	pools                map[int]*sync.Pool
+	metrics              *NetworkMetrics
+	currentOptimalSize   int
+	mutex                sync.RWMutex
+	lastOptimization     time.Time
 	optimizationInterval time.Duration
 }
 
@@ -39,35 +39,35 @@ type NetworkMetrics struct {
 
 // ThroughputSample represents a throughput measurement
 type ThroughputSample struct {
-	Timestamp  time.Time
+	Timestamp   time.Time
 	BytesPerSec int64
 	BufferSize  int
 }
 
 // StreamingEngine provides unified streaming with adaptive optimization
 type StreamingEngine struct {
-	bufferPool       *AdaptiveBufferPool
-	metrics         *NetworkMetrics
+	bufferPool        *AdaptiveBufferPool
+	metrics           *NetworkMetrics
 	resilienceManager *NetworkResilienceManager
-	interfaceManager *MultiInterfaceManager
+	interfaceManager  *MultiInterfaceManager
 }
 
 // ClientProfile stores optimization data per client
 type ClientProfile struct {
-	OptimalChunkSize  int64
-	OptimalBufferSize int
-	ReliabilityScore  float64
-	AverageThroughput int64
-	LastSeen         time.Time
-	ConnectionType   string
+	OptimalChunkSize   int64
+	OptimalBufferSize  int
+	ReliabilityScore   float64
+	AverageThroughput  int64
+	LastSeen           time.Time
+	ConnectionType     string
 	PreferredInterface string
-	InterfaceHistory []InterfaceUsage
+	InterfaceHistory   []InterfaceUsage
 }
 
 // InterfaceUsage tracks performance per network interface
 type InterfaceUsage struct {
 	InterfaceName     string
-	LastUsed         time.Time
+	LastUsed          time.Time
 	AverageThroughput int64
 	ReliabilityScore  float64
 	OptimalBufferSize int
@@ -75,31 +75,32 @@ type InterfaceUsage struct {
 
 var (
 	globalStreamingEngine *StreamingEngine
-	clientProfiles       = make(map[string]*ClientProfile)
-	clientProfilesMutex  sync.RWMutex
+	clientProfiles        = make(map[string]*ClientProfile)
+	clientProfilesMutex   sync.RWMutex
 	multiInterfaceManager *MultiInterfaceManager
 )
 
 // Initialize the global streaming engine
+// nolint:unused
 func initStreamingEngine() {
 	// Initialize multi-interface manager
 	multiInterfaceManager = NewMultiInterfaceManager()
-	
+
 	globalStreamingEngine = &StreamingEngine{
 		bufferPool:       NewAdaptiveBufferPool(),
-		metrics:         NewNetworkMetrics(),
+		metrics:          NewNetworkMetrics(),
 		interfaceManager: multiInterfaceManager,
 	}
-	
+
 	// Start optimization routine
 	go globalStreamingEngine.optimizationLoop()
-	
+
 	// Start multi-interface monitoring
 	if conf.NetworkResilience.MultiInterfaceEnabled {
 		go multiInterfaceManager.StartMonitoring()
 		log.Info("Multi-interface monitoring enabled")
 	}
-	
+
 	log.Info("Adaptive streaming engine with multi-interface support initialized")
 }
 
@@ -111,7 +112,7 @@ func NewAdaptiveBufferPool() *AdaptiveBufferPool {
 		currentOptimalSize:   64 * 1024, // Start with 64KB
 		optimizationInterval: 30 * time.Second,
 	}
-	
+
 	// Initialize pools for different buffer sizes
 	sizes := []int{
 		16 * 1024,   // 16KB - for slow connections
@@ -122,7 +123,7 @@ func NewAdaptiveBufferPool() *AdaptiveBufferPool {
 		512 * 1024,  // 512KB - high-speed networks
 		1024 * 1024, // 1MB - maximum for extreme cases
 	}
-	
+
 	for _, size := range sizes {
 		size := size // capture for closure
 		pool.pools[size] = &sync.Pool{
@@ -132,7 +133,7 @@ func NewAdaptiveBufferPool() *AdaptiveBufferPool {
 			},
 		}
 	}
-	
+
 	return pool
 }
 
@@ -149,14 +150,14 @@ func (abp *AdaptiveBufferPool) GetOptimalBuffer() (*[]byte, int) {
 	abp.mutex.RLock()
 	size := abp.currentOptimalSize
 	abp.mutex.RUnlock()
-	
+
 	pool, exists := abp.pools[size]
 	if !exists {
 		// Fallback to 64KB if size not available
 		size = 64 * 1024
 		pool = abp.pools[size]
 	}
-	
+
 	bufPtr := pool.Get().(*[]byte)
 	return bufPtr, size
 }
@@ -177,18 +178,18 @@ func (se *StreamingEngine) StreamWithAdaptation(
 	clientIP string,
 ) (int64, error) {
 	startTime := time.Now()
-	
+
 	// Get client profile for optimization
 	profile := getClientProfile(clientIP)
-	
+
 	// Select optimal buffer size
 	bufPtr, bufferSize := se.selectOptimalBuffer(contentLength, profile)
 	defer se.bufferPool.PutBuffer(bufPtr, bufferSize)
-	
+
 	buf := *bufPtr
 	var written int64
 	var lastMetricUpdate time.Time
-	
+
 	for {
 		// Check for network resilience signals
 		if se.resilienceManager != nil {
@@ -204,26 +205,26 @@ func (se *StreamingEngine) StreamWithAdaptation(
 				}
 			}
 		}
-		
+
 		// Read data
 		n, readErr := src.Read(buf)
 		if n > 0 {
 			// Write data
 			w, writeErr := dst.Write(buf[:n])
 			written += int64(w)
-			
+
 			if writeErr != nil {
 				se.recordError(clientIP, writeErr)
 				return written, writeErr
 			}
-			
+
 			// Update metrics periodically
 			if time.Since(lastMetricUpdate) > time.Second {
 				se.updateMetrics(written, startTime, bufferSize, clientIP)
 				lastMetricUpdate = time.Now()
 			}
 		}
-		
+
 		if readErr != nil {
 			if readErr == io.EOF {
 				break
@@ -232,11 +233,11 @@ func (se *StreamingEngine) StreamWithAdaptation(
 			return written, readErr
 		}
 	}
-	
+
 	// Final metrics update
 	duration := time.Since(startTime)
 	se.recordTransferComplete(written, duration, bufferSize, clientIP)
-	
+
 	return written, nil
 }
 
@@ -244,7 +245,7 @@ func (se *StreamingEngine) StreamWithAdaptation(
 func (se *StreamingEngine) selectOptimalBuffer(contentLength int64, profile *ClientProfile) (*[]byte, int) {
 	// Start with current optimal size
 	bufferSize := se.bufferPool.currentOptimalSize
-	
+
 	// Adjust based on file size
 	if contentLength > 0 {
 		if contentLength < 1024*1024 { // < 1MB
@@ -253,24 +254,27 @@ func (se *StreamingEngine) selectOptimalBuffer(contentLength int64, profile *Cli
 			bufferSize = maxInt(bufferSize, 256*1024)
 		}
 	}
-	
+
 	// Adjust based on client profile
 	if profile != nil {
 		if profile.OptimalBufferSize > 0 {
 			bufferSize = profile.OptimalBufferSize
 		}
-		
+
 		// Adjust for connection type
+		// Note: bufferSize adjustments are for future integration when
+		// GetOptimalBuffer can accept a preferred size hint
 		switch profile.ConnectionType {
 		case "mobile", "cellular":
-			bufferSize = minInt(bufferSize, 64*1024)
+			bufferSize = minInt(bufferSize, 64*1024) //nolint:staticcheck,ineffassign
 		case "wifi":
-			bufferSize = minInt(bufferSize, 256*1024)
+			bufferSize = minInt(bufferSize, 256*1024) //nolint:staticcheck,ineffassign
 		case "ethernet", "fiber":
-			bufferSize = maxInt(bufferSize, 128*1024)
+			bufferSize = maxInt(bufferSize, 128*1024) //nolint:staticcheck,ineffassign
 		}
 	}
-	
+	_ = bufferSize // Silence unused warning - bufferSize is for future use
+
 	return se.bufferPool.GetOptimalBuffer()
 }
 
@@ -280,24 +284,24 @@ func (se *StreamingEngine) updateMetrics(bytesTransferred int64, startTime time.
 	if duration == 0 {
 		return
 	}
-	
+
 	throughput := bytesTransferred * int64(time.Second) / int64(duration)
-	
+
 	se.metrics.mutex.Lock()
 	se.metrics.ThroughputSamples = append(se.metrics.ThroughputSamples, ThroughputSample{
 		Timestamp:   time.Now(),
 		BytesPerSec: throughput,
 		BufferSize:  bufferSize,
 	})
-	
+
 	// Keep only recent samples
 	if len(se.metrics.ThroughputSamples) > 100 {
 		se.metrics.ThroughputSamples = se.metrics.ThroughputSamples[1:]
 	}
-	
+
 	se.metrics.LastUpdate = time.Now()
 	se.metrics.mutex.Unlock()
-	
+
 	// Update client profile
 	updateClientProfile(clientIP, throughput, bufferSize)
 }
@@ -307,12 +311,12 @@ func (se *StreamingEngine) recordTransferComplete(bytesTransferred int64, durati
 	if duration == 0 {
 		return
 	}
-	
+
 	throughput := bytesTransferred * int64(time.Second) / int64(duration)
-	
+
 	// Update global metrics
 	se.updateMetrics(bytesTransferred, time.Now().Add(-duration), bufferSize, clientIP)
-	
+
 	// Log performance for large transfers
 	if bytesTransferred > 10*1024*1024 {
 		log.Debugf("Transfer complete: %s in %s (%.2f MB/s) using %dKB buffer",
@@ -328,34 +332,33 @@ func (se *StreamingEngine) recordError(clientIP string, err error) {
 	se.metrics.mutex.Lock()
 	se.metrics.ErrorRate = se.metrics.ErrorRate*0.9 + 0.1 // Exponential moving average
 	se.metrics.mutex.Unlock()
-	
+
 	log.Warnf("Transfer error for client %s: %v", clientIP, err)
 }
 
 // optimizationLoop continuously optimizes buffer sizes
+// nolint:unused
 func (se *StreamingEngine) optimizationLoop() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	
-	for {
-		select {
-		case <-ticker.C:
-			se.optimizeBufferSizes()
-		}
+	for range ticker.C {
+		se.optimizeBufferSizes()
 	}
 }
 
 // optimizeBufferSizes analyzes performance and adjusts optimal buffer size
+// nolint:unused
 func (se *StreamingEngine) optimizeBufferSizes() {
 	se.metrics.mutex.RLock()
 	samples := make([]ThroughputSample, len(se.metrics.ThroughputSamples))
 	copy(samples, se.metrics.ThroughputSamples)
 	se.metrics.mutex.RUnlock()
-	
+
 	if len(samples) < 10 {
 		return // Not enough data
 	}
-	
+
 	// Analyze throughput by buffer size
 	bufferPerformance := make(map[int][]int64)
 	for _, sample := range samples {
@@ -366,28 +369,28 @@ func (se *StreamingEngine) optimizeBufferSizes() {
 			)
 		}
 	}
-	
+
 	// Find the buffer size with best average performance
 	bestSize := se.bufferPool.currentOptimalSize
 	bestPerformance := int64(0)
-	
+
 	for size, throughputs := range bufferPerformance {
 		if len(throughputs) < 3 {
 			continue // Not enough samples
 		}
-		
+
 		var total int64
 		for _, t := range throughputs {
 			total += t
 		}
 		avg := total / int64(len(throughputs))
-		
+
 		if avg > bestPerformance {
 			bestPerformance = avg
 			bestSize = size
 		}
 	}
-	
+
 	// Update optimal size if significantly better
 	if bestSize != se.bufferPool.currentOptimalSize {
 		se.bufferPool.mutex.Lock()
@@ -395,19 +398,19 @@ func (se *StreamingEngine) optimizeBufferSizes() {
 		se.bufferPool.currentOptimalSize = bestSize
 		se.bufferPool.lastOptimization = time.Now()
 		se.bufferPool.mutex.Unlock()
-		
-	log.Infof("Optimized buffer size: %dKB -> %dKB (%.2f%% improvement)",
-		oldSize/1024,
-		bestSize/1024,
-		float64(bestPerformance-bestPerformance*int64(oldSize)/int64(bestSize))*100/float64(bestPerformance))
+
+		log.Infof("Optimized buffer size: %dKB -> %dKB (%.2f%% improvement)",
+			oldSize/1024,
+			bestSize/1024,
+			float64(bestPerformance-bestPerformance*int64(oldSize)/int64(bestSize))*100/float64(bestPerformance))
 	}
 }
 
 // handleInterfaceSwitch handles network interface switching during transfers
 func (se *StreamingEngine) handleInterfaceSwitch(oldInterface, newInterface string, reason SwitchReason) {
-	log.Infof("Handling interface switch from %s to %s (reason: %s)", 
+	log.Infof("Handling interface switch from %s to %s (reason: %s)",
 		oldInterface, newInterface, multiInterfaceManager.switchReasonString(reason))
-	
+
 	// Update client profiles with interface preference
 	clientProfilesMutex.Lock()
 	for clientIP, profile := range clientProfiles {
@@ -417,7 +420,7 @@ func (se *StreamingEngine) handleInterfaceSwitch(oldInterface, newInterface stri
 			for _, usage := range profile.InterfaceHistory {
 				if usage.InterfaceName == newInterface && usage.ReliabilityScore > 0.8 {
 					profile.PreferredInterface = newInterface
-					log.Debugf("Updated preferred interface for client %s: %s -> %s", 
+					log.Debugf("Updated preferred interface for client %s: %s -> %s",
 						clientIP, oldInterface, newInterface)
 					break
 				}
@@ -425,14 +428,14 @@ func (se *StreamingEngine) handleInterfaceSwitch(oldInterface, newInterface stri
 		}
 	}
 	clientProfilesMutex.Unlock()
-	
+
 	// Adjust streaming parameters for the new interface if we have that data
 	if se.interfaceManager != nil {
 		if newIfaceInfo := se.interfaceManager.GetInterfaceInfo(newInterface); newIfaceInfo != nil {
 			se.adjustParametersForInterface(newIfaceInfo)
 		}
 	}
-	
+
 	// Force buffer optimization on next transfer
 	se.bufferPool.mutex.Lock()
 	se.bufferPool.lastOptimization = time.Time{} // Force immediate re-optimization
@@ -444,10 +447,10 @@ func (se *StreamingEngine) adjustParametersForInterface(iface *NetworkInterface)
 	if iface == nil {
 		return
 	}
-	
+
 	// Adjust buffer pool optimal size based on interface type and quality
 	var recommendedBufferSize int
-	
+
 	switch iface.Type {
 	case InterfaceEthernet:
 		recommendedBufferSize = 512 * 1024 // 512KB for Ethernet
@@ -471,41 +474,41 @@ func (se *StreamingEngine) adjustParametersForInterface(iface *NetworkInterface)
 	default:
 		recommendedBufferSize = 128 * 1024 // Default 128KB
 	}
-	
+
 	// Update the adaptive buffer pool's optimal size
 	se.bufferPool.mutex.Lock()
 	se.bufferPool.currentOptimalSize = recommendedBufferSize
 	se.bufferPool.mutex.Unlock()
-	
-	log.Debugf("Adjusted buffer size for interface %s (%s): %dKB", 
+
+	log.Debugf("Adjusted buffer size for interface %s (%s): %dKB",
 		iface.Name, multiInterfaceManager.interfaceTypeString(iface.Type), recommendedBufferSize/1024)
-}// getClientProfile retrieves or creates a client profile
+} // getClientProfile retrieves or creates a client profile
 func getClientProfile(clientIP string) *ClientProfile {
 	clientProfilesMutex.RLock()
 	profile, exists := clientProfiles[clientIP]
 	clientProfilesMutex.RUnlock()
-	
+
 	if exists {
 		return profile
 	}
-	
+
 	// Create new profile
 	clientProfilesMutex.Lock()
 	defer clientProfilesMutex.Unlock()
-	
+
 	// Double-check after acquiring write lock
 	if profile, exists := clientProfiles[clientIP]; exists {
 		return profile
 	}
-	
+
 	profile = &ClientProfile{
 		OptimalChunkSize:  2 * 1024 * 1024, // 2MB default
 		OptimalBufferSize: 64 * 1024,       // 64KB default
 		ReliabilityScore:  0.8,             // Assume good initially
-		LastSeen:         time.Now(),
-		ConnectionType:   "unknown",
+		LastSeen:          time.Now(),
+		ConnectionType:    "unknown",
 	}
-	
+
 	clientProfiles[clientIP] = profile
 	return profile
 }
@@ -513,22 +516,22 @@ func getClientProfile(clientIP string) *ClientProfile {
 // updateClientProfile updates performance data for a client
 func updateClientProfile(clientIP string, throughput int64, bufferSize int) {
 	profile := getClientProfile(clientIP)
-	
+
 	clientProfilesMutex.Lock()
 	defer clientProfilesMutex.Unlock()
-	
+
 	// Exponential moving average for throughput
 	if profile.AverageThroughput == 0 {
 		profile.AverageThroughput = throughput
 	} else {
 		profile.AverageThroughput = (profile.AverageThroughput*9 + throughput) / 10
 	}
-	
+
 	// Update optimal buffer size if this performed well
 	if throughput > profile.AverageThroughput*110/100 { // 10% better
 		profile.OptimalBufferSize = bufferSize
 	}
-	
+
 	// Track interface usage if multi-interface manager is available
 	if multiInterfaceManager != nil {
 		currentInterface := multiInterfaceManager.GetActiveInterface()
@@ -536,7 +539,7 @@ func updateClientProfile(clientIP string, throughput int64, bufferSize int) {
 			updateInterfaceUsage(profile, currentInterface, throughput, bufferSize)
 		}
 	}
-	
+
 	profile.LastSeen = time.Now()
 }
 
@@ -550,12 +553,12 @@ func updateInterfaceUsage(profile *ClientProfile, interfaceName string, throughp
 			break
 		}
 	}
-	
+
 	// Create new record if not found
 	if usage == nil {
 		profile.InterfaceHistory = append(profile.InterfaceHistory, InterfaceUsage{
 			InterfaceName:     interfaceName,
-			LastUsed:         time.Now(),
+			LastUsed:          time.Now(),
 			AverageThroughput: throughput,
 			ReliabilityScore:  0.8, // Start with good assumption
 			OptimalBufferSize: bufferSize,
@@ -564,46 +567,47 @@ func updateInterfaceUsage(profile *ClientProfile, interfaceName string, throughp
 		// Update existing record
 		usage.LastUsed = time.Now()
 		usage.AverageThroughput = (usage.AverageThroughput*4 + throughput) / 5 // Faster adaptation
-		
+
 		// Update reliability score based on performance consistency
 		if throughput > usage.AverageThroughput*90/100 { // Within 10% of average
 			usage.ReliabilityScore = minFloat64(usage.ReliabilityScore+0.1, 1.0)
 		} else {
 			usage.ReliabilityScore = maxFloat64(usage.ReliabilityScore-0.1, 0.0)
 		}
-		
+
 		// Update optimal buffer size if performance improved
 		if throughput > usage.AverageThroughput {
 			usage.OptimalBufferSize = bufferSize
 		}
 	}
-	
+
 	// Keep only recent interface history (last 10 interfaces)
 	if len(profile.InterfaceHistory) > 10 {
 		profile.InterfaceHistory = profile.InterfaceHistory[1:]
 	}
-	
+
 	// Update preferred interface if this one is performing significantly better
-	if usage != nil && (profile.PreferredInterface == "" || 
+	if usage != nil && (profile.PreferredInterface == "" ||
 		usage.AverageThroughput > profile.AverageThroughput*120/100) {
 		profile.PreferredInterface = interfaceName
 	}
 }
 
 // detectConnectionType attempts to determine connection type from request
+// nolint:unused
 func detectConnectionType(r *http.Request) string {
 	userAgent := r.Header.Get("User-Agent")
-	
+
 	// Simple heuristics - could be enhanced with more sophisticated detection
 	if containsAny(userAgent, "Mobile", "Android", "iPhone", "iPad") {
 		return "mobile"
 	}
-	
+
 	// Check for specific client indicators
 	if containsAny(userAgent, "curl", "wget", "HTTPie") {
 		return "cli"
 	}
-	
+
 	// Default assumption
 	return "browser"
 }
@@ -652,6 +656,7 @@ func maxFloat64(a, b float64) float64 {
 }
 
 // Enhanced upload handler using the streaming engine
+// nolint:unused
 func handleUploadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	activeConnections.Inc()
@@ -709,7 +714,7 @@ func handleUploadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 	// Use adaptive streaming engine
 	clientIP := getClientIP(r)
 	sessionID := generateSessionID("", "")
-	
+
 	written, err := globalStreamingEngine.StreamWithAdaptation(
 		dst,
 		file,
@@ -717,7 +722,7 @@ func handleUploadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 		sessionID,
 		clientIP,
 	)
-	
+
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error saving file: %v", err), http.StatusInternalServerError)
 		uploadErrorsTotal.Inc()
@@ -740,13 +745,14 @@ func handleUploadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 		"size":     written,
 		"duration": duration.String(),
 	}
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 
 	log.Infof("Successfully uploaded %s (%s) in %s using adaptive I/O",
 		filename, formatBytes(written), duration)
 }
 
 // Enhanced download handler with adaptive streaming
+// nolint:unused
 func handleDownloadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	activeConnections.Inc()
@@ -765,7 +771,6 @@ func handleDownloadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 	if conf.ISO.Enabled {
 		storagePath = conf.ISO.MountPoint
 	}
-	absFilename := filepath.Join(storagePath, filename)
 
 	// Sanitize the file path
 	absFilename, err := sanitizeFilePath(storagePath, filename)
@@ -805,7 +810,7 @@ func handleDownloadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 	// Use adaptive streaming engine
 	clientIP := getClientIP(r)
 	sessionID := generateSessionID("", "")
-	
+
 	n, err := globalStreamingEngine.StreamWithAdaptation(
 		w,
 		file,
@@ -813,7 +818,7 @@ func handleDownloadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 		sessionID,
 		clientIP,
 	)
-	
+
 	if err != nil {
 		log.Errorf("Error during download of %s: %v", absFilename, err)
 		downloadErrorsTotal.Inc()
@@ -832,23 +837,23 @@ func handleDownloadWithAdaptiveIO(w http.ResponseWriter, r *http.Request) {
 
 // MultiInterfaceManager handles multiple network interfaces for seamless switching
 type MultiInterfaceManager struct {
-	interfaces     map[string]*NetworkInterface
+	interfaces      map[string]*NetworkInterface
 	activeInterface string
-	mutex          sync.RWMutex
-	switchHistory  []InterfaceSwitch
-	config         *MultiInterfaceConfig
+	mutex           sync.RWMutex
+	switchHistory   []InterfaceSwitch
+	config          *MultiInterfaceConfig
 }
 
 // NetworkInterface represents a network adapter
 type NetworkInterface struct {
-	Name            string
-	Type            InterfaceType
-	Priority        int
-	Quality         *InterfaceQuality
-	Active          bool
-	Gateway         net.IP
-	MTU             int
-	LastSeen        time.Time
+	Name              string
+	Type              InterfaceType
+	Priority          int
+	Quality           *InterfaceQuality
+	Active            bool
+	Gateway           net.IP
+	MTU               int
+	LastSeen          time.Time
 	ThroughputHistory []ThroughputSample
 }
 
@@ -897,33 +902,33 @@ const (
 
 // MultiInterfaceConfig holds configuration for multi-interface support
 type MultiInterfaceConfig struct {
-	Enabled                    bool
-	InterfacePriority         []string
-	AutoSwitchEnabled         bool
-	SwitchThresholdLatency    time.Duration
-	SwitchThresholdPacketLoss float64
+	Enabled                     bool
+	InterfacePriority           []string
+	AutoSwitchEnabled           bool
+	SwitchThresholdLatency      time.Duration
+	SwitchThresholdPacketLoss   float64
 	QualityDegradationThreshold float64
-	MaxSwitchAttempts         int
-	SwitchDetectionInterval   time.Duration
+	MaxSwitchAttempts           int
+	SwitchDetectionInterval     time.Duration
 }
 
 // NewMultiInterfaceManager creates a new multi-interface manager
 func NewMultiInterfaceManager() *MultiInterfaceManager {
 	config := &MultiInterfaceConfig{
-		Enabled:                    conf.NetworkResilience.MultiInterfaceEnabled,
-		InterfacePriority:         []string{"eth0", "wlan0", "wwan0", "ppp0"},
-		AutoSwitchEnabled:         true,
-		SwitchThresholdLatency:    500 * time.Millisecond,
-		SwitchThresholdPacketLoss: 5.0,
+		Enabled:                     conf.NetworkResilience.MultiInterfaceEnabled,
+		InterfacePriority:           []string{"eth0", "wlan0", "wwan0", "ppp0"},
+		AutoSwitchEnabled:           true,
+		SwitchThresholdLatency:      500 * time.Millisecond,
+		SwitchThresholdPacketLoss:   5.0,
 		QualityDegradationThreshold: 0.3,
-		MaxSwitchAttempts:         3,
-		SwitchDetectionInterval:   2 * time.Second,
+		MaxSwitchAttempts:           3,
+		SwitchDetectionInterval:     2 * time.Second,
 	}
-	
+
 	return &MultiInterfaceManager{
 		interfaces:    make(map[string]*NetworkInterface),
 		switchHistory: make([]InterfaceSwitch, 0, 100),
-		config:       config,
+		config:        config,
 	}
 }
 
@@ -931,16 +936,13 @@ func NewMultiInterfaceManager() *MultiInterfaceManager {
 func (mim *MultiInterfaceManager) StartMonitoring() {
 	ticker := time.NewTicker(mim.config.SwitchDetectionInterval)
 	defer ticker.Stop()
-	
+
 	// Initial discovery
 	mim.discoverInterfaces()
-	
-	for {
-		select {
-		case <-ticker.C:
-			mim.updateInterfaceStatus()
-			mim.evaluateInterfaceSwitching()
-		}
+
+	for range ticker.C {
+		mim.updateInterfaceStatus()
+		mim.evaluateInterfaceSwitching()
 	}
 }
 
@@ -951,10 +953,10 @@ func (mim *MultiInterfaceManager) discoverInterfaces() {
 		log.Errorf("Failed to discover network interfaces: %v", err)
 		return
 	}
-	
+
 	mim.mutex.Lock()
 	defer mim.mutex.Unlock()
-	
+
 	for _, iface := range interfaces {
 		if iface.Flags&net.FlagUp != 0 && iface.Flags&net.FlagLoopback == 0 {
 			netIface := &NetworkInterface{
@@ -964,19 +966,19 @@ func (mim *MultiInterfaceManager) discoverInterfaces() {
 				Active:   true,
 				MTU:      iface.MTU,
 				LastSeen: time.Now(),
-				Quality:  &InterfaceQuality{
+				Quality: &InterfaceQuality{
 					Name:         iface.Name,
 					Connectivity: ConnectivityUnknown,
 				},
 				ThroughputHistory: make([]ThroughputSample, 0, 50),
 			}
-			
+
 			mim.interfaces[iface.Name] = netIface
-			log.Infof("Discovered network interface: %s (type: %s, priority: %d)", 
+			log.Infof("Discovered network interface: %s (type: %s, priority: %d)",
 				iface.Name, mim.interfaceTypeString(netIface.Type), netIface.Priority)
 		}
 	}
-	
+
 	// Set initial active interface
 	if mim.activeInterface == "" {
 		mim.activeInterface = mim.selectBestInterface()
@@ -1012,21 +1014,21 @@ func (mim *MultiInterfaceManager) GetActiveInterface() string {
 func (mim *MultiInterfaceManager) selectBestInterface() string {
 	mim.mutex.RLock()
 	defer mim.mutex.RUnlock()
-	
+
 	var bestInterface *NetworkInterface
 	var bestName string
-	
+
 	for name, iface := range mim.interfaces {
 		if !iface.Active {
 			continue
 		}
-		
+
 		if bestInterface == nil || mim.isInterfaceBetter(iface, bestInterface) {
 			bestInterface = iface
 			bestName = name
 		}
 	}
-	
+
 	return bestName
 }
 
@@ -1037,7 +1039,7 @@ func (mim *MultiInterfaceManager) getInterfacePriority(name string) int {
 			return i
 		}
 	}
-	
+
 	// Default priority based on interface type
 	interfaceType := mim.detectInterfaceType(name)
 	switch interfaceType {
@@ -1062,14 +1064,14 @@ func (mim *MultiInterfaceManager) isInterfaceBetter(a, b *NetworkInterface) bool
 	if a.Priority != b.Priority {
 		return a.Priority < b.Priority
 	}
-	
+
 	// Then check quality metrics if available
 	if a.Quality != nil && b.Quality != nil {
 		aScore := mim.calculateInterfaceScore(a)
 		bScore := mim.calculateInterfaceScore(b)
 		return aScore > bScore
 	}
-	
+
 	// Fallback to priority only
 	return a.Priority < b.Priority
 }
@@ -1079,20 +1081,20 @@ func (mim *MultiInterfaceManager) calculateInterfaceScore(iface *NetworkInterfac
 	if iface.Quality == nil {
 		return 0.0
 	}
-	
+
 	score := 100.0 // Base score
-	
+
 	// Penalize high latency
 	if iface.Quality.RTT > 100*time.Millisecond {
 		score -= float64(iface.Quality.RTT.Milliseconds()) * 0.1
 	}
-	
+
 	// Penalize packet loss
 	score -= iface.Quality.PacketLoss * 10
-	
+
 	// Reward stability
 	score += iface.Quality.Stability * 50
-	
+
 	// Adjust for interface type
 	switch iface.Type {
 	case InterfaceEthernet:
@@ -1106,7 +1108,7 @@ func (mim *MultiInterfaceManager) calculateInterfaceScore(iface *NetworkInterfac
 	case InterfaceVPN:
 		score -= 10 // VPN adds overhead
 	}
-	
+
 	return maxFloat64(score, 0.0)
 }
 
@@ -1117,15 +1119,15 @@ func (mim *MultiInterfaceManager) updateInterfaceStatus() {
 		log.Errorf("Failed to update interface status: %v", err)
 		return
 	}
-	
+
 	mim.mutex.Lock()
 	defer mim.mutex.Unlock()
-	
+
 	// Mark all interfaces as potentially inactive
 	for _, iface := range mim.interfaces {
 		iface.Active = false
 	}
-	
+
 	// Update active interfaces
 	for _, iface := range interfaces {
 		if iface.Flags&net.FlagUp != 0 && iface.Flags&net.FlagLoopback == 0 {
@@ -1143,14 +1145,14 @@ func (mim *MultiInterfaceManager) evaluateInterfaceSwitching() {
 	if !mim.config.AutoSwitchEnabled {
 		return
 	}
-	
+
 	currentInterface := mim.GetActiveInterface()
 	if currentInterface == "" {
 		return
 	}
-	
+
 	bestInterface := mim.selectBestInterface()
-	
+
 	if bestInterface != currentInterface && bestInterface != "" {
 		reason := mim.determineSwitchReason(currentInterface, bestInterface)
 		mim.switchToInterface(bestInterface, reason)
@@ -1161,13 +1163,13 @@ func (mim *MultiInterfaceManager) evaluateInterfaceSwitching() {
 func (mim *MultiInterfaceManager) determineSwitchReason(current, target string) SwitchReason {
 	mim.mutex.RLock()
 	defer mim.mutex.RUnlock()
-	
+
 	currentIface := mim.interfaces[current]
-	
+
 	if currentIface == nil || !currentIface.Active {
 		return SwitchReasonInterfaceDown
 	}
-	
+
 	// Check if current interface quality has degraded
 	if currentIface.Quality != nil {
 		if currentIface.Quality.PacketLoss > mim.config.SwitchThresholdPacketLoss {
@@ -1177,7 +1179,7 @@ func (mim *MultiInterfaceManager) determineSwitchReason(current, target string) 
 			return SwitchReasonQualityDegradation
 		}
 	}
-	
+
 	return SwitchReasonBetterAlternative
 }
 
@@ -1187,7 +1189,7 @@ func (mim *MultiInterfaceManager) switchToInterface(newInterface string, reason 
 	oldInterface := mim.activeInterface
 	mim.activeInterface = newInterface
 	mim.mutex.Unlock()
-	
+
 	// Record the switch
 	switchEvent := InterfaceSwitch{
 		FromInterface:  oldInterface,
@@ -1196,17 +1198,17 @@ func (mim *MultiInterfaceManager) switchToInterface(newInterface string, reason 
 		Reason:         reason,
 		TransferStatus: TransferStatusContinuous,
 	}
-	
+
 	mim.mutex.Lock()
 	mim.switchHistory = append(mim.switchHistory, switchEvent)
 	if len(mim.switchHistory) > 100 {
 		mim.switchHistory = mim.switchHistory[1:]
 	}
 	mim.mutex.Unlock()
-	
+
 	log.Infof("Switched network interface: %s -> %s (reason: %s)",
 		oldInterface, newInterface, mim.switchReasonString(reason))
-	
+
 	// Notify active transfers about the switch
 	if globalStreamingEngine != nil {
 		go globalStreamingEngine.handleInterfaceSwitch(oldInterface, newInterface, reason)
@@ -1253,7 +1255,7 @@ func (mim *MultiInterfaceManager) switchReasonString(r SwitchReason) string {
 func (mim *MultiInterfaceManager) GetInterfaceInfo(interfaceName string) *NetworkInterface {
 	mim.mutex.RLock()
 	defer mim.mutex.RUnlock()
-	
+
 	for _, iface := range mim.interfaces {
 		if iface.Name == interfaceName {
 			return iface

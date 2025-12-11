@@ -70,34 +70,31 @@ func MonitorUploadPerformance() {
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 	
-	for {
-		select {
-		case <-ticker.C:
-			// Log upload session statistics
-			if uploadSessionStore != nil {
-				uploadSessionStore.mutex.RLock()
-				activeSessionsCount := len(uploadSessionStore.sessions)
-				uploadSessionStore.mutex.RUnlock()
-				
-				if activeSessionsCount > 0 {
-					log.Infof("Active upload sessions: %d", activeSessionsCount)
-				}
-			}
+	for range ticker.C {
+		// Log upload session statistics
+		if uploadSessionStore != nil {
+			uploadSessionStore.mutex.RLock()
+			activeSessionsCount := len(uploadSessionStore.sessions)
+			uploadSessionStore.mutex.RUnlock()
 			
-			// Log network resilience status
-			if networkManager != nil {
-				networkManager.mutex.RLock()
-				activeUploadsCount := len(networkManager.activeUploads)
-				isPaused := networkManager.isPaused
-				networkManager.mutex.RUnlock()
-				
-				if activeUploadsCount > 0 {
-					status := "active"
-					if isPaused {
-						status = "paused"
-					}
-					log.Infof("Network resilience: %d uploads %s", activeUploadsCount, status)
+			if activeSessionsCount > 0 {
+				log.Infof("Active upload sessions: %d", activeSessionsCount)
+			}
+		}
+		
+		// Log network resilience status
+		if networkManager != nil {
+			networkManager.mutex.RLock()
+			activeUploadsCount := len(networkManager.activeUploads)
+			isPaused := networkManager.isPaused
+			networkManager.mutex.RUnlock()
+			
+			if activeUploadsCount > 0 {
+				status := "active"
+				if isPaused {
+					status = "paused"
 				}
+				log.Infof("Network resilience: %d uploads %s", activeUploadsCount, status)
 			}
 		}
 	}

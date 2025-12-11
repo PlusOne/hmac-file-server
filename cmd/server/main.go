@@ -57,6 +57,14 @@ type NetworkResilientSession struct {
 	LastActivity      time.Time         `json:"last_activity"`
 }
 
+// contextKey is a custom type for context keys to avoid collisions
+type contextKey string
+
+// Context keys
+const (
+	responseWriterKey contextKey = "responseWriter"
+)
+
 // NetworkEvent tracks network transitions during session
 type NetworkEvent struct {
 	Timestamp    time.Time `json:"timestamp"`
@@ -275,6 +283,7 @@ func generateUploadSessionID(uploadType, userAgent, clientIP string) string {
 }
 
 // Detect network context for intelligent switching
+// nolint:unused
 func detectNetworkContext(r *http.Request) string {
 	clientIP := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
@@ -612,8 +621,8 @@ var (
 	conf              Config
 	versionString     string
 	log               = logrus.New()
-	fileInfoCache     *cache.Cache
-	fileMetadataCache *cache.Cache
+	fileInfoCache     *cache.Cache     //nolint:unused
+	fileMetadataCache *cache.Cache     //nolint:unused
 	clamClient        *clamd.Clamd
 	redisClient       *redis.Client
 	redisConnected    bool
@@ -642,7 +651,7 @@ var (
 	isoMountErrorsTotal       prometheus.Counter
 
 	workerPool    *WorkerPool
-	networkEvents chan NetworkEvent
+	networkEvents chan NetworkEvent //nolint:unused
 
 	workerAdjustmentsTotal   prometheus.Counter
 	workerReAdjustmentsTotal prometheus.Counter
@@ -662,9 +671,12 @@ var semaphore = make(chan struct{}, maxConcurrentOperations)
 // Global client connection tracker for multi-interface support
 var clientTracker *ClientConnectionTracker
 
+//nolint:unused
 var logMessages []string
+//nolint:unused
 var logMu sync.Mutex
 
+//nolint:unused
 func flushLogMessages() {
 	logMu.Lock()
 	defer logMu.Unlock()
@@ -770,6 +782,7 @@ func initializeNetworkProtocol(forceProtocol string) (*net.Dialer, error) {
 	}
 }
 
+//nolint:unused
 var dualStackClient *http.Client
 
 func main() {
@@ -1165,6 +1178,8 @@ func main() {
 	go handleFileCleanup(&conf)
 }
 
+// printExampleConfig prints an example configuration file
+// nolint:unused
 func printExampleConfig() {
 	fmt.Print(`
 [server]
@@ -1261,6 +1276,8 @@ version = "3.3.0"
 `)
 }
 
+// getExampleConfigString returns an example configuration string
+// nolint:unused
 func getExampleConfigString() string {
 	return `[server]
 listen_address = ":8080"
@@ -1439,6 +1456,8 @@ func monitorWorkerPerformance(ctx context.Context, server *ServerConfig, w *Work
 	}
 }
 
+// readConfig reads configuration from a file
+// nolint:unused
 func readConfig(configFilename string, conf *Config) error {
 	viper.SetConfigFile(configFilename)
 	if err := viper.ReadInConfig(); err != nil {
@@ -1451,6 +1470,8 @@ func readConfig(configFilename string, conf *Config) error {
 	return nil
 }
 
+// setDefaults sets default configuration values
+// nolint:unused
 func setDefaults() {
 	viper.SetDefault("server.listen_address", ":8080")
 	viper.SetDefault("server.storage_path", "./uploads")
@@ -2604,7 +2625,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		// Bearer token authentication with session recovery for network switching
 		// Store response writer in context for session headers
-		ctx := context.WithValue(r.Context(), "responseWriter", w)
+		ctx := context.WithValue(r.Context(), responseWriterKey, w)
 		r = r.WithContext(ctx)
 		
 		claims, err := validateBearerTokenWithSession(r, conf.Security.Secret)
@@ -2805,7 +2826,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 				"message":  "File already exists (deduplication hit)",
 				"upload_time": duration.String(),
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 			
 			log.Infof("💾 Deduplication hit: file %s already exists (%s), returning success immediately (IP: %s)", 
 				filename, formatBytes(existingFileInfo.Size()), getClientIP(r))
@@ -2895,7 +2916,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 		// Send response immediately
 		if jsonBytes, err := json.Marshal(response); err == nil {
-			w.Write(jsonBytes)
+			_, _ = w.Write(jsonBytes)
 		} else {
 			fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d, "post_processing": "background"}`, filename, written)
 		}
@@ -2988,7 +3009,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Create JSON response
 	if jsonBytes, err := json.Marshal(response); err == nil {
-		w.Write(jsonBytes)
+		_, _ = w.Write(jsonBytes)
 	} else {
 		fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d}`, filename, written)
 	}
@@ -3286,7 +3307,7 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 				"size":     existingFileInfo.Size(),
 				"message":  "File already exists (deduplication hit)",
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 			
 			log.Infof("Deduplication hit: file %s already exists (%s), returning success immediately", 
 				filename, formatBytes(existingFileInfo.Size()))
@@ -3344,7 +3365,7 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 
 		// Send response immediately
 		if jsonBytes, err := json.Marshal(response); err == nil {
-			w.Write(jsonBytes)
+			_, _ = w.Write(jsonBytes)
 		} else {
 			fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d, "post_processing": "background"}`, filename, written)
 		}
@@ -3419,7 +3440,7 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 
 	// Create JSON response
 	if jsonBytes, err := json.Marshal(response); err == nil {
-		w.Write(jsonBytes)
+		_, _ = w.Write(jsonBytes)
 	} else {
 		fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d}`, filename, written)
 	}

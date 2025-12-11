@@ -498,6 +498,7 @@ func validateCrossSection(c *Config, result *ConfigValidationResult) {
 // Enhanced Security Validation Functions
 
 // checkSecretStrength analyzes the strength of secrets/passwords
+// nolint:unused
 func checkSecretStrength(secret string) (score int, issues []string) {
 	if len(secret) == 0 {
 		return 0, []string{"secret is empty"}
@@ -586,6 +587,7 @@ func checkSecretStrength(secret string) (score int, issues []string) {
 }
 
 // hasRepeatedChars checks if a string has excessive repeated characters
+// nolint:unused
 func hasRepeatedChars(s string) bool {
 	if len(s) < 4 {
 		return false
@@ -601,6 +603,7 @@ func hasRepeatedChars(s string) bool {
 }
 
 // isDefaultOrExampleSecret checks if a secret appears to be a default/example value
+// nolint:unused
 func isDefaultOrExampleSecret(secret string) bool {
 	defaultSecrets := []string{
 		"your-secret-key-here",
@@ -642,6 +645,7 @@ func isDefaultOrExampleSecret(secret string) bool {
 }
 
 // calculateEntropy calculates the Shannon entropy of a string
+// nolint:unused
 func calculateEntropy(s string) float64 {
 	if len(s) == 0 {
 		return 0
@@ -668,6 +672,7 @@ func calculateEntropy(s string) float64 {
 }
 
 // validateSecretSecurity performs comprehensive secret security validation
+// nolint:unused
 func validateSecretSecurity(fieldName, secret string, result *ConfigValidationResult) {
 	if secret == "" {
 		return // Already handled by other validators

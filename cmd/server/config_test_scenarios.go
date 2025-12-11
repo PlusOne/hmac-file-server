@@ -211,7 +211,7 @@ func RunConfigTests() {
 
 		// Create temporary directories for testing
 		tempDir := filepath.Join(os.TempDir(), fmt.Sprintf("hmac-test-%d", i))
-		os.MkdirAll(tempDir, 0755)
+		_ = os.MkdirAll(tempDir, 0755)
 		defer os.RemoveAll(tempDir)
 
 		// Update paths in config to use temp directory
