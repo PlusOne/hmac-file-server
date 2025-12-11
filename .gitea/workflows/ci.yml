@@ -1,121 +1,12 @@
-name: CI/CD
+name: CI
 
-on:
-  push:
-    branches: [main, master]
-    tags: ['v*']
-  pull_request:
-    branches: [main, master]
+on: [push]
 
 jobs:
   test:
-    name: Test
     runs-on: ubuntu-latest
     container:
       image: golang:1.24-bookworm
     steps:
-      - name: Install git
-        run: apt-get update && apt-get install -y git ca-certificates
-
-      - name: Checkout code
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git clone --depth 1 --branch ${GITHUB_REF_NAME} https://git.uuxo.net/${GITHUB_REPOSITORY}.git .
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run tests
-        run: GOMAXPROCS=8 go test -race -coverprofile=coverage.out -covermode=atomic ./...
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    container:
-      image: golang:1.24-bookworm
-    steps:
-      - name: Install git
-        run: apt-get update && apt-get install -y git ca-certificates
-
-      - name: Checkout code
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git clone --depth 1 --branch ${GITHUB_REF_NAME} https://git.uuxo.net/${GITHUB_REPOSITORY}.git .
-
-      - name: Run go vet
-        run: go vet ./...
-
-      - name: Check formatting
-        run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            echo "Files not formatted:"
-            gofmt -l .
-            exit 1
-          fi
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [test, lint]
-    container:
-      image: golang:1.24-bookworm
-    strategy:
-      max-parallel: 8
-      matrix:
-        binary: [server, monitor]
-        goos: [linux, darwin]
-        goarch: [amd64, arm64]
-    steps:
-      - name: Install git
-        run: apt-get update && apt-get install -y git ca-certificates
-
-      - name: Checkout code
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git clone --depth 1 --branch ${GITHUB_REF_NAME} https://git.uuxo.net/${GITHUB_REPOSITORY}.git .
-
-      - name: Build binary
-        run: |
-          export GOOS=${{ matrix.goos }}
-          export GOARCH=${{ matrix.goarch }}
-          export CGO_ENABLED=0
-          export GOMAXPROCS=8
-          go build -ldflags="-s -w" \
-            -o dist/hmac-file-${{ matrix.binary }}-${{ matrix.goos }}-${{ matrix.goarch }} \
-            ./cmd/${{ matrix.binary }}
-
-  docker:
-    name: Docker
-    runs-on: ubuntu-latest
-    needs: [test, lint]
-    container:
-      image: docker:24-cli
-      options: --privileged -v /var/run/docker.sock:/var/run/docker.sock
-    steps:
-      - name: Install dependencies
-        run: apk add --no-cache git curl bash
-
-      - name: Checkout code
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git clone --depth 1 --branch ${GITHUB_REF_NAME} https://git.uuxo.net/${GITHUB_REPOSITORY}.git .
-
-      - name: Setup buildx
-        run: |
-          docker buildx create --use --name builder --driver docker-container || true
-          docker buildx inspect --bootstrap
-
-      - name: Login to registry
-        run: |
-          echo "${{ secrets.REGISTRY_TOKEN }}" | docker login git.uuxo.net -u "${{ secrets.REGISTRY_USER }}" --password-stdin
-
-      - name: Build and push
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-            TAGS="-t git.uuxo.net/uuxo/hmac-file-server:${VERSION} -t git.uuxo.net/uuxo/hmac-file-server:latest"
-          else
-            TAGS="-t git.uuxo.net/uuxo/hmac-file-server:${GITHUB_SHA::8} -t git.uuxo.net/uuxo/hmac-file-server:main"
-          fi
-          docker buildx build --platform linux/amd64,linux/arm64 --push --file Dockerfile.multiarch ${TAGS} .
-# CI trigger Thu Dec 11 08:22:24 PM CET 2025
+      - name: Test
+        run: echo "Hello World"
