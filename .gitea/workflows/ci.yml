@@ -30,6 +30,8 @@ jobs:
         run: go mod download
 
       - name: Run tests with race detection
+        env:
+          GOMAXPROCS: 8
         run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Generate coverage report
@@ -69,6 +71,7 @@ jobs:
     container:
       image: golang:1.24-bookworm
     strategy:
+      max-parallel: 8
       matrix:
         binary: [server, monitor]
         goos: [linux, darwin]
@@ -87,6 +90,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
+          GOMAXPROCS: 8
         run: |
           go build -ldflags="-s -w -X main.Version=${GITHUB_REF_NAME}" \
             -o dist/hmac-file-${{ matrix.binary }}-${{ matrix.goos }}-${{ matrix.goarch }} \
