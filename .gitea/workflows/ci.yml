@@ -207,6 +207,19 @@ jobs:
 
       - name: Push to GitHub
         run: |
+          echo "Checking if token is set..."
+          if [ -z "${{ secrets.GITHUBMIRRORTOKEN }}" ]; then
+            echo "ERROR: GITHUBMIRRORTOKEN secret is empty!"
+            exit 1
+          fi
+          echo "Token is set, length: ${#GITHUB_TOKEN}"
+          git remote -v
           git remote add github https://x-access-token:${{ secrets.GITHUBMIRRORTOKEN }}@github.com/PlusOne/hmac-file-server.git
+          git remote -v
+          echo "Pushing branches..."
           git push --force --all github
+          echo "Pushing tags..."
           git push --force --tags github
+          echo "Mirror complete!"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUBMIRRORTOKEN }}
