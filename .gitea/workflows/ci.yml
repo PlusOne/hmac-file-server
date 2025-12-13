@@ -193,3 +193,29 @@ jobs:
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: goreleaser release --clean
+
+  mirror:
+    name: Mirror to GitHub
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MIRROR_ENABLED != 'false'
+    container:
+      image: alpine:latest
+    steps:
+      - name: Install git
+        run: apk add --no-cache git openssh-client
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GITHUB_MIRROR_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Clone and mirror
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git clone --mirror ${{ env.GITEA_URL }}/${GITHUB_REPOSITORY}.git repo.git
+          cd repo.git
+          git remote add github git@github.com:PlusOne/hmac-file-server.git
+          git push --mirror github || git push --force --all github && git push --force --tags github
