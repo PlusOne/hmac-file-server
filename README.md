@@ -8,13 +8,22 @@ A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) 
 
 ## Features
 
+### Core Features
 - XEP-0363 HTTP File Upload compliance
-- HMAC-based authentication
-- File deduplication
+- HMAC-based authentication with JWT support
+- File deduplication (SHA256 with hardlinks)
 - Multi-architecture support (AMD64, ARM64, ARM32v7)
 - Docker and Podman deployment
 - XMPP client compatibility (Dino, Gajim, Conversations, Monal, Converse.js)
-- Network resilience for mobile clients
+- Network resilience for mobile clients (WiFi/LTE switching)
+
+### Security Features (v3.3.0)
+- **Audit Logging** - Comprehensive security event logging (uploads, downloads, auth events)
+- **Magic Bytes Validation** - Content type verification using file signatures
+- **Per-User Quotas** - Storage limits per XMPP JID with Redis tracking
+- **Admin API** - Protected endpoints for system management and monitoring
+- **ClamAV Integration** - Antivirus scanning for uploaded files
+- **Rate Limiting** - Configurable request throttling
 
 ## Installation
 
@@ -90,16 +99,19 @@ secret = "your-hmac-secret-key"
 | Section | Description |
 |---------|-------------|
 | `[server]` | Bind address, port, storage path, timeouts |
-| `[security]` | HMAC secret, TLS settings |
+| `[security]` | HMAC secret, JWT, TLS settings |
 | `[uploads]` | Size limits, allowed extensions |
 | `[downloads]` | Download settings, bandwidth limits |
 | `[logging]` | Log file, log level |
 | `[clamav]` | Antivirus scanning integration |
 | `[redis]` | Redis caching backend |
-| `[deduplication]` | File deduplication settings |
+| `[audit]` | Security audit logging |
+| `[validation]` | Magic bytes content validation |
+| `[quotas]` | Per-user storage quotas |
+| `[admin]` | Admin API configuration |
 | `[workers]` | Worker pool configuration |
 
-See [examples/](examples/) for complete configuration templates.
+See [templates/](templates/) for complete configuration templates.
 
 ## XMPP Server Integration
 
@@ -168,6 +180,64 @@ token = HMAC-SHA256(secret, filename + filesize + timestamp)
 | `/download/...` | GET | File download |
 | `/health` | GET | Health check |
 | `/metrics` | GET | Prometheus metrics |
+| `/admin/stats` | GET | Server statistics (auth required) |
+| `/admin/files` | GET | List uploaded files (auth required) |
+| `/admin/users` | GET | User quota information (auth required) |
+
+## Enhanced Features (v3.3.0)
+
+### Audit Logging
+
+Security-focused logging for compliance and forensics:
+
+```toml
+[audit]
+enabled = true
+output = "file"
+path = "/var/log/hmac-audit.log"
+format = "json"
+events = ["upload", "download", "auth_failure", "quota_exceeded"]
+```
+
+### Content Validation
+
+Magic bytes validation to verify file types:
+
+```toml
+[validation]
+check_magic_bytes = true
+allowed_types = ["image/*", "video/*", "audio/*", "application/pdf"]
+blocked_types = ["application/x-executable", "application/x-shellscript"]
+```
+
+### Per-User Quotas
+
+Storage limits per XMPP JID with Redis tracking:
+
+```toml
+[quotas]
+enabled = true
+default = "100MB"
+tracking = "redis"
+
+[quotas.custom]
+"admin@example.com" = "10GB"
+"premium@example.com" = "1GB"
+```
+
+### Admin API
+
+Protected management endpoints:
+
+```toml
+[admin]
+enabled = true
+path_prefix = "/admin"
+
+[admin.auth]
+type = "bearer"
+token = "${ADMIN_TOKEN}"
+```
 
 ## System Requirements
 

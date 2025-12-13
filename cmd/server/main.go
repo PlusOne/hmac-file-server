@@ -39,22 +39,22 @@ import (
 
 // NetworkResilientSession represents a persistent session for network switching
 type NetworkResilientSession struct {
-	SessionID         string            `json:"session_id"`
-	UserJID           string            `json:"user_jid"`
-	OriginalToken     string            `json:"original_token"`
-	CreatedAt         time.Time         `json:"created_at"`
-	LastSeen          time.Time         `json:"last_seen"`
-	NetworkHistory    []NetworkEvent    `json:"network_history"`
-	UploadContext     *UploadContext    `json:"upload_context,omitempty"`
-	RefreshCount      int               `json:"refresh_count"`
-	MaxRefreshes      int               `json:"max_refreshes"`
-	LastIP            string            `json:"last_ip"`
-	UserAgent         string            `json:"user_agent"`
-	SecurityLevel     int               `json:"security_level"`     // 1=normal, 2=challenge, 3=reauth
-	LastSecurityCheck time.Time         `json:"last_security_check"`
-	NetworkChangeCount int              `json:"network_change_count"`
-	StandbyDetected   bool              `json:"standby_detected"`
-	LastActivity      time.Time         `json:"last_activity"`
+	SessionID          string         `json:"session_id"`
+	UserJID            string         `json:"user_jid"`
+	OriginalToken      string         `json:"original_token"`
+	CreatedAt          time.Time      `json:"created_at"`
+	LastSeen           time.Time      `json:"last_seen"`
+	NetworkHistory     []NetworkEvent `json:"network_history"`
+	UploadContext      *UploadContext `json:"upload_context,omitempty"`
+	RefreshCount       int            `json:"refresh_count"`
+	MaxRefreshes       int            `json:"max_refreshes"`
+	LastIP             string         `json:"last_ip"`
+	UserAgent          string         `json:"user_agent"`
+	SecurityLevel      int            `json:"security_level"` // 1=normal, 2=challenge, 3=reauth
+	LastSecurityCheck  time.Time      `json:"last_security_check"`
+	NetworkChangeCount int            `json:"network_change_count"`
+	StandbyDetected    bool           `json:"standby_detected"`
+	LastActivity       time.Time      `json:"last_activity"`
 }
 
 // contextKey is a custom type for context keys to avoid collisions
@@ -67,12 +67,12 @@ const (
 
 // NetworkEvent tracks network transitions during session
 type NetworkEvent struct {
-	Timestamp    time.Time `json:"timestamp"`
-	FromNetwork  string    `json:"from_network"`
-	ToNetwork    string    `json:"to_network"`
-	ClientIP     string    `json:"client_ip"`
-	UserAgent    string    `json:"user_agent"`
-	EventType    string    `json:"event_type"` // "switch", "resume", "refresh"
+	Timestamp   time.Time `json:"timestamp"`
+	FromNetwork string    `json:"from_network"`
+	ToNetwork   string    `json:"to_network"`
+	ClientIP    string    `json:"client_ip"`
+	UserAgent   string    `json:"user_agent"`
+	EventType   string    `json:"event_type"` // "switch", "resume", "refresh"
 }
 
 // UploadContext maintains upload state across network changes and network resilience channels
@@ -244,11 +244,11 @@ func initializeSessionStore() {
 		opt, err := redis.ParseURL(redisURL)
 		if err == nil {
 			sessionStore.redisClient = redis.NewClient(opt)
-			
+
 			// Test Redis connection
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			
+
 			if err := sessionStore.redisClient.Ping(ctx).Err(); err == nil {
 				log.Infof("📊 Session store: Redis backend initialized (%s)", redisURL)
 			} else {
@@ -526,53 +526,57 @@ type BuildConfig struct {
 }
 
 type NetworkResilienceConfig struct {
-	FastDetection               bool     `toml:"fast_detection" mapstructure:"fast_detection"`
-	QualityMonitoring          bool     `toml:"quality_monitoring" mapstructure:"quality_monitoring"`
-	PredictiveSwitching        bool     `toml:"predictive_switching" mapstructure:"predictive_switching"`
-	MobileOptimizations        bool     `toml:"mobile_optimizations" mapstructure:"mobile_optimizations"`
-	DetectionInterval          string   `toml:"detection_interval" mapstructure:"detection_interval"`
-	QualityCheckInterval       string   `toml:"quality_check_interval" mapstructure:"quality_check_interval"`
-	MaxDetectionInterval       string   `toml:"max_detection_interval" mapstructure:"max_detection_interval"`
-	
+	FastDetection        bool   `toml:"fast_detection" mapstructure:"fast_detection"`
+	QualityMonitoring    bool   `toml:"quality_monitoring" mapstructure:"quality_monitoring"`
+	PredictiveSwitching  bool   `toml:"predictive_switching" mapstructure:"predictive_switching"`
+	MobileOptimizations  bool   `toml:"mobile_optimizations" mapstructure:"mobile_optimizations"`
+	DetectionInterval    string `toml:"detection_interval" mapstructure:"detection_interval"`
+	QualityCheckInterval string `toml:"quality_check_interval" mapstructure:"quality_check_interval"`
+	MaxDetectionInterval string `toml:"max_detection_interval" mapstructure:"max_detection_interval"`
+
 	// Multi-interface support
-	MultiInterfaceEnabled      bool     `toml:"multi_interface_enabled" mapstructure:"multi_interface_enabled"`
-	InterfacePriority          []string `toml:"interface_priority" mapstructure:"interface_priority"`
-	AutoSwitchEnabled          bool     `toml:"auto_switch_enabled" mapstructure:"auto_switch_enabled"`
-	SwitchThresholdLatency     string   `toml:"switch_threshold_latency" mapstructure:"switch_threshold_latency"`
-	SwitchThresholdPacketLoss  float64  `toml:"switch_threshold_packet_loss" mapstructure:"switch_threshold_packet_loss"`
+	MultiInterfaceEnabled       bool     `toml:"multi_interface_enabled" mapstructure:"multi_interface_enabled"`
+	InterfacePriority           []string `toml:"interface_priority" mapstructure:"interface_priority"`
+	AutoSwitchEnabled           bool     `toml:"auto_switch_enabled" mapstructure:"auto_switch_enabled"`
+	SwitchThresholdLatency      string   `toml:"switch_threshold_latency" mapstructure:"switch_threshold_latency"`
+	SwitchThresholdPacketLoss   float64  `toml:"switch_threshold_packet_loss" mapstructure:"switch_threshold_packet_loss"`
 	QualityDegradationThreshold float64  `toml:"quality_degradation_threshold" mapstructure:"quality_degradation_threshold"`
-	MaxSwitchAttempts          int      `toml:"max_switch_attempts" mapstructure:"max_switch_attempts"`
-	SwitchDetectionInterval    string   `toml:"switch_detection_interval" mapstructure:"switch_detection_interval"`
+	MaxSwitchAttempts           int      `toml:"max_switch_attempts" mapstructure:"max_switch_attempts"`
+	SwitchDetectionInterval     string   `toml:"switch_detection_interval" mapstructure:"switch_detection_interval"`
 }
 
 // ClientNetworkConfigTOML is used for loading from TOML where timeout is a string
 type ClientNetworkConfigTOML struct {
 	SessionBasedTracking      bool   `toml:"session_based_tracking" mapstructure:"session_based_tracking"`
-	AllowIPChanges           bool   `toml:"allow_ip_changes" mapstructure:"allow_ip_changes"`
-	SessionMigrationTimeout  string `toml:"session_migration_timeout" mapstructure:"session_migration_timeout"`
-	MaxIPChangesPerSession   int    `toml:"max_ip_changes_per_session" mapstructure:"max_ip_changes_per_session"`
-	ClientConnectionDetection bool  `toml:"client_connection_detection" mapstructure:"client_connection_detection"`
-	AdaptToClientNetwork     bool   `toml:"adapt_to_client_network" mapstructure:"adapt_to_client_network"`
+	AllowIPChanges            bool   `toml:"allow_ip_changes" mapstructure:"allow_ip_changes"`
+	SessionMigrationTimeout   string `toml:"session_migration_timeout" mapstructure:"session_migration_timeout"`
+	MaxIPChangesPerSession    int    `toml:"max_ip_changes_per_session" mapstructure:"max_ip_changes_per_session"`
+	ClientConnectionDetection bool   `toml:"client_connection_detection" mapstructure:"client_connection_detection"`
+	AdaptToClientNetwork      bool   `toml:"adapt_to_client_network" mapstructure:"adapt_to_client_network"`
 }
 
 // This is the main Config struct to be used
 type Config struct {
-	Server            ServerConfig             `mapstructure:"server"`
-	Logging           LoggingConfig            `mapstructure:"logging"`
-	Deduplication     DeduplicationConfig      `mapstructure:"deduplication"` // Added
-	ISO               ISOConfig                `mapstructure:"iso"`           // Added
-	Timeouts          TimeoutConfig            `mapstructure:"timeouts"`      // Added
-	Security          SecurityConfig           `mapstructure:"security"`
-	Versioning        VersioningConfig         `mapstructure:"versioning"` // Added
-	Uploads           UploadsConfig            `mapstructure:"uploads"`
-	Downloads         DownloadsConfig          `mapstructure:"downloads"`
-	ClamAV            ClamAVConfig             `mapstructure:"clamav"`
-	Redis             RedisConfig              `mapstructure:"redis"`
-	Workers           WorkersConfig            `mapstructure:"workers"`
-	File              FileConfig               `mapstructure:"file"`
-	Build             BuildConfig              `mapstructure:"build"`
-	NetworkResilience NetworkResilienceConfig      `mapstructure:"network_resilience"`
-	ClientNetwork     ClientNetworkConfigTOML     `mapstructure:"client_network_support"`
+	Server            ServerConfig            `mapstructure:"server"`
+	Logging           LoggingConfig           `mapstructure:"logging"`
+	Deduplication     DeduplicationConfig     `mapstructure:"deduplication"` // Added
+	ISO               ISOConfig               `mapstructure:"iso"`           // Added
+	Timeouts          TimeoutConfig           `mapstructure:"timeouts"`      // Added
+	Security          SecurityConfig          `mapstructure:"security"`
+	Versioning        VersioningConfig        `mapstructure:"versioning"` // Added
+	Uploads           UploadsConfig           `mapstructure:"uploads"`
+	Downloads         DownloadsConfig         `mapstructure:"downloads"`
+	ClamAV            ClamAVConfig            `mapstructure:"clamav"`
+	Redis             RedisConfig             `mapstructure:"redis"`
+	Workers           WorkersConfig           `mapstructure:"workers"`
+	File              FileConfig              `mapstructure:"file"`
+	Build             BuildConfig             `mapstructure:"build"`
+	NetworkResilience NetworkResilienceConfig `mapstructure:"network_resilience"`
+	ClientNetwork     ClientNetworkConfigTOML `mapstructure:"client_network_support"`
+	Audit             AuditConfig             `mapstructure:"audit"`      // Audit logging
+	Validation        ValidationConfig        `mapstructure:"validation"` // Content validation
+	Quotas            QuotaConfig             `mapstructure:"quotas"`     // Per-user quotas
+	Admin             AdminConfig             `mapstructure:"admin"`      // Admin API
 }
 
 type UploadTask struct {
@@ -597,12 +601,12 @@ func processScan(task ScanTask) error {
 	confMutex.RLock()
 	clamEnabled := conf.ClamAV.ClamAVEnabled
 	confMutex.RUnlock()
-	
+
 	if !clamEnabled {
 		log.Infof("ClamAV disabled, skipping scan for file: %s", task.AbsFilename)
 		return nil
 	}
-	
+
 	log.Infof("Started processing scan for file: %s", task.AbsFilename)
 	semaphore <- struct{}{}
 	defer func() { <-semaphore }()
@@ -621,8 +625,8 @@ var (
 	conf              Config
 	versionString     string
 	log               = logrus.New()
-	fileInfoCache     *cache.Cache     //nolint:unused
-	fileMetadataCache *cache.Cache     //nolint:unused
+	fileInfoCache     *cache.Cache //nolint:unused
+	fileMetadataCache *cache.Cache //nolint:unused
 	clamClient        *clamd.Clamd
 	redisClient       *redis.Client
 	redisConnected    bool
@@ -673,6 +677,7 @@ var clientTracker *ClientConnectionTracker
 
 //nolint:unused
 var logMessages []string
+
 //nolint:unused
 var logMu sync.Mutex
 
@@ -748,7 +753,7 @@ func initializeNetworkProtocol(forceProtocol string) (*net.Dialer, error) {
 	if forceProtocol == "" {
 		forceProtocol = "auto"
 	}
-	
+
 	switch forceProtocol {
 	case "ipv4":
 		return &net.Dialer{
@@ -845,7 +850,7 @@ func main() {
 		} else {
 			content = GenerateMinimalConfig()
 		}
-		
+
 		f, err := os.Create(genConfigPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create file: %v\n", err)
@@ -878,7 +883,7 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 	conf = *loadedConfig
-	configFileGlobal = configFile  // Store for validation helper functions
+	configFileGlobal = configFile // Store for validation helper functions
 	log.Info("Configuration loaded successfully.")
 
 	err = validateConfig(&conf)
@@ -892,12 +897,12 @@ func main() {
 
 	// Initialize client connection tracker for multi-interface support
 	clientNetworkConfig := &ClientNetworkConfig{
-		SessionBasedTracking:     conf.ClientNetwork.SessionBasedTracking,
-		AllowIPChanges:          conf.ClientNetwork.AllowIPChanges,
-		MaxIPChangesPerSession:  conf.ClientNetwork.MaxIPChangesPerSession,
-		AdaptToClientNetwork:    conf.ClientNetwork.AdaptToClientNetwork,
+		SessionBasedTracking:   conf.ClientNetwork.SessionBasedTracking,
+		AllowIPChanges:         conf.ClientNetwork.AllowIPChanges,
+		MaxIPChangesPerSession: conf.ClientNetwork.MaxIPChangesPerSession,
+		AdaptToClientNetwork:   conf.ClientNetwork.AdaptToClientNetwork,
 	}
-	
+
 	// Parse session migration timeout
 	if conf.ClientNetwork.SessionMigrationTimeout != "" {
 		if timeout, err := time.ParseDuration(conf.ClientNetwork.SessionMigrationTimeout); err == nil {
@@ -908,12 +913,12 @@ func main() {
 	} else {
 		clientNetworkConfig.SessionMigrationTimeout = 5 * time.Minute // default
 	}
-	
+
 	// Set defaults if not configured
 	if clientNetworkConfig.MaxIPChangesPerSession == 0 {
 		clientNetworkConfig.MaxIPChangesPerSession = 10
 	}
-	
+
 	// Initialize the client tracker
 	clientTracker = NewClientConnectionTracker(clientNetworkConfig)
 	if clientTracker != nil {
@@ -1075,7 +1080,21 @@ func main() {
 		initRedis() // Assuming initRedis is defined in helpers.go or elsewhere
 	}
 
+	// Initialize new features
+	if err := InitAuditLogger(&conf.Audit); err != nil {
+		log.Warnf("Failed to initialize audit logger: %v", err)
+	}
+
+	InitContentValidator(&conf.Validation)
+
+	if err := InitQuotaManager(&conf.Quotas, redisClient); err != nil {
+		log.Warnf("Failed to initialize quota manager: %v", err)
+	}
+
 	router := setupRouter() // Assuming setupRouter is defined (likely in this file or router.go
+
+	// Setup Admin API routes
+	SetupAdminRoutes(router, &conf.Admin)
 
 	// Initialize enhancements and enhance the router
 	InitializeEnhancements(router)
@@ -1658,7 +1677,7 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 	query := r.URL.Query()
 	user := query.Get("user")
 	expiryStr := query.Get("expiry")
-	
+
 	if user == "" {
 		return nil, errors.New("missing user parameter")
 	}
@@ -1674,10 +1693,10 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 
 	// ULTRA-FLEXIBLE GRACE PERIODS FOR NETWORK SWITCHING AND STANDBY SCENARIOS
 	now := time.Now().Unix()
-	
+
 	// Base grace period: 8 hours (increased from 4 hours for better WiFi ↔ LTE reliability)
 	gracePeriod := int64(28800) // 8 hours base grace period for all scenarios
-	
+
 	// Detect mobile XMPP clients and apply enhanced grace periods
 	userAgent := r.Header.Get("User-Agent")
 	isMobileXMPP := strings.Contains(strings.ToLower(userAgent), "conversations") ||
@@ -1688,12 +1707,12 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 		strings.Contains(strings.ToLower(userAgent), "xmpp") ||
 		strings.Contains(strings.ToLower(userAgent), "client") ||
 		strings.Contains(strings.ToLower(userAgent), "bot")
-	
+
 	// Enhanced XMPP client detection and grace period management
 	// Desktop XMPP clients (Dino, Gajim) need extended grace for session restoration after restart
 	isDesktopXMPP := strings.Contains(strings.ToLower(userAgent), "dino") ||
 		strings.Contains(strings.ToLower(userAgent), "gajim")
-	
+
 	if isMobileXMPP || isDesktopXMPP {
 		if isDesktopXMPP {
 			gracePeriod = int64(86400) // 24 hours for desktop XMPP clients (session restoration)
@@ -1703,32 +1722,32 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 			log.Infof("� Mobile XMPP client detected (%s), using extended 12-hour grace period", userAgent)
 		}
 	}
-	
+
 	// Network resilience parameters for session recovery
 	sessionId := query.Get("session_id")
 	networkResilience := query.Get("network_resilience")
 	resumeAllowed := query.Get("resume_allowed")
-	
+
 	// Maximum grace period for network resilience scenarios
 	if sessionId != "" || networkResilience == "true" || resumeAllowed == "true" {
 		gracePeriod = int64(86400) // 24 hours for explicit network resilience scenarios
-		log.Infof("🌐 Network resilience mode activated (session_id: %s, network_resilience: %s), using 24-hour grace period", 
+		log.Infof("🌐 Network resilience mode activated (session_id: %s, network_resilience: %s), using 24-hour grace period",
 			sessionId, networkResilience)
 	}
-	
+
 	// Detect potential network switching scenarios
 	clientIP := getClientIP(r)
 	xForwardedFor := r.Header.Get("X-Forwarded-For")
 	xRealIP := r.Header.Get("X-Real-IP")
-	
+
 	// Check for client IP change indicators (WiFi ↔ LTE switching detection)
 	if xForwardedFor != "" || xRealIP != "" {
 		// Client is behind proxy/NAT - likely mobile switching between networks
 		gracePeriod = int64(86400) // 24 hours for proxy/NAT scenarios
-		log.Infof("📱 Network switching detected (client IP: %s, X-Forwarded-For: %s, X-Real-IP: %s), using 24-hour grace period", 
+		log.Infof("📱 Network switching detected (client IP: %s, X-Forwarded-For: %s, X-Real-IP: %s), using 24-hour grace period",
 			clientIP, xForwardedFor, xRealIP)
 	}
-	
+
 	// Check Content-Length to identify large uploads that need extra time
 	contentLength := r.Header.Get("Content-Length")
 	var size int64 = 0
@@ -1741,27 +1760,27 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 			log.Infof("📁 Large file detected (%d bytes), extending grace period by %d seconds", size, additionalTime)
 		}
 	}
-	
+
 	// ABSOLUTE MAXIMUM: 48 hours for extreme scenarios
 	maxAbsoluteGrace := int64(172800) // 48 hours absolute maximum
 	if gracePeriod > maxAbsoluteGrace {
 		gracePeriod = maxAbsoluteGrace
 		log.Infof("⚠️  Grace period capped at 48 hours maximum")
 	}
-	
+
 	// STANDBY RECOVERY: Special handling for device standby scenarios
 	isLikelyStandbyRecovery := false
 	standbyGraceExtension := int64(86400) // Additional 24 hours for standby recovery
-	
+
 	if now > expiry {
 		expiredTime := now - expiry
-		
+
 		// If token expired more than grace period but less than standby window, allow standby recovery
-		if expiredTime > gracePeriod && expiredTime < (gracePeriod + standbyGraceExtension) {
+		if expiredTime > gracePeriod && expiredTime < (gracePeriod+standbyGraceExtension) {
 			isLikelyStandbyRecovery = true
 			log.Infof("💤 STANDBY RECOVERY: Token expired %d seconds ago, within standby recovery window", expiredTime)
 		}
-		
+
 		// Apply grace period check
 		if expiredTime > gracePeriod && !isLikelyStandbyRecovery {
 			// DESKTOP XMPP CLIENT SESSION RESTORATION: Special handling for Dino/Gajim restart scenarios
@@ -1770,7 +1789,7 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 				isDesktopSessionRestore = true
 				log.Infof("🖥️  DESKTOP SESSION RESTORE: %s token expired %d seconds ago, allowing within 48-hour desktop restoration window", userAgent, expiredTime)
 			}
-			
+
 			// Still apply ultra-generous final check for mobile scenarios
 			ultraMaxGrace := int64(259200) // 72 hours ultra-maximum for critical mobile scenarios
 			if (isMobileXMPP && expiredTime < ultraMaxGrace) || isDesktopSessionRestore {
@@ -1778,9 +1797,9 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 					log.Warnf("⚡ ULTRA-GRACE: Mobile XMPP client token expired %d seconds ago, allowing within 72-hour ultra-grace window", expiredTime)
 				}
 			} else {
-				log.Warnf("❌ Bearer token expired beyond all grace periods: now=%d, expiry=%d, expired_for=%d seconds, grace_period=%d, user_agent=%s", 
+				log.Warnf("❌ Bearer token expired beyond all grace periods: now=%d, expiry=%d, expired_for=%d seconds, grace_period=%d, user_agent=%s",
 					now, expiry, expiredTime, gracePeriod, userAgent)
-				return nil, fmt.Errorf("token has expired beyond grace period (expired %d seconds ago, grace period: %d seconds)", 
+				return nil, fmt.Errorf("token has expired beyond grace period (expired %d seconds ago, grace period: %d seconds)",
 					expiredTime, gracePeriod)
 			}
 		} else if isLikelyStandbyRecovery {
@@ -1797,7 +1816,7 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 	if len(pathParts) < 1 {
 		return nil, errors.New("invalid upload path format")
 	}
-	
+
 	// Handle different path formats from various ejabberd modules
 	filename := ""
 	if len(pathParts) >= 3 {
@@ -1805,7 +1824,7 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 	} else if len(pathParts) >= 1 {
 		filename = pathParts[len(pathParts)-1] // Simplified format: /filename
 	}
-	
+
 	if filename == "" {
 		filename = "upload" // Fallback filename
 	}
@@ -1813,71 +1832,71 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 	// ENHANCED HMAC VALIDATION: Try multiple payload formats for maximum compatibility
 	var validPayload bool
 	var payloadFormat string
-	
+
 	// Format 1: Network-resilient payload (mod_http_upload_hmac_network_resilient)
-	extendedPayload := fmt.Sprintf("%s\x00%s\x00%d\x00%d\x00%d\x00network_resilient", 
+	extendedPayload := fmt.Sprintf("%s\x00%s\x00%d\x00%d\x00%d\x00network_resilient",
 		user, filename, size, expiry-86400, expiry)
 	h1 := hmac.New(sha256.New, []byte(secret))
 	h1.Write([]byte(extendedPayload))
 	expectedMAC1 := h1.Sum(nil)
-	
+
 	if hmac.Equal(tokenBytes, expectedMAC1) {
 		validPayload = true
 		payloadFormat = "network_resilient"
 	}
-	
+
 	// Format 2: Extended payload with session support
 	if !validPayload {
 		sessionPayload := fmt.Sprintf("%s\x00%s\x00%d\x00%d\x00%s", user, filename, size, expiry, sessionId)
 		h2 := hmac.New(sha256.New, []byte(secret))
 		h2.Write([]byte(sessionPayload))
 		expectedMAC2 := h2.Sum(nil)
-		
+
 		if hmac.Equal(tokenBytes, expectedMAC2) {
 			validPayload = true
 			payloadFormat = "session_based"
 		}
 	}
-	
+
 	// Format 3: Standard payload (original mod_http_upload_hmac)
 	if !validPayload {
 		standardPayload := fmt.Sprintf("%s\x00%s\x00%d\x00%d", user, filename, size, expiry-3600)
 		h3 := hmac.New(sha256.New, []byte(secret))
 		h3.Write([]byte(standardPayload))
 		expectedMAC3 := h3.Sum(nil)
-		
+
 		if hmac.Equal(tokenBytes, expectedMAC3) {
 			validPayload = true
 			payloadFormat = "standard"
 		}
 	}
-	
+
 	// Format 4: Simplified payload (fallback compatibility)
 	if !validPayload {
 		simplePayload := fmt.Sprintf("%s\x00%s\x00%d", user, filename, size)
 		h4 := hmac.New(sha256.New, []byte(secret))
 		h4.Write([]byte(simplePayload))
 		expectedMAC4 := h4.Sum(nil)
-		
+
 		if hmac.Equal(tokenBytes, expectedMAC4) {
 			validPayload = true
 			payloadFormat = "simple"
 		}
 	}
-	
+
 	// Format 5: User-only payload (maximum fallback)
 	if !validPayload {
 		userPayload := fmt.Sprintf("%s\x00%d", user, expiry)
 		h5 := hmac.New(sha256.New, []byte(secret))
 		h5.Write([]byte(userPayload))
 		expectedMAC5 := h5.Sum(nil)
-		
+
 		if hmac.Equal(tokenBytes, expectedMAC5) {
 			validPayload = true
 			payloadFormat = "user_only"
 		}
 	}
-	
+
 	if !validPayload {
 		log.Warnf("❌ Invalid Bearer token HMAC for user %s, file %s (tried all 5 payload formats)", user, filename)
 		return nil, errors.New("invalid Bearer token HMAC")
@@ -1890,16 +1909,16 @@ func validateBearerToken(r *http.Request, secret string) (*BearerTokenClaims, er
 		Expiry:   expiry,
 	}
 
-	log.Infof("✅ Bearer token authentication SUCCESSFUL: user=%s, file=%s, format=%s, grace_period=%d seconds", 
+	log.Infof("✅ Bearer token authentication SUCCESSFUL: user=%s, file=%s, format=%s, grace_period=%d seconds",
 		user, filename, payloadFormat, gracePeriod)
-	
+
 	return claims, nil
 }
 
 // evaluateSecurityLevel determines the required security level based on network changes and standby detection
 func evaluateSecurityLevel(session *NetworkResilientSession, currentIP string, userAgent string) int {
 	now := time.Now()
-	
+
 	// Initialize if this is the first check
 	if session.LastSecurityCheck.IsZero() {
 		session.LastSecurityCheck = now
@@ -1907,50 +1926,50 @@ func evaluateSecurityLevel(session *NetworkResilientSession, currentIP string, u
 		session.SecurityLevel = 1 // Normal level
 		return 1
 	}
-	
+
 	// Detect potential standby scenario
 	timeSinceLastActivity := now.Sub(session.LastActivity)
 	standbyThreshold := 30 * time.Minute
-	
+
 	if timeSinceLastActivity > standbyThreshold {
 		session.StandbyDetected = true
 		log.Infof("🔒 STANDBY DETECTED: %v since last activity for session %s", timeSinceLastActivity, session.SessionID)
-		
+
 		// Long standby requires full re-authentication
 		if timeSinceLastActivity > 2*time.Hour {
 			log.Warnf("🔐 SECURITY LEVEL 3: Long standby (%v) requires full re-authentication", timeSinceLastActivity)
 			return 3
 		}
-		
+
 		// Medium standby requires challenge-response
 		log.Infof("🔐 SECURITY LEVEL 2: Medium standby (%v) requires challenge-response", timeSinceLastActivity)
 		return 2
 	}
-	
+
 	// Detect network changes
 	if session.LastIP != "" && session.LastIP != currentIP {
 		session.NetworkChangeCount++
-		log.Infof("🌐 NETWORK CHANGE #%d: %s → %s for session %s", 
+		log.Infof("🌐 NETWORK CHANGE #%d: %s → %s for session %s",
 			session.NetworkChangeCount, session.LastIP, currentIP, session.SessionID)
-		
+
 		// Multiple rapid network changes are suspicious
 		if session.NetworkChangeCount > 3 {
-			log.Warnf("🔐 SECURITY LEVEL 3: Multiple network changes (%d) requires full re-authentication", 
+			log.Warnf("🔐 SECURITY LEVEL 3: Multiple network changes (%d) requires full re-authentication",
 				session.NetworkChangeCount)
 			return 3
 		}
-		
+
 		// Single network change requires challenge-response
 		log.Infof("🔐 SECURITY LEVEL 2: Network change requires challenge-response")
 		return 2
 	}
-	
+
 	// Check for suspicious user agent changes
 	if session.UserAgent != "" && session.UserAgent != userAgent {
 		log.Warnf("🔐 SECURITY LEVEL 3: User agent change detected - potential device hijacking")
 		return 3
 	}
-	
+
 	// Normal operation
 	return 1
 }
@@ -1960,11 +1979,11 @@ func generateSecurityChallenge(session *NetworkResilientSession, secret string) 
 	// Create a time-based challenge using session data
 	timestamp := time.Now().Unix()
 	challengeData := fmt.Sprintf("%s:%s:%d", session.SessionID, session.UserJID, timestamp)
-	
+
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write([]byte(challengeData))
 	challenge := hex.EncodeToString(h.Sum(nil))
-	
+
 	log.Infof("🔐 Generated security challenge for session %s", session.SessionID)
 	return challenge, nil
 }
@@ -1974,22 +1993,22 @@ func validateSecurityChallenge(session *NetworkResilientSession, providedRespons
 	// This would validate against the expected response
 	// For now, we'll implement a simple time-window validation
 	timestamp := time.Now().Unix()
-	
+
 	// Allow 5-minute window for challenge responses
 	for i := int64(0); i <= 300; i += 60 {
 		testTimestamp := timestamp - i
 		challengeData := fmt.Sprintf("%s:%s:%d", session.SessionID, session.UserJID, testTimestamp)
-		
+
 		h := hmac.New(sha256.New, []byte(secret))
 		h.Write([]byte(challengeData))
 		expectedResponse := hex.EncodeToString(h.Sum(nil))
-		
+
 		if expectedResponse == providedResponse {
 			log.Infof("✅ Security challenge validated for session %s", session.SessionID)
 			return true
 		}
 	}
-	
+
 	log.Warnf("❌ Security challenge failed for session %s", session.SessionID)
 	return false
 }
@@ -2029,17 +2048,17 @@ func validateBearerTokenWithSession(r *http.Request, secret string) (*BearerToke
 		session := sessionStore.GetSession(sessionID)
 		if session == nil {
 			session = &NetworkResilientSession{
-				SessionID:         sessionID,
-				UserJID:           claims.User,
-				OriginalToken:     getBearerTokenFromRequest(r),
-				CreatedAt:         time.Now(),
-				MaxRefreshes:      10,
-				NetworkHistory:    []NetworkEvent{},
-				SecurityLevel:     1,
-				LastSecurityCheck: time.Now(),
+				SessionID:          sessionID,
+				UserJID:            claims.User,
+				OriginalToken:      getBearerTokenFromRequest(r),
+				CreatedAt:          time.Now(),
+				MaxRefreshes:       10,
+				NetworkHistory:     []NetworkEvent{},
+				SecurityLevel:      1,
+				LastSecurityCheck:  time.Now(),
 				NetworkChangeCount: 0,
-				StandbyDetected:   false,
-				LastActivity:      time.Now(),
+				StandbyDetected:    false,
+				LastActivity:       time.Now(),
 			}
 		}
 
@@ -2069,7 +2088,7 @@ func validateBearerTokenWithSession(r *http.Request, secret string) (*BearerToke
 					log.Errorf("❌ Failed to generate security challenge: %v", err)
 					return nil, fmt.Errorf("security challenge generation failed")
 				}
-				
+
 				// Check if client provided challenge response
 				challengeResponse := r.Header.Get("X-Challenge-Response")
 				if challengeResponse == "" {
@@ -2077,15 +2096,15 @@ func validateBearerTokenWithSession(r *http.Request, secret string) (*BearerToke
 					setSecurityHeaders(w, 2, challenge)
 					return nil, fmt.Errorf("challenge-response required for network change")
 				}
-				
+
 				// Validate challenge response
 				if !validateSecurityChallenge(session, challengeResponse, secret) {
 					setSecurityHeaders(w, 2, challenge)
 					return nil, fmt.Errorf("invalid challenge response")
 				}
-				
+
 				log.Infof("✅ Challenge-response validated for session %s", sessionID)
-				
+
 			case 3:
 				// Full re-authentication required
 				setSecurityHeaders(w, 3, "")
@@ -2104,7 +2123,7 @@ func validateBearerTokenWithSession(r *http.Request, secret string) (*BearerToke
 				UserAgent:   userAgent,
 				EventType:   "network_switch",
 			})
-			log.Infof("🌐 Network switch detected for session %s: %s → %s", 
+			log.Infof("🌐 Network switch detected for session %s: %s → %s",
 				sessionID, session.LastIP, currentIP)
 		}
 
@@ -2138,7 +2157,7 @@ func validateBearerTokenWithSession(r *http.Request, secret string) (*BearerToke
 						// Token refresh successful
 						session.RefreshCount++
 						session.LastSeen = time.Now()
-						
+
 						// Add refresh event to history
 						session.NetworkHistory = append(session.NetworkHistory, NetworkEvent{
 							Timestamp: time.Now(),
@@ -2157,12 +2176,12 @@ func validateBearerTokenWithSession(r *http.Request, secret string) (*BearerToke
 							Expiry:   time.Now().Add(24 * time.Hour).Unix(),
 						}
 
-						log.Infof("✅ Session recovery successful: %s (refresh #%d)", 
+						log.Infof("✅ Session recovery successful: %s (refresh #%d)",
 							sessionID, session.RefreshCount)
 						return refreshedClaims, nil
 					}
 				} else {
-					log.Warnf("❌ Session %s exceeded maximum refreshes (%d)", 
+					log.Warnf("❌ Session %s exceeded maximum refreshes (%d)",
 						sessionID, session.MaxRefreshes)
 				}
 			} else {
@@ -2191,8 +2210,8 @@ func refreshSessionToken(session *NetworkResilientSession, secret string, r *htt
 	size := extractSizeFromRequest(r)
 
 	// Use session-based payload format for refresh
-	payload := fmt.Sprintf("%s\x00%s\x00%d\x00%d\x00%s\x00session_refresh", 
-		session.UserJID, 
+	payload := fmt.Sprintf("%s\x00%s\x00%d\x00%d\x00%s\x00session_refresh",
+		session.UserJID,
 		filename,
 		size,
 		expiry,
@@ -2202,7 +2221,7 @@ func refreshSessionToken(session *NetworkResilientSession, secret string, r *htt
 	h.Write([]byte(payload))
 	token := base64.StdEncoding.EncodeToString(h.Sum(nil))
 
-	log.Infof("🆕 Generated refresh token for session %s (refresh #%d)", 
+	log.Infof("🆕 Generated refresh token for session %s (refresh #%d)",
 		session.SessionID, session.RefreshCount+1)
 
 	return token, nil
@@ -2251,7 +2270,7 @@ type BearerTokenClaims struct {
 // ENHANCED FOR 100% WIFI ↔ LTE SWITCHING AND STANDBY RECOVERY RELIABILITY
 func validateHMAC(r *http.Request, secret string) error {
 	log.Debugf("🔍 validateHMAC: Validating request to %s with query: %s", r.URL.Path, r.URL.RawQuery)
-	
+
 	// Check for X-Signature header (for POST uploads)
 	signature := r.Header.Get("X-Signature")
 	if signature != "" {
@@ -2294,7 +2313,7 @@ func validateHMAC(r *http.Request, secret string) error {
 	// ENHANCED HMAC CALCULATION: Try multiple formats for maximum compatibility
 	var validMAC bool
 	var messageFormat string
-	
+
 	// Calculate HMAC based on protocol version with enhanced compatibility
 	mac := hmac.New(sha256.New, []byte(secret))
 
@@ -2305,7 +2324,7 @@ func validateHMAC(r *http.Request, secret string) error {
 		mac.Write([]byte(message1))
 		calculatedMAC1 := mac.Sum(nil)
 		calculatedMACHex1 := hex.EncodeToString(calculatedMAC1)
-		
+
 		// Decode provided MAC
 		if providedMAC, err := hex.DecodeString(providedMACHex); err == nil {
 			if hmac.Equal(calculatedMAC1, providedMAC) {
@@ -2314,14 +2333,14 @@ func validateHMAC(r *http.Request, secret string) error {
 				log.Debugf("✅ Legacy v protocol HMAC validated: %s", calculatedMACHex1)
 			}
 		}
-		
+
 		// Format 2: Try without content length for compatibility
 		if !validMAC {
 			message2 := fileStorePath
 			mac.Reset()
 			mac.Write([]byte(message2))
 			calculatedMAC2 := mac.Sum(nil)
-			
+
 			if providedMAC, err := hex.DecodeString(providedMACHex); err == nil {
 				if hmac.Equal(calculatedMAC2, providedMAC) {
 					validMAC = true
@@ -2333,14 +2352,14 @@ func validateHMAC(r *http.Request, secret string) error {
 	} else {
 		// v2 and token protocols: Enhanced format compatibility
 		contentType := GetContentType(fileStorePath)
-		
+
 		// Format 1: Standard format - fileStorePath + "\x00" + contentLength + "\x00" + contentType
 		message1 := fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10) + "\x00" + contentType
 		mac.Reset()
 		mac.Write([]byte(message1))
 		calculatedMAC1 := mac.Sum(nil)
 		calculatedMACHex1 := hex.EncodeToString(calculatedMAC1)
-		
+
 		if providedMAC, err := hex.DecodeString(providedMACHex); err == nil {
 			if hmac.Equal(calculatedMAC1, providedMAC) {
 				validMAC = true
@@ -2348,14 +2367,14 @@ func validateHMAC(r *http.Request, secret string) error {
 				log.Debugf("✅ %s protocol HMAC validated (standard): %s", protocolVersion, calculatedMACHex1)
 			}
 		}
-		
+
 		// Format 2: Without content type for compatibility
 		if !validMAC {
 			message2 := fileStorePath + "\x00" + strconv.FormatInt(r.ContentLength, 10)
 			mac.Reset()
 			mac.Write([]byte(message2))
 			calculatedMAC2 := mac.Sum(nil)
-			
+
 			if providedMAC, err := hex.DecodeString(providedMACHex); err == nil {
 				if hmac.Equal(calculatedMAC2, providedMAC) {
 					validMAC = true
@@ -2364,14 +2383,14 @@ func validateHMAC(r *http.Request, secret string) error {
 				}
 			}
 		}
-		
+
 		// Format 3: Simple path only for maximum compatibility
 		if !validMAC {
 			message3 := fileStorePath
 			mac.Reset()
 			mac.Write([]byte(message3))
 			calculatedMAC3 := mac.Sum(nil)
-			
+
 			if providedMAC, err := hex.DecodeString(providedMACHex); err == nil {
 				if hmac.Equal(calculatedMAC3, providedMAC) {
 					validMAC = true
@@ -2387,7 +2406,7 @@ func validateHMAC(r *http.Request, secret string) error {
 		return fmt.Errorf("invalid MAC for %s protocol", protocolVersion)
 	}
 
-	log.Infof("✅ %s HMAC authentication SUCCESSFUL: format=%s, path=%s", 
+	log.Infof("✅ %s HMAC authentication SUCCESSFUL: format=%s, path=%s",
 		protocolVersion, messageFormat, r.URL.Path)
 	return nil
 }
@@ -2417,11 +2436,11 @@ func validateV3HMAC(r *http.Request, secret string) error {
 
 	// ULTRA-FLEXIBLE GRACE PERIODS FOR V3 PROTOCOL NETWORK SWITCHING
 	now := time.Now().Unix()
-	
+
 	if now > expires {
 		// Base grace period: 8 hours (significantly increased for WiFi ↔ LTE reliability)
 		gracePeriod := int64(28800) // 8 hours base grace period
-		
+
 		// Enhanced mobile XMPP client detection
 		userAgent := r.Header.Get("User-Agent")
 		isMobileXMPP := strings.Contains(strings.ToLower(userAgent), "gajim") ||
@@ -2432,12 +2451,12 @@ func validateV3HMAC(r *http.Request, secret string) error {
 			strings.Contains(strings.ToLower(userAgent), "xmpp") ||
 			strings.Contains(strings.ToLower(userAgent), "client") ||
 			strings.Contains(strings.ToLower(userAgent), "bot")
-			
+
 		if isMobileXMPP {
 			gracePeriod = int64(43200) // 12 hours for mobile XMPP clients
 			log.Infof("📱 V3: Mobile XMPP client detected (%s), using 12-hour grace period", userAgent)
 		}
-		
+
 		// Network resilience parameters for V3 protocol
 		sessionId := query.Get("session_id")
 		networkResilience := query.Get("network_resilience")
@@ -2446,19 +2465,19 @@ func validateV3HMAC(r *http.Request, secret string) error {
 			gracePeriod = int64(86400) // 24 hours for network resilience scenarios
 			log.Infof("🌐 V3: Network resilience mode detected, using 24-hour grace period")
 		}
-		
+
 		// Detect network switching indicators
 		clientIP := getClientIP(r)
 		xForwardedFor := r.Header.Get("X-Forwarded-For")
 		xRealIP := r.Header.Get("X-Real-IP")
-		
+
 		if xForwardedFor != "" || xRealIP != "" {
 			// Client behind proxy/NAT - likely mobile network switching
 			gracePeriod = int64(86400) // 24 hours for proxy/NAT scenarios
-			log.Infof("🔄 V3: Network switching detected (IP: %s, X-Forwarded-For: %s), using 24-hour grace period", 
+			log.Infof("🔄 V3: Network switching detected (IP: %s, X-Forwarded-For: %s), using 24-hour grace period",
 				clientIP, xForwardedFor)
 		}
-		
+
 		// Large file uploads get additional grace time
 		if contentLengthStr := r.Header.Get("Content-Length"); contentLengthStr != "" {
 			if contentLength, parseErr := strconv.ParseInt(contentLengthStr, 10, 64); parseErr == nil {
@@ -2466,33 +2485,33 @@ func validateV3HMAC(r *http.Request, secret string) error {
 				if contentLength > 10*1024*1024 {
 					additionalTime := (contentLength / (10 * 1024 * 1024)) * 3600 // 1 hour per 10MB
 					gracePeriod += additionalTime
-					log.Infof("📁 V3: Large file (%d bytes), extending grace period by %d seconds", 
+					log.Infof("📁 V3: Large file (%d bytes), extending grace period by %d seconds",
 						contentLength, additionalTime)
 				}
 			}
 		}
-		
+
 		// Maximum grace period cap: 48 hours
 		maxGracePeriod := int64(172800) // 48 hours absolute maximum
 		if gracePeriod > maxGracePeriod {
 			gracePeriod = maxGracePeriod
 			log.Infof("⚠️  V3: Grace period capped at 48 hours maximum")
 		}
-		
+
 		// STANDBY RECOVERY: Handle device standby scenarios
 		expiredTime := now - expires
 		standbyGraceExtension := int64(86400) // Additional 24 hours for standby
-		isLikelyStandbyRecovery := expiredTime > gracePeriod && expiredTime < (gracePeriod + standbyGraceExtension)
-		
+		isLikelyStandbyRecovery := expiredTime > gracePeriod && expiredTime < (gracePeriod+standbyGraceExtension)
+
 		if expiredTime > gracePeriod && !isLikelyStandbyRecovery {
 			// Ultra-generous final check for mobile scenarios
 			ultraMaxGrace := int64(259200) // 72 hours ultra-maximum for critical scenarios
 			if isMobileXMPP && expiredTime < ultraMaxGrace {
 				log.Warnf("⚡ V3 ULTRA-GRACE: Mobile client token expired %d seconds ago, allowing within 72-hour window", expiredTime)
 			} else {
-				log.Warnf("❌ V3 signature expired beyond all grace periods: now=%d, expires=%d, expired_for=%d seconds, grace_period=%d, user_agent=%s", 
+				log.Warnf("❌ V3 signature expired beyond all grace periods: now=%d, expires=%d, expired_for=%d seconds, grace_period=%d, user_agent=%s",
 					now, expires, expiredTime, gracePeriod, userAgent)
-				return fmt.Errorf("signature has expired beyond grace period (expired %d seconds ago, grace period: %d seconds)", 
+				return fmt.Errorf("signature has expired beyond grace period (expired %d seconds ago, grace period: %d seconds)",
 					expiredTime, gracePeriod)
 			}
 		} else if isLikelyStandbyRecovery {
@@ -2507,18 +2526,18 @@ func validateV3HMAC(r *http.Request, secret string) error {
 	// ENHANCED MESSAGE CONSTRUCTION: Try multiple formats for compatibility
 	var validSignature bool
 	var messageFormat string
-	
+
 	// Format 1: Standard v3 format
 	message1 := fmt.Sprintf("%s\n%s\n%s", r.Method, expiresStr, r.URL.Path)
 	h1 := hmac.New(sha256.New, []byte(secret))
 	h1.Write([]byte(message1))
 	expectedSignature1 := hex.EncodeToString(h1.Sum(nil))
-	
+
 	if hmac.Equal([]byte(signature), []byte(expectedSignature1)) {
 		validSignature = true
 		messageFormat = "standard_v3"
 	}
-	
+
 	// Format 2: Alternative format with query string
 	if !validSignature {
 		pathWithQuery := r.URL.Path
@@ -2529,32 +2548,32 @@ func validateV3HMAC(r *http.Request, secret string) error {
 		h2 := hmac.New(sha256.New, []byte(secret))
 		h2.Write([]byte(message2))
 		expectedSignature2 := hex.EncodeToString(h2.Sum(nil))
-		
+
 		if hmac.Equal([]byte(signature), []byte(expectedSignature2)) {
 			validSignature = true
 			messageFormat = "with_query"
 		}
 	}
-	
+
 	// Format 3: Simplified format (fallback)
 	if !validSignature {
 		message3 := fmt.Sprintf("%s\n%s", r.Method, r.URL.Path)
 		h3 := hmac.New(sha256.New, []byte(secret))
 		h3.Write([]byte(message3))
 		expectedSignature3 := hex.EncodeToString(h3.Sum(nil))
-		
+
 		if hmac.Equal([]byte(signature), []byte(expectedSignature3)) {
 			validSignature = true
 			messageFormat = "simplified"
 		}
 	}
-	
+
 	if !validSignature {
 		log.Warnf("❌ Invalid V3 HMAC signature (tried all 3 formats)")
 		return errors.New("invalid v3 HMAC signature")
 	}
 
-	log.Infof("✅ V3 HMAC authentication SUCCESSFUL: format=%s, method=%s, path=%s", 
+	log.Infof("✅ V3 HMAC authentication SUCCESSFUL: format=%s, method=%s, path=%s",
 		messageFormat, r.Method, r.URL.Path)
 	return nil
 }
@@ -2563,7 +2582,7 @@ func validateV3HMAC(r *http.Request, secret string) error {
 func copyWithProgressTracking(dst io.Writer, src io.Reader, buf []byte, totalSize int64, clientIP string) (int64, error) {
 	var written int64
 	lastLogTime := time.Now()
-	
+
 	for {
 		n, err := src.Read(buf)
 		if n > 0 {
@@ -2572,12 +2591,12 @@ func copyWithProgressTracking(dst io.Writer, src io.Reader, buf []byte, totalSiz
 			if werr != nil {
 				return written, werr
 			}
-			
+
 			// Log progress for large files every 10MB or 30 seconds
-			if totalSize > 50*1024*1024 && 
+			if totalSize > 50*1024*1024 &&
 				(written%10*1024*1024 == 0 || time.Since(lastLogTime) > 30*time.Second) {
 				progress := float64(written) / float64(totalSize) * 100
-				log.Infof("📥 Download progress: %.1f%% (%s/%s) for IP %s", 
+				log.Infof("📥 Download progress: %.1f%% (%s/%s) for IP %s",
 					progress, formatBytes(written), formatBytes(totalSize), clientIP)
 				lastLogTime = time.Now()
 			}
@@ -2589,7 +2608,7 @@ func copyWithProgressTracking(dst io.Writer, src io.Reader, buf []byte, totalSiz
 			return written, err
 		}
 	}
-	
+
 	return written, nil
 }
 
@@ -2606,11 +2625,11 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		// Generate session ID for multi-upload tracking
 		sessionID = generateUploadSessionID("upload", r.Header.Get("User-Agent"), getClientIP(r))
 	}
-	
+
 	// Set session headers for client continuation
 	w.Header().Set("X-Session-ID", sessionID)
 	w.Header().Set("X-Upload-Session-Timeout", "3600") // 1 hour
-	
+
 	// Only allow POST method
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -2621,22 +2640,22 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	// ENHANCED AUTHENTICATION with network switching support
 	var bearerClaims *BearerTokenClaims
 	authHeader := r.Header.Get("Authorization")
-	
+
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		// Bearer token authentication with session recovery for network switching
 		// Store response writer in context for session headers
 		ctx := context.WithValue(r.Context(), responseWriterKey, w)
 		r = r.WithContext(ctx)
-		
+
 		claims, err := validateBearerTokenWithSession(r, conf.Security.Secret)
 		if err != nil {
 			// Enhanced error logging for network switching scenarios
 			clientIP := getClientIP(r)
 			userAgent := r.Header.Get("User-Agent")
 			sessionID := getSessionIDFromRequest(r)
-			log.Warnf("🔴 Authentication failed for IP %s, User-Agent: %s, Session: %s, Error: %v", 
+			log.Warnf("🔴 Authentication failed for IP %s, User-Agent: %s, Session: %s, Error: %v",
 				clientIP, userAgent, sessionID, err)
-			
+
 			// Check if this might be a network switching scenario and provide helpful response
 			if strings.Contains(err.Error(), "expired") || strings.Contains(err.Error(), "invalid") {
 				w.Header().Set("X-Network-Switch-Detected", "true")
@@ -2646,15 +2665,17 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("X-Session-ID", sessionID)
 				}
 			}
-			
+
+			AuditAuthFailure(r, "bearer_token", err.Error())
 			http.Error(w, fmt.Sprintf("Bearer Token Authentication failed: %v", err), http.StatusUnauthorized)
 			uploadErrorsTotal.Inc()
 			return
 		}
+		AuditAuthSuccess(r, claims.User, "bearer_token")
 		bearerClaims = claims
-		log.Infof("✅ Bearer token authentication successful: user=%s, file=%s, IP=%s", 
+		log.Infof("✅ Bearer token authentication successful: user=%s, file=%s, IP=%s",
 			claims.User, claims.Filename, getClientIP(r))
-		
+
 		// Add comprehensive response headers for audit logging and client tracking
 		w.Header().Set("X-Authenticated-User", claims.User)
 		w.Header().Set("X-Auth-Method", "Bearer-Token")
@@ -2665,10 +2686,12 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		_, err := validateJWTFromRequest(r, conf.Security.JWTSecret)
 		if err != nil {
 			log.Warnf("🔴 JWT Authentication failed for IP %s: %v", getClientIP(r), err)
+			AuditAuthFailure(r, "jwt", err.Error())
 			http.Error(w, fmt.Sprintf("JWT Authentication failed: %v", err), http.StatusUnauthorized)
 			uploadErrorsTotal.Inc()
 			return
 		}
+		AuditAuthSuccess(r, "", "jwt")
 		log.Infof("✅ JWT authentication successful for upload request: %s", r.URL.Path)
 		w.Header().Set("X-Auth-Method", "JWT")
 	} else {
@@ -2676,10 +2699,12 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		err := validateHMAC(r, conf.Security.Secret)
 		if err != nil {
 			log.Warnf("🔴 HMAC Authentication failed for IP %s: %v", getClientIP(r), err)
+			AuditAuthFailure(r, "hmac", err.Error())
 			http.Error(w, fmt.Sprintf("HMAC Authentication failed: %v", err), http.StatusUnauthorized)
 			uploadErrorsTotal.Inc()
 			return
 		}
+		AuditAuthSuccess(r, "", "hmac")
 		log.Infof("✅ HMAC authentication successful for upload request: %s", r.URL.Path)
 		w.Header().Set("X-Auth-Method", "HMAC")
 	}
@@ -2699,30 +2724,30 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			// Generate new session ID with enhanced entropy
 			sessionID = generateSessionID("", "")
 		}
-		
+
 		clientIP := getClientIP(r)
-		
+
 		// Detect potential network switching
 		xForwardedFor := r.Header.Get("X-Forwarded-For")
 		xRealIP := r.Header.Get("X-Real-IP")
 		networkSwitchIndicators := xForwardedFor != "" || xRealIP != ""
-		
+
 		if networkSwitchIndicators {
-			log.Infof("🔄 Network switching indicators detected: session=%s, client_ip=%s, x_forwarded_for=%s, x_real_ip=%s", 
+			log.Infof("🔄 Network switching indicators detected: session=%s, client_ip=%s, x_forwarded_for=%s, x_real_ip=%s",
 				sessionID, clientIP, xForwardedFor, xRealIP)
 			w.Header().Set("X-Network-Switch-Detected", "true")
 		}
-		
+
 		clientSession = clientTracker.TrackClientSession(sessionID, clientIP, r)
-		
+
 		// Enhanced session response headers for client coordination
 		w.Header().Set("X-Upload-Session-ID", sessionID)
 		w.Header().Set("X-Session-IP-Count", fmt.Sprintf("%d", len(clientSession.ClientIPs)))
 		w.Header().Set("X-Connection-Type", clientSession.ConnectionType)
-		
-		log.Infof("🔗 Client session tracking: %s from IP %s (connection: %s, total_ips: %d)", 
+
+		log.Infof("🔗 Client session tracking: %s from IP %s (connection: %s, total_ips: %d)",
 			sessionID, clientIP, clientSession.ConnectionType, len(clientSession.ClientIPs))
-		
+
 		// Add user context for Bearer token authentication
 		if bearerClaims != nil {
 			log.Infof("👤 Session associated with XMPP user: %s", bearerClaims.User)
@@ -2749,6 +2774,57 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	// Get user JID for quota and audit tracking
+	var userJID string
+	if bearerClaims != nil {
+		userJID = bearerClaims.User
+	}
+	r.Header.Set("X-User-JID", userJID)
+	r.Header.Set("X-File-Name", header.Filename)
+
+	// Check quota before upload
+	if qm := GetQuotaManager(); qm != nil && qm.config.Enabled && userJID != "" {
+		canUpload, _ := qm.CanUpload(r.Context(), userJID, header.Size)
+		if !canUpload {
+			used, limit, _ := qm.GetUsage(r.Context(), userJID)
+			AuditQuotaExceeded(r, userJID, used, limit, header.Size)
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("X-Quota-Used", fmt.Sprintf("%d", used))
+			w.Header().Set("X-Quota-Limit", fmt.Sprintf("%d", limit))
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":     "quota_exceeded",
+				"message":   "Storage quota exceeded",
+				"used":      used,
+				"limit":     limit,
+				"requested": header.Size,
+			})
+			uploadErrorsTotal.Inc()
+			return
+		}
+	}
+
+	// Content type validation using magic bytes
+	var fileReader io.Reader = file
+	declaredContentType := header.Header.Get("Content-Type")
+	detectedContentType := declaredContentType
+
+	if validator := GetContentValidator(); validator != nil && validator.config.CheckMagicBytes {
+		validatedReader, detected, validErr := validator.ValidateContent(file, declaredContentType, header.Size)
+		if validErr != nil {
+			if valErr, ok := validErr.(*ValidationError); ok {
+				AuditValidationFailure(r, userJID, header.Filename, declaredContentType, detected, valErr.Code)
+				WriteValidationError(w, valErr)
+			} else {
+				http.Error(w, validErr.Error(), http.StatusUnsupportedMediaType)
+			}
+			uploadErrorsTotal.Inc()
+			return
+		}
+		fileReader = validatedReader
+		detectedContentType = detected
+	}
+
 	// Validate file size against max_upload_size if configured
 	if conf.Server.MaxUploadSize != "" {
 		maxSizeBytes, err := parseSize(conf.Server.MaxUploadSize)
@@ -2759,9 +2835,9 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if header.Size > maxSizeBytes {
-			log.Warnf("⚠️  File size %s exceeds maximum allowed size %s (IP: %s)", 
+			log.Warnf("⚠️  File size %s exceeds maximum allowed size %s (IP: %s)",
 				formatBytes(header.Size), conf.Server.MaxUploadSize, getClientIP(r))
-			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s", 
+			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s",
 				formatBytes(header.Size), conf.Server.MaxUploadSize), http.StatusRequestEntityTooLarge)
 			uploadErrorsTotal.Inc()
 			return
@@ -2815,20 +2891,20 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			uploadsTotal.Inc()
 			uploadSizeBytes.Observe(float64(existingFileInfo.Size()))
 			filesDeduplicatedTotal.Inc()
-			
+
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("X-Deduplication-Hit", "true")
 			w.WriteHeader(http.StatusOK)
 			response := map[string]interface{}{
-				"success":  true,
-				"filename": filename,
-				"size":     existingFileInfo.Size(),
-				"message":  "File already exists (deduplication hit)",
+				"success":     true,
+				"filename":    filename,
+				"size":        existingFileInfo.Size(),
+				"message":     "File already exists (deduplication hit)",
 				"upload_time": duration.String(),
 			}
 			_ = json.NewEncoder(w).Encode(response)
-			
-			log.Infof("💾 Deduplication hit: file %s already exists (%s), returning success immediately (IP: %s)", 
+
+			log.Infof("💾 Deduplication hit: file %s already exists (%s), returning success immediately (IP: %s)",
 				filename, formatBytes(existingFileInfo.Size()), getClientIP(r))
 			return
 		}
@@ -2855,30 +2931,43 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		uploadCtx = networkManager.RegisterUpload(networkSessionID)
 		defer networkManager.UnregisterUpload(networkSessionID)
 		log.Infof("🌐 Registered upload with network resilience: session=%s, IP=%s", networkSessionID, getClientIP(r))
-		
+
 		// Add network resilience headers
 		w.Header().Set("X-Network-Resilience", "enabled")
 		w.Header().Set("X-Upload-Context-ID", networkSessionID)
 	}
 
 	// Copy file content with network resilience support and enhanced progress tracking
-	written, err := copyWithNetworkResilience(dst, file, uploadCtx)
+	// Use fileReader which may be wrapped with content validation
+	written, err := copyWithNetworkResilience(dst, fileReader, uploadCtx)
 	if err != nil {
 		log.Errorf("🔴 Error saving file %s (IP: %s, session: %s): %v", filename, getClientIP(r), sessionID, err)
 		http.Error(w, fmt.Sprintf("Error saving file: %v", err), http.StatusInternalServerError)
 		uploadErrorsTotal.Inc()
 		// Clean up partial file
 		os.Remove(absFilename)
+		// Audit the failure
+		AuditUploadFailure(r, userJID, header.Filename, header.Size, err.Error())
 		return
 	}
+
+	// Update quota after successful upload
+	if qm := GetQuotaManager(); qm != nil && qm.config.Enabled && userJID != "" {
+		if err := qm.RecordUpload(r.Context(), userJID, absFilename, written); err != nil {
+			log.Warnf("⚠️  Failed to update quota for user %s: %v", userJID, err)
+		}
+	}
+
+	// Audit successful upload
+	AuditUploadSuccess(r, userJID, filename, written, detectedContentType)
 
 	// ✅ CRITICAL FIX: Send immediate success response for large files (>1GB)
 	// This prevents client timeouts while server does post-processing
 	isLargeFile := header.Size > 1024*1024*1024 // 1GB threshold
-	
+
 	if isLargeFile {
 		log.Infof("🚀 Large file detected (%s), sending immediate success response", formatBytes(header.Size))
-		
+
 		// Send immediate success response to client
 		duration := time.Since(startTime)
 		uploadDuration.Observe(duration.Seconds())
@@ -2893,12 +2982,12 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
 		response := map[string]interface{}{
-			"success":  true,
-			"filename": filename,
-			"size":     written,
-			"duration": duration.String(),
-			"client_ip": getClientIP(r),
-			"timestamp": time.Now().Unix(),
+			"success":         true,
+			"filename":        filename,
+			"size":            written,
+			"duration":        duration.String(),
+			"client_ip":       getClientIP(r),
+			"timestamp":       time.Now().Unix(),
 			"post_processing": "background",
 		}
 
@@ -2921,7 +3010,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d, "post_processing": "background"}`, filename, written)
 		}
 
-		log.Infof("✅ Immediate response sent for large file %s (%s) in %s from IP %s", 
+		log.Infof("✅ Immediate response sent for large file %s (%s) in %s from IP %s",
 			filename, formatBytes(written), duration, getClientIP(r))
 
 		// Process deduplication asynchronously for large files
@@ -2936,7 +3025,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 					log.Infof("✅ Background deduplication completed for %s", filename)
 				}
 			}
-			
+
 			// Add to scan queue for virus scanning if enabled
 			if conf.ClamAV.ClamAVEnabled && len(conf.ClamAV.ScanFileExtensions) > 0 {
 				ext := strings.ToLower(filepath.Ext(header.Filename))
@@ -2958,7 +3047,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}()
-		
+
 		return
 	}
 
@@ -2987,10 +3076,10 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	response := map[string]interface{}{
-		"success":  true,
-		"filename": filename,
-		"size":     written,
-		"duration": duration.String(),
+		"success":   true,
+		"filename":  filename,
+		"size":      written,
+		"duration":  duration.String(),
 		"client_ip": getClientIP(r),
 		"timestamp": time.Now().Unix(),
 	}
@@ -3014,7 +3103,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d}`, filename, written)
 	}
 
-	log.Infof("✅ Successfully uploaded %s (%s) in %s from IP %s (session: %s)", 
+	log.Infof("✅ Successfully uploaded %s (%s) in %s from IP %s (session: %s)",
 		filename, formatBytes(written), duration, getClientIP(r), sessionID)
 }
 
@@ -3030,20 +3119,24 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 		_, err := validateJWTFromRequest(r, conf.Security.JWTSecret)
 		if err != nil {
 			log.Warnf("🔴 JWT Authentication failed for download from IP %s: %v", getClientIP(r), err)
+			AuditAuthFailure(r, "jwt", err.Error())
 			http.Error(w, fmt.Sprintf("JWT Authentication failed: %v", err), http.StatusUnauthorized)
 			downloadErrorsTotal.Inc()
 			return
 		}
+		AuditAuthSuccess(r, "", "jwt")
 		log.Infof("✅ JWT authentication successful for download request: %s", r.URL.Path)
 		w.Header().Set("X-Auth-Method", "JWT")
 	} else {
 		err := validateHMAC(r, conf.Security.Secret)
 		if err != nil {
 			log.Warnf("🔴 HMAC Authentication failed for download from IP %s: %v", getClientIP(r), err)
+			AuditAuthFailure(r, "hmac", err.Error())
 			http.Error(w, fmt.Sprintf("HMAC Authentication failed: %v", err), http.StatusUnauthorized)
 			downloadErrorsTotal.Inc()
 			return
 		}
+		AuditAuthSuccess(r, "", "hmac")
 		log.Infof("✅ HMAC authentication successful for download request: %s", r.URL.Path)
 		w.Header().Set("X-Auth-Method", "HMAC")
 	}
@@ -3060,13 +3153,13 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 	// Enhanced file path validation and construction
 	var absFilename string
 	var err error
-	
+
 	// Use storage path or ISO mount point
 	storagePath := conf.Server.StoragePath
 	if conf.ISO.Enabled {
 		storagePath = conf.ISO.MountPoint
 	}
-	
+
 	absFilename, err = sanitizeFilePath(storagePath, filename)
 	if err != nil {
 		log.Warnf("🔴 Invalid file path requested from IP %s: %s, error: %v", getClientIP(r), filename, err)
@@ -3079,12 +3172,12 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 	fileInfo, err := os.Stat(absFilename)
 	if os.IsNotExist(err) {
 		log.Warnf("🔴 File not found: %s (requested by IP %s)", absFilename, getClientIP(r))
-		
+
 		// Enhanced 404 response with network switching hints
 		w.Header().Set("X-File-Not-Found", "true")
 		w.Header().Set("X-Client-IP", getClientIP(r))
 		w.Header().Set("X-Network-Switch-Support", "enabled")
-		
+
 		// Check if this might be a network switching issue
 		userAgent := r.Header.Get("User-Agent")
 		isMobileXMPP := strings.Contains(strings.ToLower(userAgent), "conversations") ||
@@ -3093,13 +3186,13 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 			strings.Contains(strings.ToLower(userAgent), "android") ||
 			strings.Contains(strings.ToLower(userAgent), "mobile") ||
 			strings.Contains(strings.ToLower(userAgent), "xmpp")
-		
+
 		if isMobileXMPP {
 			w.Header().Set("X-Mobile-Client-Detected", "true")
 			w.Header().Set("X-Retry-Suggestion", "30") // Suggest retry after 30 seconds
 			log.Infof("📱 Mobile XMPP client file not found - may be network switching issue: %s", userAgent)
 		}
-		
+
 		http.Error(w, "File not found", http.StatusNotFound)
 		downloadErrorsTotal.Inc()
 		return
@@ -3126,13 +3219,13 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			break
 		}
-		
+
 		if attempt < maxRetries {
-			log.Warnf("⚠️  Attempt %d/%d: Error opening file %s from IP %s: %v (retrying...)", 
+			log.Warnf("⚠️  Attempt %d/%d: Error opening file %s from IP %s: %v (retrying...)",
 				attempt, maxRetries, absFilename, getClientIP(r), err)
 			time.Sleep(time.Duration(attempt) * time.Second) // Progressive backoff
 		} else {
-			log.Errorf("🔴 Failed to open file %s after %d attempts from IP %s: %v", 
+			log.Errorf("🔴 Failed to open file %s after %d attempts from IP %s: %v",
 				absFilename, maxRetries, getClientIP(r), err)
 			http.Error(w, fmt.Sprintf("Error opening file: %v", err), http.StatusInternalServerError)
 			downloadErrorsTotal.Inc()
@@ -3149,7 +3242,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Network-Switch-Support", "enabled")
 	w.Header().Set("X-File-Path", filename)
 	w.Header().Set("X-Download-Start-Time", fmt.Sprintf("%d", time.Now().Unix()))
-	
+
 	// Add cache control headers for mobile network optimization
 	userAgent := r.Header.Get("User-Agent")
 	isMobileXMPP := strings.Contains(strings.ToLower(userAgent), "conversations") ||
@@ -3158,7 +3251,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 		strings.Contains(strings.ToLower(userAgent), "android") ||
 		strings.Contains(strings.ToLower(userAgent), "mobile") ||
 		strings.Contains(strings.ToLower(userAgent), "xmpp")
-	
+
 	if isMobileXMPP {
 		w.Header().Set("X-Mobile-Client-Detected", "true")
 		w.Header().Set("Cache-Control", "public, max-age=86400") // 24 hours cache for mobile
@@ -3173,7 +3266,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 
 	// Track download progress for large files
 	if fileInfo.Size() > 10*1024*1024 { // Log progress for files > 10MB
-		log.Infof("📥 Starting download of %s (%.1f MiB) for IP %s", 
+		log.Infof("📥 Starting download of %s (%.1f MiB) for IP %s",
 			filepath.Base(absFilename), float64(fileInfo.Size())/(1024*1024), getClientIP(r))
 	}
 
@@ -3191,8 +3284,11 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 	downloadDuration.Observe(duration.Seconds())
 	downloadsTotal.Inc()
 	downloadSizeBytes.Observe(float64(n))
-	
-	log.Infof("✅ Successfully downloaded %s (%s) in %s for IP %s (session complete)", 
+
+	// Audit successful download
+	AuditDownloadSuccess(r, "", filepath.Base(absFilename), n)
+
+	log.Infof("✅ Successfully downloaded %s (%s) in %s for IP %s (session complete)",
 		filepath.Base(absFilename), formatBytes(n), duration, getClientIP(r))
 }
 
@@ -3262,7 +3358,7 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if r.ContentLength > maxSizeBytes {
-			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s", 
+			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s",
 				formatBytes(r.ContentLength), conf.Server.MaxUploadSize), http.StatusRequestEntityTooLarge)
 			uploadErrorsTotal.Inc()
 			return
@@ -3298,7 +3394,7 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 			uploadsTotal.Inc()
 			uploadSizeBytes.Observe(float64(existingFileInfo.Size()))
 			filesDeduplicatedTotal.Inc()
-			
+
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			response := map[string]interface{}{
@@ -3308,8 +3404,8 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 				"message":  "File already exists (deduplication hit)",
 			}
 			_ = json.NewEncoder(w).Encode(response)
-			
-			log.Infof("Deduplication hit: file %s already exists (%s), returning success immediately", 
+
+			log.Infof("Deduplication hit: file %s already exists (%s), returning success immediately",
 				filename, formatBytes(existingFileInfo.Size()))
 			return
 		}
@@ -3337,10 +3433,10 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 	// ✅ CRITICAL FIX: Send immediate success response for large files (>1GB)
 	// This prevents client timeouts while server does post-processing
 	isLargeFile := written > 1024*1024*1024 // 1GB threshold
-	
+
 	if isLargeFile {
 		log.Infof("🚀 Large file detected (%s), sending immediate success response (v3)", formatBytes(written))
-		
+
 		// Send immediate success response to client
 		duration := time.Since(startTime)
 		uploadDuration.Observe(duration.Seconds())
@@ -3355,11 +3451,11 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
 		response := map[string]interface{}{
-			"success":  true,
-			"filename": filename,
-			"size":     written,
-			"duration": duration.String(),
-			"protocol": "v3",
+			"success":         true,
+			"filename":        filename,
+			"size":            written,
+			"duration":        duration.String(),
+			"protocol":        "v3",
 			"post_processing": "background",
 		}
 
@@ -3370,7 +3466,7 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d, "post_processing": "background"}`, filename, written)
 		}
 
-		log.Infof("✅ Immediate response sent for large file %s (%s) in %s via v3 protocol", 
+		log.Infof("✅ Immediate response sent for large file %s (%s) in %s via v3 protocol",
 			filename, formatBytes(written), duration)
 
 		// Process deduplication asynchronously for large files
@@ -3385,7 +3481,7 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 					log.Infof("✅ Background deduplication completed for %s (v3)", filename)
 				}
 			}
-			
+
 			// Add to scan queue for virus scanning if enabled
 			if conf.ClamAV.ClamAVEnabled && len(conf.ClamAV.ScanFileExtensions) > 0 {
 				ext := strings.ToLower(filepath.Ext(originalFilename))
@@ -3407,7 +3503,7 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}()
-		
+
 		return
 	}
 
@@ -3462,7 +3558,7 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 		// Generate session ID for XMPP multi-upload tracking
 		sessionID = generateUploadSessionID("legacy", r.Header.Get("User-Agent"), getClientIP(r))
 	}
-	
+
 	// Set session headers for XMPP client continuation
 	w.Header().Set("X-Session-ID", sessionID)
 	w.Header().Set("X-Upload-Session-Timeout", "3600") // 1 hour
@@ -3531,7 +3627,7 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if r.ContentLength > maxSizeBytes {
-			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s", 
+			http.Error(w, fmt.Sprintf("File size %s exceeds maximum allowed size %s",
 				formatBytes(r.ContentLength), conf.Server.MaxUploadSize), http.StatusRequestEntityTooLarge)
 			uploadErrorsTotal.Inc()
 			return
@@ -3582,9 +3678,9 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 			uploadsTotal.Inc()
 			uploadSizeBytes.Observe(float64(existingFileInfo.Size()))
 			filesDeduplicatedTotal.Inc()
-			
+
 			w.WriteHeader(http.StatusCreated) // 201 Created for legacy compatibility
-			log.Infof("Deduplication hit: file %s already exists (%s), returning success immediately", 
+			log.Infof("Deduplication hit: file %s already exists (%s), returning success immediately",
 				filename, formatBytes(existingFileInfo.Size()))
 			return
 		}
@@ -3617,10 +3713,10 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 	// ✅ CRITICAL FIX: Send immediate success response for large files (>1GB)
 	// This prevents client timeouts while server does post-processing
 	isLargeFile := written > 1024*1024*1024 // 1GB threshold
-	
+
 	if isLargeFile {
 		log.Infof("🚀 Large file detected (%s), sending immediate success response (legacy)", formatBytes(written))
-		
+
 		// Send immediate success response to client
 		duration := time.Since(startTime)
 		uploadDuration.Observe(duration.Seconds())
@@ -3634,7 +3730,7 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Post-Processing", "background")
 		w.WriteHeader(http.StatusCreated)
 
-		log.Infof("✅ Immediate response sent for large file %s (%s) in %s via legacy protocol", 
+		log.Infof("✅ Immediate response sent for large file %s (%s) in %s via legacy protocol",
 			filename, formatBytes(written), duration)
 
 		// Process deduplication asynchronously for large files
@@ -3649,7 +3745,7 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 					log.Infof("✅ Background deduplication completed for %s (legacy)", filename)
 				}
 			}
-			
+
 			// Add to scan queue for virus scanning if enabled
 			if conf.ClamAV.ClamAVEnabled && len(conf.ClamAV.ScanFileExtensions) > 0 {
 				ext := strings.ToLower(filepath.Ext(fileStorePath))
@@ -3671,7 +3767,7 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}()
-		
+
 		return
 	}
 

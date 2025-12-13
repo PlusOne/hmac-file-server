@@ -1,0 +1,162 @@
+# HMAC File Server 3.3.0 "Nexus Infinitum" Configuration
+# Enhanced Features Template: Audit Logging, Content Validation, Quotas, Admin API
+# Generated on: January 2025
+
+[server]
+listen_address = "8080"
+storage_path = "/opt/hmac-file-server/data/uploads"
+metrics_enabled = true
+metrics_port = "9090"
+pid_file = "/opt/hmac-file-server/data/hmac-file-server.pid"
+max_upload_size = "10GB"
+deduplication_enabled = true
+min_free_bytes = "1GB"
+file_naming = "original"
+enable_dynamic_workers = true
+
+[security]
+secret = "CHANGE-THIS-SECRET-KEY-MINIMUM-32-CHARACTERS"
+enablejwt = false
+
+[uploads]
+allowedextensions = [".txt", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".zip", ".tar", ".gz", ".7z", ".mp4", ".webm", ".ogg", ".mp3", ".wav", ".flac", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp"]
+maxfilesize = "100MB"
+chunkeduploadsenabled = true
+chunksize = "10MB"
+networkevents = true
+
+[downloads]
+chunkeddownloadsenabled = true
+chunksize = "10MB"
+
+[logging]
+level = "INFO"
+file = "/opt/hmac-file-server/data/logs/hmac-file-server.log"
+max_size = 100
+max_backups = 3
+max_age = 30
+compress = true
+
+[workers]
+numworkers = 10
+uploadqueuesize = 1000
+autoscaling = true
+
+[timeouts]
+readtimeout = "30s"
+writetimeout = "30s"
+idletimeout = "120s"
+shutdown = "30s"
+
+[clamav]
+enabled = false
+
+[redis]
+enabled = true
+address = "127.0.0.1:6379"
+db = 0
+
+# ============================================
+# NEW ENHANCED FEATURES (v3.3.0)
+# ============================================
+
+# Security Audit Logging
+# Records security-relevant events for compliance and forensics
+[audit]
+enabled = true
+output = "file"                         # "file" or "stdout"
+path = "/var/log/hmac-audit.log"       # Log file path (when output = "file")
+format = "json"                         # "json" or "text"
+max_size = 100                          # Max size in MB before rotation
+max_age = 30                            # Max age in days
+events = [
+    "upload",                           # Log all file uploads
+    "download",                         # Log all file downloads
+    "delete",                           # Log file deletions
+    "auth_success",                     # Log successful authentications
+    "auth_failure",                     # Log failed authentications
+    "rate_limited",                     # Log rate limiting events
+    "banned",                           # Log ban events
+    "quota_exceeded",                   # Log quota exceeded events
+    "validation_failure"                # Log content validation failures
+]
+
+# Magic Bytes Content Validation
+# Validates uploaded file content types using magic bytes detection
+[validation]
+check_magic_bytes = true               # Enable magic bytes validation
+strict_mode = false                    # Strict mode rejects mismatched types
+max_peek_size = 65536                  # Bytes to read for detection (64KB)
+
+# Allowed content types (supports wildcards like "image/*")
+# If empty, all types are allowed (except blocked)
+allowed_types = [
+    "image/*",                          # All image types
+    "video/*",                          # All video types
+    "audio/*",                          # All audio types
+    "text/plain",                       # Plain text
+    "application/pdf",                  # PDF documents
+    "application/zip",                  # ZIP archives
+    "application/gzip",                 # GZIP archives
+    "application/x-tar",                # TAR archives
+    "application/x-7z-compressed",      # 7-Zip archives
+    "application/vnd.openxmlformats-officedocument.*",  # MS Office docs
+    "application/vnd.oasis.opendocument.*"              # LibreOffice docs
+]
+
+# Blocked content types (takes precedence over allowed)
+blocked_types = [
+    "application/x-executable",         # Executable files
+    "application/x-msdos-program",      # DOS executables
+    "application/x-msdownload",         # Windows executables
+    "application/x-elf",                # ELF binaries
+    "application/x-shellscript",        # Shell scripts
+    "application/javascript",           # JavaScript files
+    "text/html",                        # HTML files (potential XSS)
+    "application/x-php"                 # PHP files
+]
+
+# Per-User Storage Quotas
+# Track and enforce storage limits per XMPP JID
+[quotas]
+enabled = true                         # Enable quota enforcement
+default = "100MB"                      # Default quota for all users
+tracking = "redis"                     # "redis" or "memory"
+
+# Custom quotas per user (JID -> quota)
+[quotas.custom]
+"admin@example.com" = "10GB"           # Admin gets 10GB
+"premium@example.com" = "1GB"          # Premium user gets 1GB
+"vip@example.com" = "5GB"              # VIP user gets 5GB
+
+# Admin API for Operations and Monitoring
+# Protected endpoints for system management
+[admin]
+enabled = true                         # Enable admin API
+path_prefix = "/admin"                 # URL prefix for admin endpoints
+
+# Available endpoints (when enabled):
+# GET  /admin/stats         - Server statistics and metrics
+# GET  /admin/files         - List all uploaded files
+# GET  /admin/files/:id     - Get file details
+# DEL  /admin/files/:id     - Delete a file
+# GET  /admin/users         - List users and quota usage
+# GET  /admin/users/:jid    - Get user details and quota
+# POST /admin/users/:jid/quota - Set user quota
+# GET  /admin/bans          - List banned IPs/users
+# POST /admin/bans          - Ban an IP or user
+# DEL  /admin/bans/:id      - Unban
+
+# Admin authentication
+[admin.auth]
+type = "bearer"                        # "bearer" or "basic"
+token = "${ADMIN_TOKEN}"               # Bearer token (from environment variable)
+# For basic auth:
+# type = "basic"
+# username = "admin"
+# password_hash = "$2a$12$..."         # bcrypt hash
+
+# Rate limiting for admin endpoints
+[admin.rate_limit]
+enabled = true
+requests_per_minute = 60               # Max requests per minute per IP
