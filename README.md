@@ -1,6 +1,6 @@
 # HMAC File Server
 
-[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](https://git.uuxo.net/UUXO/hmac-file-server/)
+[![Version](https://img.shields.io/badge/version-3.3.0_Nexus_Infinitum-blue.svg)](https://git.uuxo.net/UUXO/hmac-file-server/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://golang.org/)
 
@@ -189,7 +189,3 @@ Apache License 2.0 - See [LICENSE](LICENSE) for details.
 - Primary Repository: https://git.uuxo.net/UUXO/hmac-file-server
 - GitHub Mirror: https://github.com/PlusOne/hmac-file-server
 - Documentation: [WIKI.md](WIKI.md)
-# CI trigger 1765622858
-# CI trigger 1765622864
-<- Fixes ARM64 build failures in CI/CD CI trigger 1765623134 -->
-<- Fixes ARM64 build failures in CI/CD CI 1765623179 -->
