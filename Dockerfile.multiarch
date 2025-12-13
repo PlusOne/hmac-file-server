@@ -27,14 +27,18 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     -o hmac-file-server ./cmd/server/
 
 # Production stage - Multi-arch Alpine
-FROM --platform=$TARGETPLATFORM alpine:latest
+# Using pinned version 3.19 which has better QEMU compatibility
+FROM alpine:3.19
+
+# Build arguments for runtime stage
+ARG TARGETARCH
 
 # Install runtime dependencies
-RUN apk add --no-cache \
-    ca-certificates \
-    tzdata \
-    curl \
-    shadow
+# Split into separate commands for better QEMU compatibility
+RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache tzdata
+RUN apk add --no-cache curl
+RUN apk add --no-cache shadow
 
 # Create non-root user for security
 RUN adduser -D -s /bin/sh -u 1011 appuser
