@@ -199,15 +199,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, lint]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MIRROR_ENABLED != 'false'
+    container:
+      image: debian:bookworm-slim
+      volumes:
+        - /root/.ssh:/root/.ssh:ro
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Install git
+        run: apt-get update && apt-get install -y --no-install-recommends git openssh-client ca-certificates && rm -rf /var/lib/apt/lists/*
 
-      - name: Push to GitHub
+      - name: Clone and mirror
+        env:
+          GIT_SSH_COMMAND: "ssh -i /root/.ssh/id_ed25519 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
         run: |
-          echo "Step is running!"
-          echo "Listing remotes..."
-          git remote -v
-          echo "Done listing remotes"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git clone --mirror ${{ env.GITEA_URL }}/${GITHUB_REPOSITORY}.git repo.git
+          cd repo.git
+          git remote add github git@github.com:PlusOne/hmac-file-server.git
+          git push --mirror github || git push --force --all github && git push --force --tags github
