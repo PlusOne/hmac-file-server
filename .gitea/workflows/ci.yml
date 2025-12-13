@@ -200,10 +200,10 @@ jobs:
     needs: [test, lint]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MIRROR_ENABLED != 'false'
     container:
-      image: alpine:latest
+      image: debian:bookworm-slim
     steps:
       - name: Install git
-        run: apk add --no-cache git openssh-client
+        run: apt-get update && apt-get install -y --no-install-recommends git openssh-client ca-certificates && rm -rf /var/lib/apt/lists/*
 
       - name: Setup SSH key
         run: |
