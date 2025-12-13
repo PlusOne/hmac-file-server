@@ -201,6 +201,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MIRROR_ENABLED != 'false'
     container:
       image: debian:bookworm-slim
+      volumes:
+        - /root/.ssh:/root/.ssh:ro
     steps:
       - name: Install git
         run: apt-get update && apt-get install -y --no-install-recommends git openssh-client ca-certificates && rm -rf /var/lib/apt/lists/*
@@ -208,7 +210,7 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.GITHUB_MIRROR_SSH_KEY }}" > ~/.ssh/id_ed25519
+          cp /root/.ssh/id_ed25519 ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
 
