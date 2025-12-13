@@ -206,20 +206,16 @@ jobs:
           fetch-depth: 0
 
       - name: Push to GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUBMIRRORTOKEN }}
         run: |
-          echo "Checking if token is set..."
-          if [ -z "${{ secrets.GITHUBMIRRORTOKEN }}" ]; then
+          echo "Starting mirror..."
+          if [ -z "${GITHUB_TOKEN}" ]; then
             echo "ERROR: GITHUBMIRRORTOKEN secret is empty!"
             exit 1
           fi
-          echo "Token is set, length: ${#GITHUB_TOKEN}"
-          git remote -v
-          git remote add github https://x-access-token:${{ secrets.GITHUBMIRRORTOKEN }}@github.com/PlusOne/hmac-file-server.git
-          git remote -v
-          echo "Pushing branches..."
+          echo "Token length: ${#GITHUB_TOKEN}"
+          git remote add github "https://x-access-token:${GITHUB_TOKEN}@github.com/PlusOne/hmac-file-server.git"
           git push --force --all github
-          echo "Pushing tags..."
           git push --force --tags github
           echo "Mirror complete!"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUBMIRRORTOKEN }}
