@@ -207,6 +207,6 @@ jobs:
 
       - name: Push to GitHub
         run: |
-          git remote add github https://x-access-token:${{ secrets.GITHUB_MIRROR_TOKEN }}@github.com/PlusOne/hmac-file-server.git
+          git remote add github https://x-access-token:${{ secrets.GITHUBMIRRORTOKEN }}@github.com/PlusOne/hmac-file-server.git
           git push --force --all github
           git push --force --tags github
