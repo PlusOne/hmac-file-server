@@ -691,7 +691,6 @@ func setupRouter() *http.ServeMux {
 
 			// Handle OPTIONS preflight for all endpoints
 			if r.Method == http.MethodOptions {
-				log.Infof("🔍 CORS DEBUG: OPTIONS preflight for %s from origin %s", r.URL.Path, r.Header.Get("Origin"))
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -714,7 +713,6 @@ func setupRouter() *http.ServeMux {
 	// Catch-all handler for all upload protocols (v, v2, token, v3)
 	// This must be added last as it matches all paths
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Infof("🔍 ROUTER DEBUG: Catch-all handler called - method:%s path:%s query:%s", r.Method, r.URL.Path, r.URL.RawQuery)
 
 		// Enhanced CORS headers for all responses - Multi-upload compatible
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -726,7 +724,6 @@ func setupRouter() *http.ServeMux {
 
 		// Handle CORS preflight requests (fix for Gajim "bad gateway" error)
 		if r.Method == http.MethodOptions {
-			log.Infof("🔍 ROUTER DEBUG: Handling CORS preflight (OPTIONS) request for %s", r.URL.Path)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -735,25 +732,19 @@ func setupRouter() *http.ServeMux {
 		if r.Method == http.MethodPut {
 			query := r.URL.Query()
 
-			log.Infof("🔍 ROUTER DEBUG: Query parameters - v:%s v2:%s v3:%s token:%s expires:%s",
-				query.Get("v"), query.Get("v2"), query.Get("v3"), query.Get("token"), query.Get("expires"))
-
 			// Check if this is a v3 request (mod_http_upload_external)
 			if query.Get("v3") != "" && query.Get("expires") != "" {
-				log.Info("🔍 ROUTER DEBUG: Routing to handleV3Upload")
 				handleV3Upload(w, r)
 				return
 			}
 
 			// Check if this is a legacy protocol request (v, v2, token)
 			if query.Get("v") != "" || query.Get("v2") != "" || query.Get("token") != "" {
-				log.Info("🔍 ROUTER DEBUG: Routing to handleLegacyUpload")
 				handleLegacyUpload(w, r)
 				return
 			}
 
 			// Handle regular PUT uploads (non-XMPP) - route to general upload handler
-			log.Info("🔍 ROUTER DEBUG: PUT request with no protocol parameters - routing to handlePutUpload")
 			handlePutUpload(w, r)
 			return
 		}
