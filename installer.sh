@@ -509,7 +509,7 @@ build_server() {
     
     # Build the server
     cd "$(dirname "$0")"
-    go build -o "$INSTALL_DIR/hmac-file-server" cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go cmd/server/network_resilience.go cmd/server/upload_session.go cmd/server/chunked_upload_handler.go
+    go build -o "$INSTALL_DIR/hmac-file-server" ./cmd/server/
     
     # Set ownership and permissions
     chown "$HMAC_USER:$HMAC_USER" "$INSTALL_DIR/hmac-file-server"
@@ -778,7 +778,7 @@ COPY . .
 
 RUN apk add --no-cache git ca-certificates tzdata && \\
     go mod download && \\
-    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o hmac-file-server cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go cmd/server/network_resilience.go cmd/server/upload_session.go cmd/server/chunked_upload_handler.go
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o hmac-file-server ./cmd/server/
 
 FROM alpine:latest
 

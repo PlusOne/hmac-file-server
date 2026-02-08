@@ -113,7 +113,7 @@ if [ -f "../hmac-file-server-ejabberd" ]; then
     fi
 else
     print_info "HMAC File Server binary not found, checking source"
-    if grep -q "validateBearerToken" ../server/*.go 2>/dev/null; then
+    if grep -rq "validateBearerToken" ../cmd/server/*.go 2>/dev/null; then
         print_success "Bearer token support found in source code"
     else
         print_fail "Bearer token support not implemented"

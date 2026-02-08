@@ -35,8 +35,8 @@ PACKAGE_NAME="hmac-file-server"
 VERSION="3.3.0"
 MAINTAINER="Alex Renz <renz@uuxo.net>"
 
-# Source files for compilation
-SOURCE_FILES="cmd/server/main.go cmd/server/helpers.go cmd/server/config_validator.go cmd/server/config_test_scenarios.go"
+# Source package for compilation
+SOURCE_PKG="./cmd/server/"
 
 print_status "Starting Debian package build for HMAC File Server v$VERSION"
 print_info "Building packages for: AMD64, ARM64"
@@ -76,7 +76,7 @@ for ARCH in amd64 arm64; do
     export CGO_ENABLED=0
     
     # Build hmac-file-server
-    if go build -ldflags="-w -s" -o $BUILD_DIR/$ARCH/hmac-file-server $SOURCE_FILES; then
+    if go build -ldflags="-w -s" -o $BUILD_DIR/$ARCH/hmac-file-server $SOURCE_PKG; then
         SIZE=$(stat -c%s "$BUILD_DIR/$ARCH/hmac-file-server" | awk '{printf "%.1fMB", $1/1024/1024}')
         print_info "   $ARCH binary built successfully ($SIZE)"
     else
@@ -344,11 +344,9 @@ chmod 0755 $DEB_DIR/DEBIAN/postrm
 
 # Prepare documentation
 print_info "Including documentation..."
-cp README.MD $DEB_DIR/usr/share/doc/hmac-file-server/
-cp INSTALL.MD $DEB_DIR/usr/share/doc/hmac-file-server/
-cp WIKI.MD $DEB_DIR/usr/share/doc/hmac-file-server/
-cp CHANGELOG.MD $DEB_DIR/usr/share/doc/hmac-file-server/
-cp config-example-xmpp.toml $DEB_DIR/usr/share/doc/hmac-file-server/
+cp README.md $DEB_DIR/usr/share/doc/hmac-file-server/ 2>/dev/null || true
+cp WIKI.md $DEB_DIR/usr/share/doc/hmac-file-server/ 2>/dev/null || true
+cp LICENSE $DEB_DIR/usr/share/doc/hmac-file-server/ 2>/dev/null || true
 
 # Create .deb packages
 print_status "Building Debian packages..."

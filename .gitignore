@@ -210,3 +210,4 @@ builds/
 # Runtime directories
 dedup_store/
 uploads/
+server

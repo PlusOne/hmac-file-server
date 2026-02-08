@@ -1453,7 +1453,7 @@ server {
 }
 ```
 
-**4. Multi-Upload Session Management** (`cmd/server/main.go`):
+**4. Multi-Upload Session Management** (`cmd/server/session_auth.go`):
 - Session ID generation for connection persistence
 - Enhanced error handling for large file scenarios
 - Connection tracking across multiple uploads
@@ -1485,7 +1485,7 @@ Use the provided test script to verify the fix:
 
 **Files Modified**:
 - `cmd/server/helpers.go` - Enhanced CORS with multi-upload headers
-- `cmd/server/main.go` - Session management for multi-upload tracking  
+- `cmd/server/session_auth.go` - Session management for multi-upload tracking
 - `/etc/nginx/conf.d/your-site.conf` - Nginx proxy optimization
 - `config.toml` - Extended timeouts for large file handling
 
