@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	defaultThumbWidth  = 320
-	defaultThumbHeight = 240
+	defaultThumbWidth   = 320
+	defaultThumbHeight  = 240
 	defaultThumbQuality = 75
-	thumbSuffix        = ".thumb.jpg"
+	thumbSuffix         = ".thumb.jpg"
 )
 
 var (

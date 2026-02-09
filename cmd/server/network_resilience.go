@@ -317,7 +317,7 @@ func (m *NetworkResilienceManager) ResumeAllUploads() {
 	defer m.mutex.Unlock()
 	
 	m.isPaused = false
-	log.Info("Resuming all paused uploads")
+	log.Debug("Resuming all paused uploads")
 	
 	for _, ctx := range m.activeUploads {
 		if ctx.IsPaused {
@@ -365,7 +365,7 @@ func (m *NetworkResilienceManager) monitorNetworkChangesEnhanced() {
 				log.Infof("Network interface change detected")
 				m.handleNetworkSwitch("interface_change")
 			} else if qualityDegraded {
-				log.Infof("Network quality degradation detected, preparing for switch")
+				log.Debugf("Network quality degradation detected, preparing for switch")
 				m.prepareForNetworkSwitch()
 			}
 			
@@ -572,7 +572,7 @@ func (m *NetworkResilienceManager) checkQualityDegradation() bool {
 
 // prepareForNetworkSwitch proactively prepares for an anticipated network switch
 func (m *NetworkResilienceManager) prepareForNetworkSwitch() {
-	log.Info("Preparing for anticipated network switch due to quality degradation")
+	log.Debug("Preparing for anticipated network switch due to quality degradation")
 	
 	// Temporarily pause new uploads but don't stop existing ones
 	// This gives ongoing uploads a chance to complete before the switch

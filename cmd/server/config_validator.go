@@ -175,11 +175,11 @@ func validateServerConfig(server *ServerConfig, result *ConfigValidationResult) 
 		result.AddError("server.force_protocol", server.ForceProtocol, "must be one of: ipv4, ipv6, auto, or empty")
 	}
 
-	// PID file validation
+	// PID file validation (warning only — non-critical, server can still operate)
 	if server.PIDFilePath != "" {
 		dir := filepath.Dir(server.PIDFilePath)
 		if err := validateDirectoryPath(dir, false); err != nil {
-			result.AddError("server.pidfilepath", server.PIDFilePath, fmt.Sprintf("PID file directory invalid: %v", err))
+			result.AddWarning("server.pidfilepath", server.PIDFilePath, fmt.Sprintf("PID file directory may not be writable: %v", err))
 		}
 	}
 
