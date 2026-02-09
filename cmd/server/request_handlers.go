@@ -23,6 +23,18 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	activeConnections.Inc()
 	defer activeConnections.Dec()
 
+	// Rate limiting check
+	if rl := GetRateLimiter(); rl != nil && !rl.Allow(r) {
+		clientIP := getClientIP(r)
+		jid := extractJIDFromRequest(r)
+		log.Warnf("⛔ Rate limit exceeded for upload: ip=%s, jid=%s", clientIP, jid)
+		AuditRateLimited(r, jid, "upload_rate_exceeded")
+		w.Header().Set("Retry-After", "60")
+		http.Error(w, "Rate limit exceeded. Please try again later.", http.StatusTooManyRequests)
+		uploadErrorsTotal.Inc()
+		return
+	}
+
 	// Enhanced session handling for multi-upload scenarios (Gajim fix)
 	sessionID := r.Header.Get("X-Session-ID")
 	if sessionID == "" {
@@ -51,7 +63,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), responseWriterKey, w)
 		r = r.WithContext(ctx)
 
-		claims, err := validateBearerTokenWithSession(r, conf.Security.Secret)
+		claims, err := validateBearerWithRotation(r)
 		if err != nil {
 			// Enhanced error logging for network switching scenarios
 			clientIP := getClientIP(r)
@@ -100,7 +112,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Auth-Method", "JWT")
 	} else {
 		// HMAC authentication with enhanced network switching support
-		err := validateHMAC(r, conf.Security.Secret)
+		err := validateHMACWithRotation(r, validateHMAC)
 		if err != nil {
 			log.Warnf("🔴 HMAC Authentication failed for IP %s: %v", getClientIP(r), err)
 			AuditAuthFailure(r, "hmac", err.Error())
@@ -271,7 +283,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	switch conf.Server.FileNaming {
 	case "HMAC":
 		// Generate HMAC-based filename with enhanced entropy
-		h := hmac.New(sha256.New, []byte(conf.Security.Secret))
+		h := hmac.New(sha256.New, []byte(getActiveSecret()))
 		h.Write([]byte(header.Filename + time.Now().String() + getClientIP(r)))
 		filename = hex.EncodeToString(h.Sum(nil)) + filepath.Ext(header.Filename)
 	default: // "original" or "None"
@@ -364,6 +376,18 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Audit successful upload
 	AuditUploadSuccess(r, userJID, filename, written, detectedContentType)
+
+	// Record in metadata store
+	if ms := GetMetadataStore(); ms != nil {
+		_ = ms.RecordUpload(r.Context(), absFilename, header.Filename, written, detectedContentType, userJID, getClientIP(r), "")
+	}
+
+	// Generate thumbnail for image uploads (SIMS / XEP-0385)
+	go func() {
+		if _, err := GenerateThumbnail(absFilename); err != nil {
+			log.Debugf("Thumbnail generation skipped for %s: %v", filename, err)
+		}
+	}()
 
 	// CRITICAL FIX: Send immediate success response for large files (>1GB)
 	// This prevents client timeouts while server does post-processing
@@ -532,7 +556,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 		log.Infof("✅ JWT authentication successful for download request: %s", r.URL.Path)
 		w.Header().Set("X-Auth-Method", "JWT")
 	} else {
-		err := validateHMAC(r, conf.Security.Secret)
+		err := validateHMACWithRotation(r, validateHMAC)
 		if err != nil {
 			log.Warnf("🔴 HMAC Authentication failed for download from IP %s: %v", getClientIP(r), err)
 			AuditAuthFailure(r, "hmac", err.Error())
@@ -615,6 +639,12 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Serve thumbnail if requested (?thumbnail=true)
+	if ServeThumbnail(w, r, absFilename) {
+		downloadsTotal.Inc()
+		return
+	}
+
 	// Enhanced file opening with retry logic for network switching scenarios
 	var file *os.File
 	maxRetries := 3
@@ -692,6 +722,11 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 	// Audit successful download
 	AuditDownloadSuccess(r, "", filepath.Base(absFilename), n)
 
+	// Track download in metadata store
+	if ms := GetMetadataStore(); ms != nil {
+		_ = ms.RecordDownload(r.Context(), absFilename)
+	}
+
 	log.Infof("✅ Successfully downloaded %s (%s) in %s for IP %s (session complete)",
 		filepath.Base(absFilename), formatBytes(n), duration, getClientIP(r))
 }
@@ -702,6 +737,16 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 	activeConnections.Inc()
 	defer activeConnections.Dec()
 
+	// Rate limiting check
+	if rl := GetRateLimiter(); rl != nil && !rl.Allow(r) {
+		log.Warnf("⛔ Rate limit exceeded for v3 upload: ip=%s", getClientIP(r))
+		AuditRateLimited(r, "", "v3_upload_rate_exceeded")
+		w.Header().Set("Retry-After", "60")
+		http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+		uploadErrorsTotal.Inc()
+		return
+	}
+
 	// Only allow PUT method for v3
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed for v3 uploads", http.StatusMethodNotAllowed)
@@ -710,7 +755,7 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate v3 HMAC signature
-	err := validateV3HMAC(r, conf.Security.Secret)
+	err := validateHMACWithRotation(r, validateV3HMAC)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("v3 Authentication failed: %v", err), http.StatusUnauthorized)
 		uploadErrorsTotal.Inc()
@@ -774,7 +819,7 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 	switch conf.Server.FileNaming {
 	case "HMAC":
 		// Generate HMAC-based filename
-		h := hmac.New(sha256.New, []byte(conf.Security.Secret))
+		h := hmac.New(sha256.New, []byte(getActiveSecret()))
 		h.Write([]byte(originalFilename + time.Now().String()))
 		filename = hex.EncodeToString(h.Sum(nil)) + filepath.Ext(originalFilename)
 	default: // "original" or "None"
@@ -945,6 +990,12 @@ func handleV3Upload(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d}`, filename, written)
 	}
 
+	// Record in metadata store
+	if ms := GetMetadataStore(); ms != nil {
+		ct := GetContentType(originalFilename)
+		_ = ms.RecordUpload(r.Context(), absFilename, originalFilename, written, ct, "", getClientIP(r), "")
+	}
+
 	log.Infof("Successfully uploaded %s via v3 protocol (%s) in %s", filename, formatBytes(written), duration)
 }
 
@@ -954,6 +1005,16 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	activeConnections.Inc()
 	defer activeConnections.Dec()
+
+	// Rate limiting check
+	if rl := GetRateLimiter(); rl != nil && !rl.Allow(r) {
+		log.Warnf("⛔ Rate limit exceeded for legacy upload: ip=%s", getClientIP(r))
+		AuditRateLimited(r, "", "legacy_upload_rate_exceeded")
+		w.Header().Set("Retry-After", "60")
+		http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+		uploadErrorsTotal.Inc()
+		return
+	}
 
 	// Enhanced session handling for multi-upload scenarios (Gajim XMPP fix)
 	sessionID := r.Header.Get("X-Session-ID")
@@ -977,7 +1038,7 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate legacy HMAC signature
-	err := validateHMAC(r, conf.Security.Secret)
+	err := validateHMACWithRotation(r, validateHMAC)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Legacy Authentication failed: %v", err), http.StatusUnauthorized)
 		uploadErrorsTotal.Inc()
@@ -1043,7 +1104,7 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 	switch conf.Server.FileNaming {
 	case "HMAC":
 		// Generate HMAC-based filename
-		h := hmac.New(sha256.New, []byte(conf.Security.Secret))
+		h := hmac.New(sha256.New, []byte(getActiveSecret()))
 		h.Write([]byte(fileStorePath + time.Now().String()))
 		filename = hex.EncodeToString(h.Sum(nil)) + filepath.Ext(fileStorePath)
 		absFilename = filepath.Join(storagePath, filename)
@@ -1187,6 +1248,12 @@ func handleLegacyUpload(w http.ResponseWriter, r *http.Request) {
 	// Return success response (201 Created for legacy compatibility)
 	w.WriteHeader(http.StatusCreated)
 
+	// Record in metadata store
+	if ms := GetMetadataStore(); ms != nil {
+		ct := GetContentType(filename)
+		_ = ms.RecordUpload(r.Context(), absFilename, filename, written, ct, "", getClientIP(r), "")
+	}
+
 	log.Infof("Successfully uploaded %s via legacy protocol (%s) in %s", filename, formatBytes(written), duration)
 }
 
@@ -1230,6 +1297,12 @@ func handleLegacyDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Serve thumbnail if requested (?thumbnail=true)
+	if ServeThumbnail(w, r, absFilename) {
+		downloadsTotal.Inc()
+		return
+	}
+
 	// Set appropriate headers
 	contentType := GetContentType(fileStorePath)
 	w.Header().Set("Content-Type", contentType)
@@ -1267,5 +1340,11 @@ func handleLegacyDownload(w http.ResponseWriter, r *http.Request) {
 	downloadDuration.Observe(duration.Seconds())
 	downloadsTotal.Inc()
 	downloadSizeBytes.Observe(float64(n))
+
+	// Track download in metadata store
+	if ms := GetMetadataStore(); ms != nil {
+		_ = ms.RecordDownload(r.Context(), absFilename)
+	}
+
 	log.Infof("Successfully downloaded %s (%s) in %s", absFilename, formatBytes(n), duration)
 }

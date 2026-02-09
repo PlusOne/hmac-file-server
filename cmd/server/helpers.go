@@ -108,17 +108,43 @@ func checkFreeSpaceWithRetry(path string, retries int, delay time.Duration) erro
 
 func handleFileCleanup(conf *Config) {
 	if !conf.Server.FileTTLEnabled {
-		log.Println("File TTL is disabled.")
+		log.Info("File TTL cleanup is disabled.")
 		return
 	}
 
-	ttlDuration, err := parseTTL(conf.Server.FileTTL)
-	if err != nil {
-		log.Fatalf("Invalid TTL configuration: %v", err)
+	// Determine TTL: prefer FileTTL, fall back to MaxFileAge
+	ttlSource := conf.Server.FileTTL
+	if ttlSource == "" {
+		ttlSource = conf.Server.MaxFileAge
+	}
+	if ttlSource == "" {
+		log.Warn("File TTL enabled but no filettl or max_file_age configured, defaulting to 720h (30 days)")
+		ttlSource = "720h"
 	}
 
-	log.Printf("TTL cleanup enabled. Files older than %v will be deleted.", ttlDuration)
-	ticker := time.NewTicker(24 * time.Hour)
+	ttlDuration, err := parseTTL(ttlSource)
+	if err != nil {
+		log.Fatalf("Invalid TTL configuration '%s': %v", ttlSource, err)
+	}
+
+	// Determine cleanup interval: prefer CleanupInterval, default to 24h
+	cleanupIntervalStr := conf.Server.CleanupInterval
+	if cleanupIntervalStr == "" {
+		cleanupIntervalStr = "24h"
+	}
+	cleanupInterval, err := parseTTL(cleanupIntervalStr)
+	if err != nil {
+		log.Warnf("Invalid cleanup_interval '%s', defaulting to 24h: %v", cleanupIntervalStr, err)
+		cleanupInterval = 24 * time.Hour
+	}
+
+	log.Infof("File cleanup enabled: TTL=%v, interval=%v, storage=%s",
+		ttlDuration, cleanupInterval, conf.Server.StoragePath)
+
+	// Run once immediately at startup
+	deleteOldFiles(conf, ttlDuration)
+
+	ticker := time.NewTicker(cleanupInterval)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -269,10 +295,114 @@ func formatBytes(bytes int64) string {
 	return fmt.Sprintf("%.1f %ciB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
-// Stub for deleteOldFiles
+// cleanupFilesDeletedTotal tracks deleted files during cleanup runs
+var cleanupFilesDeletedTotal int64
+
+// deleteOldFiles walks the storage directory and removes files older than ttlDuration.
+// It also cleans up empty directories left behind after file deletion.
 func deleteOldFiles(conf *Config, ttlDuration time.Duration) {
-	// TODO: Implement actual file deletion logic based on TTL
-	log.Infof("deleteOldFiles is a stub and not yet implemented. It would check for files older than %v.", ttlDuration)
+	confMutex.RLock()
+	storagePath := conf.Server.StoragePath
+	confMutex.RUnlock()
+
+	if storagePath == "" {
+		log.Warn("Cleanup: storage path is empty, skipping")
+		return
+	}
+
+	now := time.Now()
+	var deletedFiles int64
+	var deletedBytes int64
+	var failedFiles int64
+	var emptyDirs []string
+
+	log.Infof("Cleanup: starting scan of %s for files older than %v", storagePath, ttlDuration)
+
+	err := filepath.WalkDir(storagePath, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			log.Warnf("Cleanup: error accessing %s: %v", path, err)
+			return nil // continue walking
+		}
+
+		// Skip the root storage directory itself
+		if path == storagePath {
+			return nil
+		}
+
+		// Track directories for later empty-dir cleanup
+		if d.IsDir() {
+			return nil
+		}
+
+		info, infoErr := d.Info()
+		if infoErr != nil {
+			log.Warnf("Cleanup: failed to stat %s: %v", path, infoErr)
+			return nil
+		}
+
+		fileAge := now.Sub(info.ModTime())
+		if fileAge > ttlDuration {
+			fileSize := info.Size()
+			if removeErr := os.Remove(path); removeErr != nil {
+				log.Warnf("Cleanup: failed to remove expired file %s (age: %v): %v", path, fileAge.Round(time.Hour), removeErr)
+				failedFiles++
+			} else {
+				log.Infof("Cleanup: removed expired file %s (age: %v, size: %s)",
+					path, fileAge.Round(time.Hour), formatBytes(fileSize))
+				deletedFiles++
+				deletedBytes += fileSize
+
+				// Mark deleted in metadata store
+				if ms := GetMetadataStore(); ms != nil {
+					_ = ms.RecordDeletion(context.Background(), path)
+				}
+
+				// Clean up associated thumbnail
+				CleanupThumbnail(path)
+
+				// Track parent dir for potential cleanup
+				parentDir := filepath.Dir(path)
+				if parentDir != storagePath {
+					emptyDirs = append(emptyDirs, parentDir)
+				}
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		log.Errorf("Cleanup: walk error: %v", err)
+	}
+
+	// Clean up empty directories (deepest first by sorting in reverse)
+	seen := make(map[string]bool)
+	for _, dir := range emptyDirs {
+		if seen[dir] {
+			continue
+		}
+		seen[dir] = true
+		removeEmptyParents(dir, storagePath)
+	}
+
+	cleanupFilesDeletedTotal += deletedFiles
+	log.Infof("Cleanup: completed — deleted %d files (%s freed), %d failures, total lifetime deletions: %d",
+		deletedFiles, formatBytes(deletedBytes), failedFiles, cleanupFilesDeletedTotal)
+}
+
+// removeEmptyParents removes empty directories up to (but not including) the root storage path.
+func removeEmptyParents(dir, storagePath string) {
+	for dir != storagePath && dir != "/" {
+		entries, err := os.ReadDir(dir)
+		if err != nil || len(entries) > 0 {
+			break
+		}
+		if err := os.Remove(dir); err != nil {
+			break
+		}
+		log.Debugf("Cleanup: removed empty directory %s", dir)
+		dir = filepath.Dir(dir)
+	}
 }
 
 // Stub for CreateISOContainer
@@ -881,6 +1011,16 @@ func handlePutUpload(w http.ResponseWriter, r *http.Request) {
 	activeConnections.Inc()
 	defer activeConnections.Dec()
 
+	// Rate limiting check
+	if rl := GetRateLimiter(); rl != nil && !rl.Allow(r) {
+		log.Warnf("⛔ Rate limit exceeded for PUT upload: ip=%s", getClientIP(r))
+		AuditRateLimited(r, "", "put_upload_rate_exceeded")
+		w.Header().Set("Retry-After", "60")
+		http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+		uploadErrorsTotal.Inc()
+		return
+	}
+
 	// Only allow PUT method
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -1011,6 +1151,12 @@ func handlePutUpload(w http.ResponseWriter, r *http.Request) {
 	requestDuration := time.Since(startTime)
 	uploadDuration.Observe(requestDuration.Seconds())
 	uploadsTotal.Inc()
+
+	// Record in metadata store
+	if ms := GetMetadataStore(); ms != nil {
+		ct := GetContentType(filename)
+		_ = ms.RecordUpload(r.Context(), filePath, originalFilename, written, ct, "", getClientIP(r), "")
+	}
 
 	log.Infof("PUT upload completed: %s (%d bytes) in %v", filename, written, requestDuration)
 }

@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -381,6 +382,44 @@ func main() {
 		log.Warnf("Failed to initialize quota manager: %v", err)
 	}
 
+	// Initialize rate limiter
+	rlCfg := &RateLimiterConfig{
+		Enabled:         conf.RateLimit.Enabled,
+		RequestsPerMin:  conf.RateLimit.RequestsPerMin,
+		BurstSize:       conf.RateLimit.BurstSize,
+		CleanupInterval: conf.RateLimit.CleanupInterval,
+		ByJID:           conf.RateLimit.ByJID,
+		ByIP:            conf.RateLimit.ByIP,
+		WhitelistedIPs:  conf.RateLimit.WhitelistedIPs,
+		WhitelistedJIDs: conf.RateLimit.WhitelistedJIDs,
+	}
+	InitRateLimiter(rlCfg)
+
+	// Initialize HMAC key rotation
+	krCfg := &KeyRotationConfig{
+		Enabled:          conf.KeyRotation.Enabled,
+		RotationInterval: conf.KeyRotation.RotationInterval,
+		GracePeriod:      conf.KeyRotation.GracePeriod,
+		KeyStoragePath:   conf.KeyRotation.KeyStoragePath,
+	}
+	if err := InitHMACKeyRotation(krCfg, conf.Security.Secret); err != nil {
+		log.Warnf("Failed to initialize HMAC key rotation: %v", err)
+	}
+
+	// Initialize SQLite metadata store
+	if conf.Metadata.Enabled {
+		dbPath := conf.Metadata.DBPath
+		if dbPath == "" {
+			dbPath = filepath.Join(conf.Server.StoragePath, ".metadata", "files.db")
+		}
+		if err := InitMetadataStore(dbPath); err != nil {
+			log.Warnf("Failed to initialize metadata store: %v", err)
+		}
+	}
+
+	// Initialize SIMS thumbnail generation
+	InitThumbnails()
+
 	router := setupRouter()
 	adminCfg := AdminConfig{
 		Enabled:    conf.Admin.Enabled,
@@ -394,6 +433,7 @@ func main() {
 		},
 	}
 	SetupAdminRoutes(router, &adminCfg)
+	InitAdminDashboard(router, &adminCfg)
 	InitializeEnhancements(router)
 
 	go handleFileCleanup(&conf)
@@ -593,3 +633,5 @@ type FileConfig = config.FileConfig
 type BuildConfig = config.BuildConfig
 type NetworkResilienceConfig = config.NetworkResilienceConfig
 type ClientNetworkConfigTOML = config.ClientNetworkConfigTOML
+type RateLimitConfig = config.RateLimitConfig
+type KeyRotationConfig = config.KeyRotationConfig

@@ -219,6 +219,33 @@ type AdminAuthConfig struct {
 	Password string `toml:"password" mapstructure:"password"`
 }
 
+// KeyRotationConfig holds HMAC key rotation configuration.
+type KeyRotationConfig struct {
+	Enabled          bool   `toml:"enabled" mapstructure:"enabled"`
+	RotationInterval string `toml:"rotation_interval" mapstructure:"rotation_interval"`
+	GracePeriod      string `toml:"grace_period" mapstructure:"grace_period"`
+	KeyStoragePath   string `toml:"key_storage" mapstructure:"key_storage"`
+}
+
+// RateLimitConfig holds rate limiting configuration.
+type RateLimitConfig struct {
+	Enabled         bool     `toml:"enabled" mapstructure:"enabled"`
+	RequestsPerMin  int      `toml:"requests_per_minute" mapstructure:"requests_per_minute"`
+	BurstSize       int      `toml:"burst_size" mapstructure:"burst_size"`
+	CleanupInterval string   `toml:"cleanup_interval" mapstructure:"cleanup_interval"`
+	ByJID           bool     `toml:"by_jid" mapstructure:"by_jid"`
+	ByIP            bool     `toml:"by_ip" mapstructure:"by_ip"`
+	WhitelistedIPs  []string `toml:"whitelisted_ips" mapstructure:"whitelisted_ips"`
+	WhitelistedJIDs []string `toml:"whitelisted_jids" mapstructure:"whitelisted_jids"`
+}
+
+// MetadataStoreConfig holds SQLite metadata store configuration.
+type MetadataStoreConfig struct {
+	Enabled  bool   `toml:"enabled" mapstructure:"enabled"`
+	DBPath   string `toml:"db_path" mapstructure:"db_path"`
+	PurgeAge string `toml:"purge_age" mapstructure:"purge_age"` // age after which soft-deleted records are purged
+}
+
 // Config is the top-level configuration struct.
 type Config struct {
 	Server            ServerConfig            `mapstructure:"server"`
@@ -241,6 +268,9 @@ type Config struct {
 	Validation        ValidationConfig        `mapstructure:"validation"`
 	Quotas            QuotaConfig             `mapstructure:"quotas"`
 	Admin             AdminConfig             `mapstructure:"admin"`
+	RateLimit         RateLimitConfig         `mapstructure:"rate_limit"`
+	KeyRotation       KeyRotationConfig       `mapstructure:"key_rotation"`
+	Metadata          MetadataStoreConfig     `mapstructure:"metadata"`
 }
 
 // UploadTask represents a queued upload task.
