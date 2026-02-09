@@ -1,8 +1,8 @@
 # HMAC File Server
 
-[![Version](https://img.shields.io/badge/version-3.3.0_Nexus_Infinitum-blue.svg)](https://git.uuxo.net/UUXO/hmac-file-server/)
+[![Version](https://img.shields.io/badge/version-3.4.0_Cascade-blue.svg)](https://git.uuxo.net/UUXO/hmac-file-server/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/go-1.24+-00ADD8.svg)](https://golang.org/)
 
 A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) with HMAC authentication, deduplication, and multi-architecture support.
 
@@ -17,13 +17,18 @@ A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) 
 - XMPP client compatibility (Dino, Gajim, Conversations, Monal, Converse.js)
 - Network resilience for mobile clients (WiFi/LTE switching)
 
-### Security Features (v3.3.0)
+### Security & Operations (v3.4.0 "Cascade")
+- **Rate Limiting** - Token bucket per JID/IP with configurable burst, whitelists, and 429 responses
+- **HMAC Key Rotation** - Automatic secret rotation with grace period and JSON key persistence
+- **Admin Dashboard** - HTMX + Tailwind CSS web UI with live stats, file browser, and user quotas
+- **SQLite Metadata Store** - Tracks every upload/download with content types, JIDs, and download counts
+- **SIMS Thumbnails** - XEP-0385 thumbnail generation (320×240 JPEG) for image uploads
+- **Automatic File Cleanup** - TTL-based expiry with empty directory pruning
 - **Audit Logging** - Comprehensive security event logging (uploads, downloads, auth events)
 - **Magic Bytes Validation** - Content type verification using file signatures
 - **Per-User Quotas** - Storage limits per XMPP JID with Redis tracking
-- **Admin API** - Protected endpoints for system management and monitoring
+- **Admin API** - Protected JSON endpoints for system management and monitoring
 - **ClamAV Integration** - Antivirus scanning for uploaded files
-- **Rate Limiting** - Configurable request throttling
 
 ## Installation
 
@@ -108,8 +113,11 @@ secret = "your-hmac-secret-key"
 | `[audit]` | Security audit logging |
 | `[validation]` | Magic bytes content validation |
 | `[quotas]` | Per-user storage quotas |
-| `[admin]` | Admin API configuration |
+| `[admin]` | Admin API and dashboard configuration |
 | `[workers]` | Worker pool configuration |
+| `[rate_limit]` | Per-JID/IP upload rate limiting |
+| `[key_rotation]` | Automatic HMAC secret rotation |
+| `[metadata]` | SQLite file metadata tracking |
 
 See [templates/](templates/) for complete configuration templates.
 
@@ -178,13 +186,96 @@ token = HMAC-SHA256(secret, filename + filesize + timestamp)
 |----------|--------|-------------|
 | `/upload/...` | PUT | File upload |
 | `/download/...` | GET | File download |
+| `/download/...?thumbnail=true` | GET | Image thumbnail (SIMS/XEP-0385) |
 | `/health` | GET | Health check |
 | `/metrics` | GET | Prometheus metrics |
 | `/admin/stats` | GET | Server statistics (auth required) |
 | `/admin/files` | GET | List uploaded files (auth required) |
 | `/admin/users` | GET | User quota information (auth required) |
+| `/admin/dashboard` | GET | Web dashboard UI (auth required) |
+| `/admin/dashboard/files` | GET | File browser UI (auth required) |
+| `/admin/dashboard/users` | GET | User quotas UI (auth required) |
 
-## Enhanced Features (v3.3.0)
+## Enhanced Features (v3.4.0 "Cascade")
+
+### Rate Limiting
+
+Token bucket rate limiting per JID and/or IP address to prevent upload abuse:
+
+```toml
+[rate_limit]
+enabled = true
+requests_per_minute = 60
+burst_size = 10
+by_jid = true
+by_ip = true
+whitelisted_ips = ["10.0.0.0/8"]
+whitelisted_jids = ["admin@example.com"]
+```
+
+Returns `429 Too Many Requests` with `Retry-After` header when limits are exceeded. Localhost (`127.0.0.1`, `::1`) is always whitelisted.
+
+### HMAC Key Rotation
+
+Automatic rotation of HMAC signing secrets with grace period for seamless transitions:
+
+```toml
+[key_rotation]
+enabled = true
+rotation_interval = "720h"   # Rotate every 30 days
+grace_period = "48h"          # Accept old key for 48h after rotation
+key_storage = "/etc/hmac-file-server/keys.json"
+```
+
+New uploads are signed with the current key. Downloads/validations accept both current and previous key during the grace period. Keys are persisted to disk and survive restarts.
+
+### Admin Dashboard
+
+HTMX-powered web UI with dark theme (Tailwind CSS), accessible at `/admin/dashboard`:
+
+- **Live stats** — storage usage, user count, uptime, memory (auto-refresh every 30s)
+- **File browser** — browse, search, and delete uploaded files
+- **User quotas** — per-JID usage with progress bars
+- **Feature status** — Redis, rate limiter, key rotation, cleanup status cards
+
+No npm or build step required — uses CDN-loaded HTMX and Tailwind CSS.
+
+### SQLite Metadata Store
+
+Persistent file metadata tracking via embedded SQLite (pure Go, no CGO):
+
+```toml
+[metadata]
+enabled = true
+db_path = "/var/lib/hmac-file-server/metadata/files.db"
+purge_age = "90d"   # Purge soft-deleted records after 90 days
+```
+
+Tracks: uploader JID/IP, content type, upload time, download count, checksums. Provides aggregate statistics (top uploaders, content type distribution) for the admin dashboard.
+
+### SIMS Thumbnails (XEP-0385)
+
+Automatic JPEG thumbnail generation for uploaded images:
+
+- Generates 320×240 thumbnails on upload (async, non-blocking)
+- Supports JPEG, PNG, GIF, BMP, TIFF, WebP source formats
+- Serve via `?thumbnail=true` query parameter on download URLs
+- On-demand generation if thumbnail doesn't exist yet
+- Auto-cleanup when source file is deleted
+
+### Automatic File Cleanup
+
+TTL-based file expiry with configurable cleanup interval:
+
+```toml
+[server]
+file_ttl_enabled = true
+file_ttl = "720h"          # Delete files older than 30 days
+cleanup_interval = "1h"    # Run cleanup every hour
+max_file_age = "720h"      # Maximum file age
+```
+
+Automatically removes expired files and prunes empty parent directories.
 
 ### Audit Logging
 
@@ -243,8 +334,10 @@ token = "${ADMIN_TOKEN}"
 
 - Memory: 512MB minimum, 2GB+ recommended
 - Storage: 100MB application + data
-- Go 1.21+ (for building)
+- Go 1.24+ (for building)
 - Linux (primary), Windows/macOS (experimental)
+- SQLite: Embedded (pure Go, no CGO required)
+- Redis: Optional (for quota tracking and session persistence)
 
 ## Contributing
 

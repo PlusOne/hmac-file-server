@@ -1,4 +1,4 @@
-This documentation provides detailed information on configuring, setting up, and maintaining the HMAC File Server 3.3.0 "Nexus Infinitum". Whether you're a developer, system administrator, or an enthusiast, this guide will help you navigate through the server's features and configurations effectively.
+This documentation provides detailed information on configuring, setting up, and maintaining the HMAC File Server 3.4.0 "Cascade". Whether you're a developer, system administrator, or an enthusiast, this guide will help you navigate through the server's features and configurations effectively.
 
 ---
 
@@ -20,6 +20,11 @@ This documentation provides detailed information on configuring, setting up, and
     - [Worker Settings](#worker-settings)
     - [Network Resilience Settings](#network-resilience-settings)
     - [Client Network Support Settings](#client-network-support-settings)
+    - [Rate Limiting Configuration](#rate-limiting-configuration)
+    - [HMAC Key Rotation Configuration](#hmac-key-rotation-configuration)
+    - [Metadata Store Configuration](#metadata-store-configuration)
+    - [Admin Dashboard](#admin-dashboard)
+    - [SIMS Thumbnails (XEP-0385)](#sims-thumbnails-xep-0385)
 4. [Example Configuration](#example-configuration)
 5. [Setup Instructions](#setup-instructions)
     - [1. HMAC File Server Installation](#1-hmac-file-server-installation)
@@ -45,15 +50,19 @@ This documentation provides detailed information on configuring, setting up, and
 
 ## Introduction
 
-The **HMAC File Server 3.3.0 "Nexus Infinitum"** is a revolutionary secure and efficient file management solution designed for infinite connectivity and boundless network resilience. This major release brings **Desktop XMPP Client Revolution**, **Network Resilience Perfection**, and **Mobile Client Optimization**.
+The **HMAC File Server 3.4.0 "Cascade"** is a secure and high-performance file management solution designed for XMPP ecosystems with enterprise-grade operational features. Building on the "Nexus Infinitum" foundation, this release adds **operational hardening**, **automated security**, and a **web-based admin dashboard**.
 
-**Version 3.3.0 "Nexus Infinitum" Revolutionary Features:**
-- **Desktop XMPP Client Revolution**: 48-hour session restoration for Dino and Gajim
-- **Network Resilience Perfection**: WiFi ↔ LTE switching with zero interruption  
+**Version 3.4.0 "Cascade" New Features:**
+- **Rate Limiting**: Token bucket per JID/IP with configurable burst, whitelists, and 429 responses
+- **HMAC Key Rotation**: Automatic secret rotation with grace period and JSON key persistence
+- **Admin Dashboard**: HTMX + Tailwind CSS dark web UI with live stats, file browser, and user quotas
+- **SQLite Metadata Store**: Persistent tracking of uploads/downloads with content types and download counts
+- **SIMS Thumbnails (XEP-0385)**: Automatic 320×240 JPEG thumbnail generation for image uploads
+- **Automatic File Cleanup**: TTL-based file expiry with empty directory pruning
+
+**Continuing from v3.3.0 "Nexus Infinitum":**
+- **Network Resilience**: WiFi ↔ LTE switching with zero interruption  
 - **Mobile Client Optimization**: 72-hour ultra-grace periods for critical scenarios
-- **Multi-Architecture Excellence**: Native builds for AMD64, ARM64, ARM32v7
-- **Infinite Connectivity**: Boundless network topology adaptation
-- **Extended Timeouts**: 4800s timeouts for seamless large file transfers
 - **Multi-Architecture Support**: Native AMD64, ARM64, ARM32v7 builds
 - **XEP-0363 XMPP Integration**: Full XMPP file sharing protocol support
 - **Prometheus Monitoring**: Enterprise-grade metrics and observability
@@ -62,9 +71,9 @@ Built with a focus on security, scalability, and performance, it integrates seam
 
 ---
 
-## 3.3.0 "Nexus Infinitum" Revolutionary Features
+## 3.3.0 "Nexus Infinitum" & 3.4.0 "Cascade" Features
 
-HMAC File Server 3.3.0 "Nexus Infinitum" represents a revolutionary leap forward in file server technology, introducing breakthrough simplifications and advanced enterprise features:
+HMAC File Server 3.4.0 "Cascade" builds on the "Nexus Infinitum" foundation, adding operational hardening and admin tooling. Below are features across both releases:
 
 ### 🚀 **93% Configuration Reduction**
 - **Simplified Setup**: Reduced configuration complexity by 93% through intelligent defaults
@@ -751,6 +760,140 @@ adapt_to_client_network = false           # Optimize parameters based on client 
   - *Description*: Defines the maximum allowed file size for uploads.  
   - *Format*: Size (e.g., `"10GB"`)  
   - *Default*: `"10GB"`
+
+---
+
+### Rate Limiting Configuration
+
+```toml
+[rate_limit]
+enabled = true
+requests_per_minute = 60        # Token refill rate
+burst_size = 10                 # Maximum burst of requests
+cleanup_interval = "5m"         # Stale bucket eviction interval
+by_jid = true                   # Rate limit per XMPP JID
+by_ip = true                    # Rate limit per client IP
+whitelisted_ips = ["10.0.0.0/8", "192.168.0.0/16"]
+whitelisted_jids = ["admin@example.com"]
+```
+
+#### Configuration Options
+
+- **enabled**: Enable/disable rate limiting. Default: `false`
+- **requests_per_minute**: Token refill rate per key (JID or IP). Default: `60`
+- **burst_size**: Maximum burst of requests before throttling. Default: half of `requests_per_minute` (min 5)
+- **cleanup_interval**: How often to evict stale rate limit buckets. Default: `"5m"`
+- **by_jid**: Rate limit per XMPP JID (from `X-User-JID` header or query parameter). Default: `true`
+- **by_ip**: Rate limit per client IP address. Default: `true`
+- **whitelisted_ips**: IP addresses or CIDR ranges exempt from rate limiting. Localhost is always whitelisted.
+- **whitelisted_jids**: XMPP JIDs exempt from rate limiting.
+
+**Behavior**: When a client exceeds the rate limit, the server returns `429 Too Many Requests` with a `Retry-After` header indicating how many seconds to wait.
+
+---
+
+### HMAC Key Rotation Configuration
+
+```toml
+[key_rotation]
+enabled = true
+rotation_interval = "720h"      # Rotate key every 30 days
+grace_period = "48h"             # Accept previous key for 48h after rotation
+key_storage = "/etc/hmac-file-server/keys.json"
+```
+
+#### Configuration Options
+
+- **enabled**: Enable/disable automatic key rotation. Default: `false`
+- **rotation_interval**: How often to rotate the HMAC signing key. Default: `"24h"`
+- **grace_period**: Duration after rotation during which the previous key is still accepted for validation. Default: `"24h"`
+- **key_storage**: Path to JSON file where keys are persisted (created with `0600` permissions). Default: `"/etc/hmac-file-server/keys.json"`
+
+**How it works**:
+1. On startup, loads keys from `key_storage` (or initializes from `[security].secret` if no key file exists)
+2. A background goroutine rotates the key at `rotation_interval`
+3. New uploads are always signed with the **current** key
+4. Download/validation tries: current key → previous key (within grace period) → static config fallback
+5. Keys are persisted to disk and survive restarts
+
+**Important**: Ensure the key storage path is writable by the server process and has restricted permissions.
+
+---
+
+### Metadata Store Configuration
+
+```toml
+[metadata]
+enabled = true
+db_path = "/var/lib/hmac-file-server/metadata/files.db"
+purge_age = "90d"               # Purge soft-deleted records after 90 days
+```
+
+#### Configuration Options
+
+- **enabled**: Enable/disable the SQLite metadata store. Default: `false`
+- **db_path**: Path to the SQLite database file. Directory is created automatically. Default: `"<storage_path>/.metadata/files.db"`
+- **purge_age**: Age after which soft-deleted metadata records are permanently removed. Default: none (records kept indefinitely)
+
+**What is tracked**:
+- File path, name, size, and content type
+- Uploader JID and IP address
+- Upload timestamp and last access time
+- Download count (incremented on each GET request)
+- Checksum (SHA256, optional)
+- Soft-delete flag (set when file is deleted, preserving history)
+
+**Database**: Uses `modernc.org/sqlite` (pure Go, no CGO required). WAL journal mode for concurrent reads. Single-writer with mutex for consistency.
+
+---
+
+### Admin Dashboard
+
+The admin dashboard provides a web-based UI accessible at `{path_prefix}/dashboard` (default: `/admin/dashboard`). It requires the same authentication as the Admin API.
+
+**Pages**:
+- **Dashboard** (`/admin/dashboard`) — Storage stats, user count, uptime, memory/goroutines, feature status cards (Redis, rate limiter, key rotation, cleanup), and recent uploads table. Stats auto-refresh every 30 seconds via HTMX.
+- **Files** (`/admin/dashboard/files`) — Full file browser with name, size, content type, modification time, and delete buttons.
+- **Users** (`/admin/dashboard/users`) — Per-JID quota usage with progress bars showing usage percentage.
+
+**Technology**: Dark-themed Tailwind CSS via CDN + HTMX for dynamic updates. No npm, no build step — everything is embedded in the Go binary.
+
+**Configuration**: Uses the existing `[admin]` config section. The dashboard is available when `admin.enabled = true`.
+
+```toml
+[admin]
+enabled = true
+path_prefix = "/admin"
+
+[admin.auth]
+type = "bearer"
+token = "your-admin-token"
+```
+
+---
+
+### SIMS Thumbnails (XEP-0385)
+
+Automatic JPEG thumbnail generation for uploaded images, compatible with the XMPP SIMS (Stateless Inline Media Sharing) specification.
+
+**Behavior**:
+- On image upload, a 320×240 JPEG thumbnail is generated asynchronously (non-blocking)
+- Supported source formats: JPEG, PNG, GIF, BMP, TIFF, WebP
+- Thumbnails are stored alongside the original with a `.thumb.jpg` suffix
+- Serve thumbnails by appending `?thumbnail=true` or `?thumb=true` to the download URL
+- If a thumbnail doesn't exist yet, it's generated on-demand on the first request
+- Thumbnails are automatically cleaned up when the source file is deleted
+
+**Example**:
+```bash
+# Upload an image (normal upload flow)
+curl -X PUT https://upload.example.com/upload/host/v/token/photo.jpg --data-binary @photo.jpg
+
+# Download the thumbnail
+curl https://upload.example.com/upload/host/v/token/photo.jpg?thumbnail=true
+```
+
+**Configuration**: Thumbnails are always enabled when the server is running. No additional config needed.
 
 ---
 
