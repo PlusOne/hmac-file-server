@@ -137,6 +137,7 @@ jobs:
           git clone --depth 1 --branch ${GITHUB_REF_NAME} ${{ env.GITEA_URL }}/${GITHUB_REPOSITORY}.git .
 
       - name: Build all release binaries
+        shell: bash
         run: |
           mkdir -p release
           for target in linux/amd64 linux/arm64 linux/arm/7 darwin/amd64 darwin/arm64 windows/amd64; do
