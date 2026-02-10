@@ -31,9 +31,9 @@ func DefaultConfig() *Config {
 			FileNaming:            "original",
 			ForceProtocol:         "",
 			EnableDynamicWorkers:  true,
-			WorkerScaleUpThresh:   40,  // Optimized from previous session
+			WorkerScaleUpThresh:   40, // Optimized from previous session
 			WorkerScaleDownThresh: 10,
-			NetworkEvents:         true,  // Enable network resilience by default
+			NetworkEvents:         true, // Enable network resilience by default
 		},
 		Uploads: UploadsConfig{
 			AllowedExtensions:       []string{".zip", ".rar", ".7z", ".tar.gz", ".tgz", ".gpg", ".enc", ".pgp", ".txt", ".pdf", ".png", ".jpg", ".jpeg"},
@@ -77,7 +77,7 @@ func DefaultConfig() *Config {
 			ContainerFile: "/mnt/iso/container.iso",
 		},
 		Timeouts: TimeoutConfig{
-			Read:     "300s", // 5 minutes instead of 4800s 
+			Read:     "300s", // 5 minutes instead of 4800s
 			Write:    "300s",
 			Idle:     "300s",
 			Shutdown: "30s",
@@ -106,12 +106,12 @@ func DefaultConfig() *Config {
 			UploadQueueSize: 100, // Optimized from previous session
 		},
 		NetworkResilience: NetworkResilienceConfig{
-			FastDetection:        true,   // Enable fast 1-second detection
-			QualityMonitoring:    true,   // Monitor connection quality
-			PredictiveSwitching:  true,   // Switch before complete failure
-			MobileOptimizations:  true,   // Mobile-friendly thresholds
-			DetectionInterval:    "1s",   // Fast detection
-			QualityCheckInterval: "5s",   // Regular quality checks
+			FastDetection:        true, // Enable fast 1-second detection
+			QualityMonitoring:    true, // Monitor connection quality
+			PredictiveSwitching:  true, // Switch before complete failure
+			MobileOptimizations:  true, // Mobile-friendly thresholds
+			DetectionInterval:    "1s", // Fast detection
+			QualityCheckInterval: "5s", // Regular quality checks
 		},
 		File: FileConfig{},
 		Build: BuildConfig{

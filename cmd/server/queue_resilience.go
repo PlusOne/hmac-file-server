@@ -13,36 +13,36 @@ import (
 // RobustQueue represents an enhanced queue with timeout resilience
 type RobustQueue struct {
 	// Core queue components
-	items           chan QueueItem
-	spillover       []QueueItem
-	spilloverMutex  sync.RWMutex
-	
+	items          chan QueueItem
+	spillover      []QueueItem
+	spilloverMutex sync.RWMutex
+
 	// Configuration
-	config          *QueueResilienceConfig
-	
+	config *QueueResilienceConfig
+
 	// State tracking
 	length          int64
 	processed       int64
 	failed          int64
 	spilloverActive bool
-	
+
 	// Circuit breaker
-	circuitBreaker  *CircuitBreaker
-	
+	circuitBreaker *CircuitBreaker
+
 	// Priority queues
-	highPriority    chan QueueItem
-	mediumPriority  chan QueueItem
-	lowPriority     chan QueueItem
-	
+	highPriority   chan QueueItem
+	mediumPriority chan QueueItem
+	lowPriority    chan QueueItem
+
 	// Worker management
-	workers         []*QueueWorker //nolint:unused
-	workerHealth    map[int]*WorkerHealth
-	healthMutex     sync.RWMutex
-	
+	workers      []*QueueWorker //nolint:unused
+	workerHealth map[int]*WorkerHealth
+	healthMutex  sync.RWMutex
+
 	// Context and lifecycle
-	ctx             context.Context
-	cancel          context.CancelFunc
-	wg              sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 // QueueItem represents an item in the queue
@@ -60,29 +60,29 @@ type QueueItem struct {
 // QueueResilienceConfig holds the resilience configuration
 type QueueResilienceConfig struct {
 	// Basic settings
-	Enabled                   bool
-	QueueSize                 int
-	SpilloverEnabled          bool
-	SpilloverMaxSize          int64
-	
+	Enabled          bool
+	QueueSize        int
+	SpilloverEnabled bool
+	SpilloverMaxSize int64
+
 	// Timeout settings
 	QueueOperationTimeout     time.Duration
 	QueueDrainTimeout         time.Duration
 	WorkerHealthCheckInterval time.Duration
-	
+
 	// Circuit breaker settings
-	CircuitBreakerEnabled     bool
-	CircuitBreakerThreshold   int
-	CircuitBreakerTimeout     time.Duration
-	
+	CircuitBreakerEnabled   bool
+	CircuitBreakerThreshold int
+	CircuitBreakerTimeout   time.Duration
+
 	// Priority settings
-	PriorityLevels           int
-	PriorityAgingEnabled     bool
-	PriorityAgingThreshold   time.Duration
-	
+	PriorityLevels         int
+	PriorityAgingEnabled   bool
+	PriorityAgingThreshold time.Duration
+
 	// Backpressure settings
-	BackpressureThreshold    float64
-	EmergencyModeThreshold   float64
+	BackpressureThreshold  float64
+	EmergencyModeThreshold float64
 }
 
 // CircuitBreaker implements circuit breaker pattern for queue operations
@@ -97,27 +97,27 @@ type CircuitBreaker struct {
 
 // WorkerHealth tracks individual worker health
 type WorkerHealth struct {
-	ID              int
-	LastSeen        time.Time
-	ProcessedCount  int64
-	ErrorCount      int64
-	AverageTime     time.Duration
-	Status          string // "healthy", "slow", "failed"
+	ID             int
+	LastSeen       time.Time
+	ProcessedCount int64
+	ErrorCount     int64
+	AverageTime    time.Duration
+	Status         string // "healthy", "slow", "failed"
 }
 
 // QueueWorker represents a queue worker
 type QueueWorker struct {
-	ID       int
-	queue    *RobustQueue     //nolint:unused
-	health   *WorkerHealth    //nolint:unused
-	ctx      context.Context  //nolint:unused
-	cancel   context.CancelFunc //nolint:unused
+	ID     int
+	queue  *RobustQueue       //nolint:unused
+	health *WorkerHealth      //nolint:unused
+	ctx    context.Context    //nolint:unused
+	cancel context.CancelFunc //nolint:unused
 }
 
 // NewRobustQueue creates a new robust queue with timeout resilience
 func NewRobustQueue(config *QueueResilienceConfig) *RobustQueue {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	queue := &RobustQueue{
 		items:          make(chan QueueItem, config.QueueSize),
 		config:         config,
@@ -126,19 +126,19 @@ func NewRobustQueue(config *QueueResilienceConfig) *RobustQueue {
 		ctx:            ctx,
 		cancel:         cancel,
 	}
-	
+
 	// Initialize priority queues if enabled
 	if config.PriorityLevels > 1 {
 		queue.highPriority = make(chan QueueItem, config.QueueSize/3)
 		queue.mediumPriority = make(chan QueueItem, config.QueueSize/3)
 		queue.lowPriority = make(chan QueueItem, config.QueueSize/3)
 	}
-	
+
 	// Start background routines
 	queue.startHealthMonitoring()
 	queue.startPriorityAging()
 	queue.startSpilloverManager()
-	
+
 	return queue
 }
 
@@ -148,11 +148,11 @@ func (q *RobustQueue) Enqueue(item QueueItem) error {
 	if !q.circuitBreaker.CanExecute() {
 		return errors.New("circuit breaker is open")
 	}
-	
+
 	// Create timeout context for queue operation
 	ctx, cancel := context.WithTimeout(q.ctx, q.config.QueueOperationTimeout)
 	defer cancel()
-	
+
 	// Check backpressure
 	currentLoad := float64(atomic.LoadInt64(&q.length)) / float64(q.config.QueueSize)
 	if currentLoad > q.config.BackpressureThreshold {
@@ -164,14 +164,14 @@ func (q *RobustQueue) Enqueue(item QueueItem) error {
 			return ctx.Err()
 		}
 	}
-	
+
 	// Try to enqueue with priority support
 	err := q.enqueueWithPriority(ctx, item)
 	if err != nil {
 		q.circuitBreaker.RecordFailure()
 		return err
 	}
-	
+
 	q.circuitBreaker.RecordSuccess()
 	atomic.AddInt64(&q.length, 1)
 	return nil
@@ -181,7 +181,7 @@ func (q *RobustQueue) Enqueue(item QueueItem) error {
 func (q *RobustQueue) enqueueWithPriority(ctx context.Context, item QueueItem) error {
 	// Set enqueue time
 	item.EnqueueTime = time.Now()
-	
+
 	// Choose appropriate queue based on priority
 	var targetQueue chan QueueItem
 	if q.config.PriorityLevels > 1 {
@@ -196,7 +196,7 @@ func (q *RobustQueue) enqueueWithPriority(ctx context.Context, item QueueItem) e
 	} else {
 		targetQueue = q.items
 	}
-	
+
 	// Try to enqueue
 	select {
 	case targetQueue <- item:
@@ -214,12 +214,12 @@ func (q *RobustQueue) enqueueWithPriority(ctx context.Context, item QueueItem) e
 func (q *RobustQueue) spilloverEnqueue(item QueueItem) error {
 	q.spilloverMutex.Lock()
 	defer q.spilloverMutex.Unlock()
-	
+
 	// Check spillover size limit
 	if int64(len(q.spillover)) >= q.config.SpilloverMaxSize {
 		return errors.New("spillover queue is full")
 	}
-	
+
 	q.spillover = append(q.spillover, item)
 	q.spilloverActive = true
 	return nil
@@ -229,7 +229,7 @@ func (q *RobustQueue) spilloverEnqueue(item QueueItem) error {
 func (q *RobustQueue) Dequeue(timeout time.Duration) (*QueueItem, error) {
 	ctx, cancel := context.WithTimeout(q.ctx, timeout)
 	defer cancel()
-	
+
 	// Try priority queues first
 	if q.config.PriorityLevels > 1 {
 		item, err := q.dequeueWithPriority(ctx)
@@ -238,7 +238,7 @@ func (q *RobustQueue) Dequeue(timeout time.Duration) (*QueueItem, error) {
 			return item, nil
 		}
 	}
-	
+
 	// Try main queue
 	select {
 	case item := <-q.items:
@@ -258,14 +258,14 @@ func (q *RobustQueue) dequeueWithPriority(ctx context.Context) (*QueueItem, erro
 		return &item, nil
 	default:
 	}
-	
+
 	// Try medium priority
 	select {
 	case item := <-q.mediumPriority:
 		return &item, nil
 	default:
 	}
-	
+
 	// Try low priority
 	select {
 	case item := <-q.lowPriority:
@@ -279,18 +279,18 @@ func (q *RobustQueue) dequeueWithPriority(ctx context.Context) (*QueueItem, erro
 func (q *RobustQueue) spilloverDequeue() (*QueueItem, error) {
 	q.spilloverMutex.Lock()
 	defer q.spilloverMutex.Unlock()
-	
+
 	if len(q.spillover) == 0 {
 		return nil, errors.New("no items available")
 	}
-	
+
 	item := q.spillover[0]
 	q.spillover = q.spillover[1:]
-	
+
 	if len(q.spillover) == 0 {
 		q.spilloverActive = false
 	}
-	
+
 	return &item, nil
 }
 
@@ -301,7 +301,7 @@ func (q *RobustQueue) startHealthMonitoring() {
 		defer q.wg.Done()
 		ticker := time.NewTicker(q.config.WorkerHealthCheckInterval)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-ticker.C:
@@ -317,7 +317,7 @@ func (q *RobustQueue) startHealthMonitoring() {
 func (q *RobustQueue) checkWorkerHealth() {
 	q.healthMutex.RLock()
 	defer q.healthMutex.RUnlock()
-	
+
 	now := time.Now()
 	for _, health := range q.workerHealth {
 		// Check if worker is responsive
@@ -338,13 +338,13 @@ func (q *RobustQueue) startPriorityAging() {
 	if !q.config.PriorityAgingEnabled {
 		return
 	}
-	
+
 	q.wg.Add(1)
 	go func() {
 		defer q.wg.Done()
 		ticker := time.NewTicker(q.config.PriorityAgingThreshold / 2)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-ticker.C:
@@ -359,10 +359,10 @@ func (q *RobustQueue) startPriorityAging() {
 // ageQueueItems promotes old items to higher priority
 func (q *RobustQueue) ageQueueItems() {
 	now := time.Now()
-	
+
 	// Age medium priority items to high priority
 	q.ageSpecificQueue(q.mediumPriority, q.highPriority, now)
-	
+
 	// Age low priority items to medium priority
 	q.ageSpecificQueue(q.lowPriority, q.mediumPriority, now)
 }
@@ -407,7 +407,7 @@ func (q *RobustQueue) startSpilloverManager() {
 		defer q.wg.Done()
 		ticker := time.NewTicker(time.Second * 30)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-ticker.C:
@@ -424,14 +424,14 @@ func (q *RobustQueue) manageSpillover() {
 	if !q.spilloverActive {
 		return
 	}
-	
+
 	q.spilloverMutex.Lock()
 	defer q.spilloverMutex.Unlock()
-	
+
 	moved := 0
 	for i := 0; i < len(q.spillover) && moved < 10; i++ {
 		item := q.spillover[i]
-		
+
 		// Try to move back to appropriate queue
 		var targetQueue chan QueueItem
 		if q.config.PriorityLevels > 1 {
@@ -446,7 +446,7 @@ func (q *RobustQueue) manageSpillover() {
 		} else {
 			targetQueue = q.items
 		}
-		
+
 		select {
 		case targetQueue <- item:
 			// Successfully moved back
@@ -457,11 +457,11 @@ func (q *RobustQueue) manageSpillover() {
 			// Queue still full, try later
 		}
 	}
-	
+
 	if len(q.spillover) == 0 {
 		q.spilloverActive = false
 	}
-	
+
 	if moved > 0 {
 		log.Debugf("Moved %d items from spillover back to memory queues", moved)
 	}
@@ -479,12 +479,12 @@ func NewCircuitBreaker(threshold int, timeout time.Duration) *CircuitBreaker {
 func (cb *CircuitBreaker) CanExecute() bool {
 	cb.mutex.RLock()
 	defer cb.mutex.RUnlock()
-	
+
 	state := atomic.LoadInt32(&cb.state)
 	if state == 0 { // Closed
 		return true
 	}
-	
+
 	if state == 1 { // Open
 		if time.Since(cb.lastFailure) > cb.timeout {
 			// Try to transition to half-open
@@ -494,7 +494,7 @@ func (cb *CircuitBreaker) CanExecute() bool {
 		}
 		return false
 	}
-	
+
 	// Half-open state
 	return true
 }
@@ -503,7 +503,7 @@ func (cb *CircuitBreaker) CanExecute() bool {
 func (cb *CircuitBreaker) RecordSuccess() {
 	cb.mutex.Lock()
 	defer cb.mutex.Unlock()
-	
+
 	atomic.StoreInt64(&cb.failures, 0)
 	atomic.StoreInt32(&cb.state, 0) // Close circuit
 }
@@ -512,10 +512,10 @@ func (cb *CircuitBreaker) RecordSuccess() {
 func (cb *CircuitBreaker) RecordFailure() {
 	cb.mutex.Lock()
 	defer cb.mutex.Unlock()
-	
+
 	failures := atomic.AddInt64(&cb.failures, 1)
 	cb.lastFailure = time.Now()
-	
+
 	if failures >= int64(cb.threshold) {
 		atomic.StoreInt32(&cb.state, 1) // Open circuit
 	}
@@ -537,17 +537,17 @@ func (q *RobustQueue) GetStats() map[string]interface{} {
 // Shutdown gracefully shuts down the queue
 func (q *RobustQueue) Shutdown(timeout time.Duration) error {
 	log.Info("Starting queue shutdown...")
-	
+
 	// Cancel context to stop background routines
 	q.cancel()
-	
+
 	// Wait for background routines to finish
 	done := make(chan struct{})
 	go func() {
 		q.wg.Wait()
 		close(done)
 	}()
-	
+
 	select {
 	case <-done:
 		log.Info("Queue shutdown completed successfully")

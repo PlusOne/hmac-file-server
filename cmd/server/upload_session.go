@@ -14,16 +14,16 @@ import (
 
 // ChunkedUploadSession represents an ongoing upload session
 type ChunkedUploadSession struct {
-	ID           string                 `json:"id"`
-	Filename     string                 `json:"filename"`
-	TotalSize    int64                  `json:"total_size"`
-	ChunkSize    int64                  `json:"chunk_size"`
-	UploadedBytes int64                 `json:"uploaded_bytes"`
-	Chunks       map[int]ChunkInfo      `json:"chunks"`
-	LastActivity time.Time              `json:"last_activity"`
-	ClientIP     string                 `json:"client_ip"`
-	TempDir      string                 `json:"temp_dir"`
-	Metadata     map[string]interface{} `json:"metadata"`
+	ID            string                 `json:"id"`
+	Filename      string                 `json:"filename"`
+	TotalSize     int64                  `json:"total_size"`
+	ChunkSize     int64                  `json:"chunk_size"`
+	UploadedBytes int64                  `json:"uploaded_bytes"`
+	Chunks        map[int]ChunkInfo      `json:"chunks"`
+	LastActivity  time.Time              `json:"last_activity"`
+	ClientIP      string                 `json:"client_ip"`
+	TempDir       string                 `json:"temp_dir"`
+	Metadata      map[string]interface{} `json:"metadata"`
 }
 
 // ChunkInfo represents information about an uploaded chunk
@@ -47,13 +47,13 @@ func NewUploadSessionStore(tempDir string) *UploadSessionStore {
 		sessions: make(map[string]*ChunkedUploadSession),
 		tempDir:  tempDir,
 	}
-	
+
 	// Create temp directory if it doesn't exist
 	_ = os.MkdirAll(tempDir, 0755)
-	
+
 	// Start cleanup routine
 	go store.cleanupExpiredSessions()
-	
+
 	return store
 }
 
@@ -61,27 +61,27 @@ func NewUploadSessionStore(tempDir string) *UploadSessionStore {
 func (s *UploadSessionStore) CreateSession(filename string, totalSize int64, clientIP string) *ChunkedUploadSession {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	sessionID := generateSessionID("", filename)
 	tempDir := filepath.Join(s.tempDir, sessionID)
 	_ = os.MkdirAll(tempDir, 0755)
-	
+
 	session := &ChunkedUploadSession{
-		ID:           sessionID,
-		Filename:     filename,
-		TotalSize:    totalSize,
-		ChunkSize:    getChunkSize(),
+		ID:            sessionID,
+		Filename:      filename,
+		TotalSize:     totalSize,
+		ChunkSize:     getChunkSize(),
 		UploadedBytes: 0,
-		Chunks:       make(map[int]ChunkInfo),
-		LastActivity: time.Now(),
-		ClientIP:     clientIP,
-		TempDir:      tempDir,
-		Metadata:     make(map[string]interface{}),
+		Chunks:        make(map[int]ChunkInfo),
+		LastActivity:  time.Now(),
+		ClientIP:      clientIP,
+		TempDir:       tempDir,
+		Metadata:      make(map[string]interface{}),
 	}
-	
+
 	s.sessions[sessionID] = session
 	s.persistSession(session)
-	
+
 	return session
 }
 
@@ -89,7 +89,7 @@ func (s *UploadSessionStore) CreateSession(filename string, totalSize int64, cli
 func (s *UploadSessionStore) GetSession(sessionID string) (*ChunkedUploadSession, bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	session, exists := s.sessions[sessionID]
 	if !exists {
 		// Try to load from persistence
@@ -99,7 +99,7 @@ func (s *UploadSessionStore) GetSession(sessionID string) (*ChunkedUploadSession
 			exists = true
 		}
 	}
-	
+
 	return session, exists
 }
 
@@ -107,12 +107,12 @@ func (s *UploadSessionStore) GetSession(sessionID string) (*ChunkedUploadSession
 func (s *UploadSessionStore) UpdateSession(sessionID string, chunkNumber int, chunkSize int64) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	session, exists := s.sessions[sessionID]
 	if !exists {
 		return fmt.Errorf("session not found")
 	}
-	
+
 	session.Chunks[chunkNumber] = ChunkInfo{
 		Number:    chunkNumber,
 		Size:      chunkSize,
@@ -120,7 +120,7 @@ func (s *UploadSessionStore) UpdateSession(sessionID string, chunkNumber int, ch
 	}
 	session.UploadedBytes += chunkSize
 	session.LastActivity = time.Now()
-	
+
 	s.persistSession(session)
 	return nil
 }
@@ -131,12 +131,12 @@ func (s *UploadSessionStore) IsSessionComplete(sessionID string) bool {
 	if !exists {
 		return false
 	}
-	
+
 	// Check if we have enough bytes
 	if session.UploadedBytes < session.TotalSize {
 		return false
 	}
-	
+
 	// Verify all required chunks are present and completed
 	totalChunks := int((session.TotalSize + session.ChunkSize - 1) / session.ChunkSize)
 	for i := 0; i < totalChunks; i++ {
@@ -150,7 +150,7 @@ func (s *UploadSessionStore) IsSessionComplete(sessionID string) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -160,11 +160,11 @@ func (s *UploadSessionStore) AssembleFile(sessionID string) (string, error) {
 	if !exists {
 		return "", fmt.Errorf("session not found")
 	}
-	
+
 	if !s.IsSessionComplete(sessionID) {
 		return "", fmt.Errorf("upload not complete")
 	}
-	
+
 	// Create final file path
 	finalPath := filepath.Join(conf.Server.StoragePath, session.Filename)
 	finalFile, err := os.Create(finalPath)
@@ -172,54 +172,54 @@ func (s *UploadSessionStore) AssembleFile(sessionID string) (string, error) {
 		return "", err
 	}
 	defer finalFile.Close()
-	
+
 	// Combine chunks in order with better error handling and progress tracking
 	totalChunks := int((session.TotalSize + session.ChunkSize - 1) / session.ChunkSize)
 	var totalCopied int64
-	
+
 	for i := 0; i < totalChunks; i++ {
 		chunkPath := filepath.Join(session.TempDir, fmt.Sprintf("chunk_%d", i))
-		
+
 		// Verify chunk exists before opening
 		chunkInfo, err := os.Stat(chunkPath)
 		if err != nil {
 			return "", fmt.Errorf("chunk %d missing: %v", i, err)
 		}
-		
+
 		chunkFile, err := os.Open(chunkPath)
 		if err != nil {
 			return "", fmt.Errorf("error opening chunk %d: %v", i, err)
 		}
-		
+
 		// Copy chunk with better error handling
 		copied, err := copyFileContentWithProgress(finalFile, chunkFile, chunkInfo.Size())
 		chunkFile.Close()
-		
+
 		if err != nil {
 			return "", fmt.Errorf("error copying chunk %d: %v", i, err)
 		}
-		
+
 		totalCopied += copied
-		
+
 		// Optional: Log progress for large files
 		if session.TotalSize > 100*1024*1024 { // Log for files > 100MB
 			progress := float64(totalCopied) / float64(session.TotalSize) * 100
 			if i%10 == 0 || i == totalChunks-1 { // Log every 10 chunks or at the end
-				log.Debugf("Assembly progress for %s: %.1f%% (%d/%d chunks)", 
+				log.Debugf("Assembly progress for %s: %.1f%% (%d/%d chunks)",
 					session.Filename, progress, i+1, totalChunks)
 			}
 		}
 	}
-	
+
 	// Verify final file size
 	if totalCopied != session.TotalSize {
 		os.Remove(finalPath) // Clean up incomplete file
 		return "", fmt.Errorf("file size mismatch: expected %d, got %d", session.TotalSize, totalCopied)
 	}
-	
+
 	// Cleanup temp files
 	s.CleanupSession(sessionID)
-	
+
 	return finalPath, nil
 }
 
@@ -227,7 +227,7 @@ func (s *UploadSessionStore) AssembleFile(sessionID string) (string, error) {
 func (s *UploadSessionStore) CleanupSession(sessionID string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	if session, exists := s.sessions[sessionID]; exists {
 		os.RemoveAll(session.TempDir)
 		delete(s.sessions, sessionID)
@@ -252,7 +252,7 @@ func (s *UploadSessionStore) persistSession(session *ChunkedUploadSession) {
 // loadSession loads session from disk/redis
 func (s *UploadSessionStore) loadSession(sessionID string) *ChunkedUploadSession {
 	var session ChunkedUploadSession
-	
+
 	// Try Redis first
 	if redisClient != nil && redisConnected {
 		data, err := redisClient.Get(context.Background(), "upload_session:"+sessionID).Result()
@@ -262,7 +262,7 @@ func (s *UploadSessionStore) loadSession(sessionID string) *ChunkedUploadSession
 			}
 		}
 	}
-	
+
 	// Fallback to disk
 	sessionFile := filepath.Join(s.tempDir, sessionID+".session")
 	data, err := os.ReadFile(sessionFile)
@@ -271,7 +271,7 @@ func (s *UploadSessionStore) loadSession(sessionID string) *ChunkedUploadSession
 			return &session
 		}
 	}
-	
+
 	return nil
 }
 
@@ -288,7 +288,7 @@ func (s *UploadSessionStore) removePersistedSession(sessionID string) {
 func (s *UploadSessionStore) cleanupExpiredSessions() {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		s.mutex.Lock()
 		now := time.Now()
@@ -330,7 +330,7 @@ func copyFileContent(dst, src *os.File) (int64, error) {
 	bufPtr := bufferPool.Get().(*[]byte)
 	defer bufferPool.Put(bufPtr)
 	buf := *bufPtr
-	
+
 	var written int64
 	for {
 		n, err := src.Read(buf)
@@ -357,7 +357,7 @@ func copyFileContentWithProgress(dst, src *os.File, expectedSize int64) (int64, 
 	bufPtr := bufferPool.Get().(*[]byte)
 	defer bufferPool.Put(bufPtr)
 	buf := *bufPtr
-	
+
 	var written int64
 	for {
 		n, err := src.Read(buf)
@@ -375,11 +375,11 @@ func copyFileContentWithProgress(dst, src *os.File, expectedSize int64) (int64, 
 			return written, fmt.Errorf("read error after %d bytes: %v", written, err)
 		}
 	}
-	
+
 	// Verify we copied the expected amount
 	if expectedSize > 0 && written != expectedSize {
 		return written, fmt.Errorf("chunk size mismatch: expected %d, copied %d", expectedSize, written)
 	}
-	
+
 	return written, nil
 }

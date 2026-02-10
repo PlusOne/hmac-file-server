@@ -341,7 +341,7 @@ func (se *StreamingEngine) recordError(clientIP string, err error) {
 func (se *StreamingEngine) optimizationLoop() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		se.optimizeBufferSizes()
 	}
