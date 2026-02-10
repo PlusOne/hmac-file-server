@@ -171,26 +171,23 @@ connection_fingerprinting = true
 performance_classification = true
 
 # Optimization strategies
-strategy_mobile = {
-    buffer_size = "32KB",
-    chunk_size = "512KB",
-    retry_multiplier = 1.5,
-    timeout_multiplier = 2.0
-}
+[client_optimization.strategy_mobile]
+buffer_size = "32KB"
+chunk_size = "512KB"
+retry_multiplier = 1.5
+timeout_multiplier = 2.0
 
-strategy_desktop = {
-    buffer_size = "128KB",
-    chunk_size = "2MB",
-    retry_multiplier = 1.0,
-    timeout_multiplier = 1.0
-}
+[client_optimization.strategy_desktop]
+buffer_size = "128KB"
+chunk_size = "2MB"
+retry_multiplier = 1.0
+timeout_multiplier = 1.0
 
-strategy_server = {
-    buffer_size = "512KB",
-    chunk_size = "10MB",
-    retry_multiplier = 0.5,
-    timeout_multiplier = 0.5
-}
+[client_optimization.strategy_server]
+buffer_size = "512KB"
+chunk_size = "10MB"
+retry_multiplier = 0.5
+timeout_multiplier = 0.5
 
 [monitoring]
 # Enhanced monitoring and metrics
