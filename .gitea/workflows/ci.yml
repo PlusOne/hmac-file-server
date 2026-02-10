@@ -148,7 +148,7 @@ jobs:
 
       - name: Login to Gitea Registry
         run: |
-          echo "${{ secrets.REGISTRY_TOKEN }}" | docker login git.uuxo.net -u "${{ secrets.REGISTRY_USER }}" --password-stdin
+          echo "${{ secrets.GITEA_TOKEN }}" | docker login git.uuxo.net -u renz --password-stdin
 
       - name: Build and push
         run: |
