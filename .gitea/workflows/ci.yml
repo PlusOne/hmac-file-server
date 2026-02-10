@@ -7,26 +7,23 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  GITEA_URL: https://git.uuxo.net
+
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    container:
+      image: golang:1.24-bookworm
     steps:
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y git ca-certificates python3
+
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.24'
-
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git clone --depth 1 --branch ${GITHUB_REF_NAME} ${{ env.GITEA_URL }}/${GITHUB_REPOSITORY}.git .
 
       - name: Download dependencies
         run: go mod download
@@ -48,7 +45,6 @@ jobs:
       - name: Validate config templates
         run: |
           echo "Validating TOML config templates..."
-          go run -mod=mod golang.org/x/tools/cmd/goimports@latest -l . > /dev/null 2>&1 || true
           for file in templates/*.toml examples/*.toml; do
             if [ -f "$file" ]; then
               echo "Checking $file"
@@ -69,6 +65,8 @@ jobs:
     name: Build (${{ matrix.goos }}-${{ matrix.goarch }})
     runs-on: ubuntu-latest
     needs: test
+    container:
+      image: golang:1.24-bookworm
     strategy:
       matrix:
         include:
@@ -86,13 +84,13 @@ jobs:
           - goos: windows
             goarch: amd64
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Install git
+        run: apt-get update && apt-get install -y git ca-certificates
 
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.24'
+      - name: Checkout code
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git clone --depth 1 --branch ${GITHUB_REF_NAME} ${{ env.GITEA_URL }}/${GITHUB_REPOSITORY}.git .
 
       - name: Build binaries
         env:
@@ -122,45 +120,50 @@ jobs:
             -o "bin/hmac-monitor-${{ matrix.goos }}-${ARCH}${SUFFIX}" \
             ./cmd/monitor/
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: bin/*
-
   docker:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    container:
+      image: docker:24-cli
+      options: --privileged
+    services:
+      docker:
+        image: docker:24-dind
+        options: --privileged
     steps:
+      - name: Install dependencies
+        run: apk add --no-cache git curl
+
       - name: Checkout code
-        uses: actions/checkout@v4
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git clone --depth 1 --branch ${GITHUB_REF_NAME} ${{ env.GITEA_URL }}/${GITHUB_REPOSITORY}.git .
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        run: |
+          docker buildx create --use --name builder --driver docker-container
+          docker buildx inspect --bootstrap
 
       - name: Login to Gitea Registry
         run: |
           echo "${{ secrets.REGISTRY_TOKEN }}" | docker login git.uuxo.net -u "${{ secrets.REGISTRY_USER }}" --password-stdin
 
-      - name: Determine tags
-        id: tags
+      - name: Build and push
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/}
-            echo "tags=git.uuxo.net/uuxo/hmac-file-server:${VERSION},git.uuxo.net/uuxo/hmac-file-server:latest" >> "$GITHUB_OUTPUT"
+            TAGS="-t git.uuxo.net/uuxo/hmac-file-server:${VERSION} -t git.uuxo.net/uuxo/hmac-file-server:latest"
           else
-            echo "tags=git.uuxo.net/uuxo/hmac-file-server:${GITHUB_SHA::8},git.uuxo.net/uuxo/hmac-file-server:main" >> "$GITHUB_OUTPUT"
+            TAGS="-t git.uuxo.net/uuxo/hmac-file-server:${GITHUB_SHA::8} -t git.uuxo.net/uuxo/hmac-file-server:main"
           fi
 
-      - name: Build and push multi-arch image
-        run: |
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --file Dockerfile.multiarch \
             --push \
-            $(echo "${{ steps.tags.outputs.tags }}" | sed 's/,/ -t /g; s/^/-t /') \
+            ${TAGS} \
             .
 
   release:
@@ -168,34 +171,42 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, build]
     if: startsWith(github.ref, 'refs/tags/v')
+    container:
+      image: golang:1.24-bookworm
     steps:
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y git ca-certificates curl python3
+
       - name: Checkout code
-        uses: actions/checkout@v4
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git clone --depth 1 --branch ${GITHUB_REF_NAME} ${{ env.GITEA_URL }}/${GITHUB_REPOSITORY}.git .
 
-      - name: Download all artifacts
-        uses: actions/download-artifact@v3
-        with:
-          path: artifacts
-
-      - name: Prepare release assets
+      - name: Build all release binaries
         run: |
           mkdir -p release
-          find artifacts -name 'hmac-file-server-*' -o -name 'hmac-monitor-*' | while read f; do
-            cp "$f" release/
-          done
-          cd release
-          sha256sum * > SHA256SUMS
-          echo "Release assets:"
-          ls -lh
+          for target in linux/amd64 linux/arm64 linux/arm/7 darwin/amd64 darwin/arm64 windows/amd64; do
+            IFS='/' read -r goos goarch goarm <<< "$target"
+            suffix=""
+            arch="$goarch"
+            [ "$goos" = "windows" ] && suffix=".exe"
+            [ -n "$goarm" ] && arch="${goarch}v${goarm}"
 
-      - name: Create Gitea release
+            export GOOS="$goos" GOARCH="$goarch" GOARM="$goarm" CGO_ENABLED=0
+            echo "Building ${goos}-${arch}..."
+            go build -ldflags="-s -w" -o "release/hmac-file-server-${goos}-${arch}${suffix}" ./cmd/server/
+            go build -ldflags="-s -w" -o "release/hmac-monitor-${goos}-${arch}${suffix}" ./cmd/monitor/
+          done
+          cd release && sha256sum * > SHA256SUMS
+          echo "Release assets:" && ls -lh
+
+      - name: Create Gitea release and upload assets
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          API_URL="https://git.uuxo.net/api/v1/repos/${GITHUB_REPOSITORY}/releases"
+          API_URL="${{ env.GITEA_URL }}/api/v1/repos/${GITHUB_REPOSITORY}/releases"
 
-          # Create release
           RELEASE_RESPONSE=$(curl -s -X POST "$API_URL" \
             -H "Authorization: token ${GITEA_TOKEN}" \
             -H "Content-Type: application/json" \
@@ -210,8 +221,7 @@ jobs:
           RELEASE_ID=$(echo "$RELEASE_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
           echo "Created release ID: $RELEASE_ID"
 
-          # Upload each asset
-          UPLOAD_URL="https://git.uuxo.net/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets"
+          UPLOAD_URL="${{ env.GITEA_URL }}/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets"
           for file in release/*; do
             FILENAME=$(basename "$file")
             echo "Uploading $FILENAME..."
