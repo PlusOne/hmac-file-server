@@ -35,7 +35,6 @@ type RateLimiter struct {
 	buckets      sync.Map // map[string]*tokenBucket
 	whitelist    map[string]bool
 	jidWhitelist map[string]bool
-	mu           sync.RWMutex
 }
 
 var (

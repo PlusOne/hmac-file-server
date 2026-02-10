@@ -228,12 +228,6 @@ file = "/var/log/hmac-file-server.log"
 `
 }
 
-// createMinimalConfig writes a minimal config file to the current directory
-func createMinimalConfig() error {
-	content := GenerateMinimalConfig()
-	return os.WriteFile("config.toml", []byte(content), 0644)
-}
-
 // GenerateAdvancedConfigTemplate creates a comprehensive config template for advanced users
 func GenerateAdvancedConfigTemplate() string {
 	return `# HMAC File Server - Advanced Configuration Template

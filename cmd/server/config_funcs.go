@@ -84,6 +84,7 @@ func parseTTL(ttlStr string) (time.Duration, error) {
 	}
 }
 
+//nolint:unused
 var logMessages []string
 
 //nolint:unused

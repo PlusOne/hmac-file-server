@@ -103,10 +103,6 @@ var bufferPool = sync.Pool{
 	},
 }
 
-const maxConcurrentOperations = 10
-
-var semaphore = make(chan struct{}, maxConcurrentOperations)
-
 // Global client connection tracker for multi-interface support
 var clientTracker *ClientConnectionTracker
 

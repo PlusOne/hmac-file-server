@@ -1149,22 +1149,22 @@ func countPassedChecks(result *ConfigValidationResult) int {
 // checkCommonConfigurationMistakes checks for common TOML field naming errors
 func checkCommonConfigurationMistakes(result *ConfigValidationResult, configBytes []byte) {
 	configStr := string(configBytes)
-	
+
 	// Common field naming mistakes
 	commonMistakes := map[string]string{
-		"storagepath":      "storage_path",
-		"listenport":       "listen_address", 
-		"bindip":           "bind_ip",
-		"pidfilepath":      "pid_file",
-		"metricsenabled":   "metrics_enabled",
-		"metricsport":      "metrics_port",
-		"maxuploadsize":    "max_upload_size",
-		"cleanupinterval":  "cleanup_interval",
-		"dedupenabled":     "deduplication_enabled",
-		"ttlenabled":       "ttl_enabled",
-		"chunksize":        "chunk_size",
+		"storagepath":     "storage_path",
+		"listenport":      "listen_address",
+		"bindip":          "bind_ip",
+		"pidfilepath":     "pid_file",
+		"metricsenabled":  "metrics_enabled",
+		"metricsport":     "metrics_port",
+		"maxuploadsize":   "max_upload_size",
+		"cleanupinterval": "cleanup_interval",
+		"dedupenabled":    "deduplication_enabled",
+		"ttlenabled":      "ttl_enabled",
+		"chunksize":       "chunk_size",
 	}
-	
+
 	for incorrect, correct := range commonMistakes {
 		if strings.Contains(configStr, incorrect+" =") || strings.Contains(configStr, incorrect+"=") {
 			result.AddWarning("config.syntax", incorrect, fmt.Sprintf("field name '%s' should be '%s' (use underscores)", incorrect, correct))

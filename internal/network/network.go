@@ -6,14 +6,7 @@ import (
 	"net"
 	"syscall"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
-
-var log = logrus.New()
-
-// SetLogger replaces the package-level logger.
-func SetLogger(l *logrus.Logger) { log = l }
 
 // InitializeNetworkProtocol sets up the network dialer based on the force protocol setting.
 func InitializeNetworkProtocol(forceProtocol string) (*net.Dialer, error) {

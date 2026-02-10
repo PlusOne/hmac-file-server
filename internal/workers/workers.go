@@ -28,7 +28,6 @@ type Pool struct {
 	wg         sync.WaitGroup
 	quit       chan struct{}
 	numWorkers int
-	mu         sync.Mutex
 }
 
 // NewPool creates a new worker pool.

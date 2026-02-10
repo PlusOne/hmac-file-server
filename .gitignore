@@ -211,3 +211,4 @@ builds/
 dedup_store/
 uploads/
 /server
+monitor
