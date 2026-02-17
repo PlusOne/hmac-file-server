@@ -91,29 +91,126 @@ func InitMetadataStore(dbPath string) error {
 		return fmt.Errorf("failed to create metadata directory %s: %w", dir, err)
 	}
 
-	db, err := sql.Open("sqlite", dbPath+"?_journal=WAL&_busy_timeout=5000")
+	// Warn if the database path is on a network filesystem (CIFS/NFS/SMB).
+	// SQLite requires POSIX file-locking which is unreliable on network mounts.
+	if isNetworkMount(dir) {
+		log.Warnf("⚠️  Metadata DB path %s appears to be on a network mount (CIFS/NFS). "+
+			"SQLite locking is unreliable on network filesystems. "+
+			"Move db_path to a local filesystem (e.g. /var/lib/hmac-file-server/metadata/files.db)", dbPath)
+	}
+
+	db, err := sql.Open("sqlite", dbPath+"?_journal=WAL&_busy_timeout=10000&_txlock=immediate")
 	if err != nil {
 		return fmt.Errorf("failed to open metadata database: %w", err)
 	}
 
 	// Connection pool settings for SQLite
 	db.SetMaxOpenConns(1) // SQLite supports only 1 writer
-	db.SetMaxIdleConns(2)
+	db.SetMaxIdleConns(1)
 	db.SetConnMaxLifetime(0) // Keep connections alive
+
+	// Verify connectivity before proceeding
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return fmt.Errorf("failed to ping metadata database: %w", err)
+	}
 
 	store := &MetadataStore{
 		db:     db,
 		dbPath: dbPath,
 	}
 
-	if err := store.migrate(); err != nil {
+	// Migrate with retry for transient lock contention
+	var migrateErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		migrateErr = store.migrate()
+		if migrateErr == nil {
+			break
+		}
+		log.Warnf("Metadata migration attempt %d/3 failed: %v", attempt, migrateErr)
+		time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+	}
+	if migrateErr != nil {
 		db.Close()
-		return fmt.Errorf("failed to migrate metadata database: %w", err)
+		return fmt.Errorf("failed to migrate metadata database after 3 attempts: %w", migrateErr)
 	}
 
 	metadataStore = store
 	log.Infof("✅ SQLite metadata store initialized at %s", dbPath)
 	return nil
+}
+
+// isNetworkMount checks whether the given directory is on a network filesystem
+// (CIFS, NFS, SMB) by inspecting /proc/mounts on Linux.
+func isNetworkMount(dir string) bool {
+	data, err := os.ReadFile("/proc/mounts")
+	if err != nil {
+		return false // can't determine, assume local
+	}
+	absDir, _ := filepath.Abs(dir)
+	lines := splitLines(string(data))
+	bestMatch := ""
+	bestFS := ""
+	for _, line := range lines {
+		fields := splitFields(line)
+		if len(fields) < 3 {
+			continue
+		}
+		mountPoint := fields[1]
+		fsType := fields[2]
+		if len(mountPoint) > len(bestMatch) && hasPrefix(absDir, mountPoint) {
+			bestMatch = mountPoint
+			bestFS = fsType
+		}
+	}
+	switch bestFS {
+	case "cifs", "smb", "smb2", "smbfs", "nfs", "nfs4", "fuse.sshfs", "9p":
+		return true
+	}
+	return false
+}
+
+// splitLines splits a string into lines (helper to avoid importing strings in this file).
+func splitLines(s string) []string {
+	var lines []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			lines = append(lines, s[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+	return lines
+}
+
+// splitFields splits a string on whitespace (helper).
+func splitFields(s string) []string {
+	var fields []string
+	start := -1
+	for i := 0; i < len(s); i++ {
+		if s[i] == ' ' || s[i] == '\t' {
+			if start >= 0 {
+				fields = append(fields, s[start:i])
+				start = -1
+			}
+		} else {
+			if start < 0 {
+				start = i
+			}
+		}
+	}
+	if start >= 0 {
+		fields = append(fields, s[start:])
+	}
+	return fields
+}
+
+// hasPrefix checks if s starts with prefix (helper).
+func hasPrefix(s, prefix string) bool {
+	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
 }
 
 // GetMetadataStore returns the global metadata store (may be nil if disabled).
@@ -150,16 +247,27 @@ func (m *MetadataStore) migrate() error {
 	);
 	`
 
-	_, err := m.db.Exec(schema)
+	// Use a transaction so all DDL is atomic and uses a single lock acquisition
+	tx, err := m.db.Begin()
+	if err != nil {
+		return fmt.Errorf("schema migration begin failed: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	_, err = tx.Exec(schema)
 	if err != nil {
 		return fmt.Errorf("schema migration failed: %w", err)
 	}
 
 	// Set version if not exists
 	var count int
-	_ = m.db.QueryRow("SELECT COUNT(*) FROM schema_version").Scan(&count)
+	_ = tx.QueryRow("SELECT COUNT(*) FROM schema_version").Scan(&count)
 	if count == 0 {
-		_, _ = m.db.Exec("INSERT INTO schema_version (version) VALUES (?)", 1)
+		_, _ = tx.Exec("INSERT INTO schema_version (version) VALUES (?)", 1)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("schema migration commit failed: %w", err)
 	}
 
 	return nil
