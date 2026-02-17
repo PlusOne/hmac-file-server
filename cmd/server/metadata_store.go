@@ -99,7 +99,9 @@ func InitMetadataStore(dbPath string) error {
 			"Move db_path to a local filesystem (e.g. /var/lib/hmac-file-server/metadata/files.db)", dbPath)
 	}
 
-	db, err := sql.Open("sqlite", dbPath+"?_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)&_txlock=immediate")
+	dsn := "file:" + dbPath + "?_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)&_txlock=immediate"
+	log.Debugf("Opening metadata database: %s", dsn)
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return fmt.Errorf("failed to open metadata database: %w", err)
 	}
