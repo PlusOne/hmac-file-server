@@ -1496,6 +1496,118 @@ version = "3.3.0"
 
 ## Configuration Best Practices
 
+### CPU Instruction Set Extensions (ISA) & Hardware Acceleration
+
+Starting with version 3.4+, the HMAC File Server **automatically detects CPU instruction set extensions** at startup and uses them to optimize compression algorithm selection, cryptographic operations, and I/O throughput.
+
+#### Detected ISA Extensions
+
+| Extension | Intel Name | AMD Name | Performance Impact |
+|-----------|-----------|----------|-------------------|
+| **AES-NI** | Intel AES-NI | AMD AES Instructions | HMAC-SHA256 & TLS: **10× faster** encrypt/decrypt + side-channel attack protection |
+| **SSE4.2** | Intel SSE4.2 | AMD SSE4.2 | CRC32c checksums, string comparisons — used by **XXHash** in zstd |
+| **AVX2** | Intel AVX2 | AMD AVX2 | 256-bit SIMD: parallel data scanning, checksum computation |
+| **AVX-512** | Intel AVX-512 | AMD AVX-512 (Zen 4 / Ryzen 7000+) | 512-bit SIMD: maximum throughput for checksum and pattern matching |
+| **BMI2** | Intel BMI2 | AMD BMI2 (full-speed Zen 3+) | **PEXT/PDEP**: critical for zstd entropy coding (HUF/FSE) — **2-4× speedup** |
+| **BMI1** | Intel BMI1 | AMD BMI1 | Bit manipulation instructions (ANDN, BEXTR, BLSI, BLSMSK, BLSR, TZCNT) |
+| **SHA-NI** | Intel SHA Extensions | AMD SHA (Zen+) | Hardware SHA-256: accelerates HMAC signature verification |
+| **CLMUL** | Intel PCLMULQDQ | AMD CLMUL | Carry-less multiply: GCM-mode AES, CRC computation |
+| **POPCNT** | Intel POPCNT | AMD POPCNT | Population count — used in hash tables and bitmap operations |
+| **RDRAND** | Intel RDRAND | AMD RDRAND | Hardware random number generator for secure token creation |
+
+#### CPU Minimum Requirements by Feature
+
+| Feature | Minimum Intel | Minimum AMD | Why |
+|---------|--------------|-------------|-----|
+| AES-NI (hardware crypto) | Westmere (2010) | Bulldozer (2011) | Without it, HMAC verification uses 10× slower software crypto |
+| SSE4.2 (checksums) | Nehalem (2008) | Bulldozer (2011) | XXHash and CRC32 acceleration |
+| AVX2 (SIMD vectors) | Haswell (2013) | Excavator (2015) | Parallel data scanning in transfer operations |
+| BMI2 (entropy coding) | Haswell (2013) | Zen 3 (2020)¹ | zstd HUF/FSE decompression at full speed |
+| AVX-512 (wide SIMD) | Skylake-X (2017) | Zen 4 (2022) | Maximum checksum throughput |
+| SHA-NI | Ice Lake (2019) | Zen (2017) | Hardware SHA-256 for signatures |
+
+> ¹ **AMD BMI2 Note**: AMD CPUs before Zen 3 (Ryzen 5000) implement PEXT/PDEP in microcode, making them **~10× slower** than Intel's single-cycle implementation. For optimal zstd performance, AMD Zen 3+ is required.
+
+#### How ISA Extensions Affect Compression Selection
+
+The server's **CPU Auto-Optimization** automatically selects the best compression algorithm based on detected hardware:
+
+| Compression Tier | Required ISA | Algorithm | Level | Reason |
+|-----------------|-------------|-----------|-------|--------|
+| **optimal** | BMI2 + AVX2 | zstd | 3 | Full-speed entropy coding via PEXT + SIMD checksums via AVX2 |
+| **good** | BMI2 + SSE4.2 | zstd | 1 | Entropy coding accelerated, narrower checksum parallelism |
+| **baseline** | SSE2 only | gzip | 6 | BMI2 missing → zstd entropy coding falls back to slow shifts |
+| **minimal** | none | gzip | 4 | No SIMD → pure software, lower level for acceptable speed |
+
+**Why this matters for zstd specifically:**
+- **BMI2 (PEXT)**: zstd's Huffman and FSE entropy decoders extract variable-length bit fields from packed streams. With PEXT, this is a single CPU instruction. Without it, zstd emulates PEXT with 5-8 shift/mask operations per field extraction.
+- **SSE4.2 / AVX2**: zstd uses XXHash64 for block checksums. SSE4.2 provides CRC32c and string scanning acceleration. AVX2 enables 32-byte parallel processing of hash computation.
+- **Without these extensions**, zstd in software is often **slower than gzip** for equivalent ratios, which is why the auto-optimizer falls back to gzip on older hardware.
+
+#### Startup Log Output
+
+When the server starts, it logs detected ISA extensions:
+
+```
+INFO CPU: Intel(R) Core(TM) i7-12700K, Cores=20
+INFO CPU ISA Extensions: AES-NI SSE4.2 AVX AVX2 BMI1 BMI2 POPCNT CLMUL SHA-NI (GenuineIntel)
+INFO Compression Tier: optimal (recommended algorithm: zstd)
+INFO Hardware Crypto: AES-NI available — HMAC/TLS operations hardware-accelerated
+INFO Compression Hint: BMI2+AVX2 detected — zstd entropy coding (HUF/FSE) hardware-accelerated
+INFO Compression Auto-Selection: algorithm=zstd level=3 tier=optimal
+```
+
+On an older or minimal CPU:
+
+```
+WARN Hardware Crypto: AES-NI NOT detected — cryptographic operations use software fallback
+WARN Compression Tier: baseline (recommended algorithm: gzip)
+INFO Compression Auto-Selection: algorithm=gzip level=6 tier=baseline
+```
+
+#### Configuration
+
+Add to your `config.toml`:
+
+```toml
+[compression]
+# Enable transfer compression (default: false)
+enabled = false
+
+# Algorithm: "auto" (CPU-based selection), "zstd", "gzip", "none"
+algorithm = "auto"
+
+# Compression level: 0 = auto-select based on CPU tier
+# gzip: 1-9, zstd: 1-22
+level = 0
+
+# Minimum file size for compression (smaller files skip compression)
+threshold = "1KB"
+
+# Adjust compression level dynamically based on CPU load
+adaptive_compression = true
+
+# Honor client Accept-Encoding headers
+compression_negotiation = true
+```
+
+#### Config Validation
+
+The `--check-performance` validator now reports ISA extension warnings:
+
+```bash
+./hmac-file-server -config config.toml --check-performance
+```
+
+Example output:
+```
+⚠ system.cpu.bmi2: BMI2 not detected — zstd entropy coding (HUF/FSE via PEXT/PDEP)
+  cannot use hardware acceleration. Intel: requires Haswell (2013+),
+  AMD: requires Zen 3 (2020+) for full-speed PEXT
+⚠ system.cpu.compression: baseline — Only baseline SIMD (SSE2) available, gzip recommended.
+  Upgrade to a CPU with BMI2+AVX2 for optimal zstd performance.
+```
+
 ### Performance Optimizations
 
 **Large File Handling**: The server is configured for efficient large file uploads:

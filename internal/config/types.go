@@ -246,6 +246,18 @@ type MetadataStoreConfig struct {
 	PurgeAge string `toml:"purge_age" mapstructure:"purge_age"` // age after which soft-deleted records are purged
 }
 
+// CompressionConfig holds transfer compression configuration.
+// The server auto-selects the optimal algorithm based on CPU ISA extensions
+// (BMI2, AVX2, SSE4.2) when Algorithm is set to "auto".
+type CompressionConfig struct {
+	Enabled              bool   `toml:"enabled" mapstructure:"enabled"`
+	Algorithm            string `toml:"algorithm" mapstructure:"algorithm"`                         // "auto", "zstd", "gzip", "none"
+	Level                int    `toml:"level" mapstructure:"level"`                                 // 0 = auto-select based on CPU tier
+	Threshold            string `toml:"threshold" mapstructure:"threshold"`                         // minimum size for compression (e.g. "1KB")
+	AdaptiveCompression  bool   `toml:"adaptive_compression" mapstructure:"adaptive_compression"`   // adjust level based on CPU load
+	NegotiateWithClient  bool   `toml:"compression_negotiation" mapstructure:"compression_negotiation"` // honor Accept-Encoding
+}
+
 // Config is the top-level configuration struct.
 type Config struct {
 	Server            ServerConfig            `mapstructure:"server"`
@@ -271,6 +283,7 @@ type Config struct {
 	RateLimit         RateLimitConfig         `mapstructure:"rate_limit"`
 	KeyRotation       KeyRotationConfig       `mapstructure:"key_rotation"`
 	Metadata          MetadataStoreConfig     `mapstructure:"metadata"`
+	Compression       CompressionConfig       `mapstructure:"compression"`
 }
 
 // UploadTask represents a queued upload task.

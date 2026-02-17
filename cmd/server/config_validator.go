@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"git.uuxo.net/uuxo/hmac-file-server/internal/cpufeatures"
 )
 
 // Global variable to store config file path for validation
@@ -717,6 +719,42 @@ func validateSystemResources(result *ConfigValidationResult) {
 		result.AddWarning("system.cpu", cpuCores, "minimum 2 CPU cores recommended for optimal performance")
 	} else if cpuCores < 4 {
 		result.AddWarning("system.cpu", cpuCores, "4+ CPU cores recommended for high-load environments")
+	}
+
+	// Detect and validate CPU ISA extensions
+	features := cpufeatures.Detect()
+
+	if !features.CryptoAccelerated() {
+		result.AddWarning("system.cpu.aes_ni", false,
+			"AES-NI not detected — HMAC signature verification and TLS will use slower software crypto. "+
+				"Intel: requires Westmere (2010+), AMD: requires Bulldozer (2011+)")
+	}
+
+	if !features.HasSSE42 {
+		result.AddWarning("system.cpu.sse42", false,
+			"SSE4.2 not detected — CRC32 checksums and data scanning will be slower. "+
+				"Required for optimal XXHash performance used by modern compression")
+	}
+
+	if !features.HasBMI2 {
+		result.AddWarning("system.cpu.bmi2", false,
+			"BMI2 not detected — zstd entropy coding (HUF/FSE via PEXT/PDEP) cannot use hardware acceleration. "+
+				"Intel: requires Haswell (2013+), AMD: requires Zen 3 (2020+) for full-speed PEXT")
+	}
+
+	tier := features.CompressionTier()
+	switch tier {
+	case "minimal":
+		result.AddWarning("system.cpu.compression", tier,
+			"No SIMD extensions detected — compression will run in pure software mode. gzip recommended over zstd")
+	case "baseline":
+		result.AddWarning("system.cpu.compression", tier,
+			"Only baseline SIMD (SSE2) available — gzip is recommended. "+
+				"Upgrade to a CPU with BMI2+AVX2 for optimal zstd performance")
+	case "good":
+		// no warning, but log info
+	case "optimal":
+		// perfect, no warning
 	}
 
 	// Check available memory (basic check through runtime)

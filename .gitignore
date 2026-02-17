@@ -204,6 +204,7 @@ check-configs.sh
 install-manager.sh
 
 # Compiled binaries (use releases for distribution)
+bins/
 builds/
 *.beam
 

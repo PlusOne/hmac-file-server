@@ -25,6 +25,8 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	"git.uuxo.net/uuxo/hmac-file-server/internal/cpufeatures"
 )
 
 // WorkerPool represents a pool of workers
@@ -468,6 +470,26 @@ func logSystemInfo() {
 
 	log.Infof("Go Runtime: Version=%s, NumCPU=%d, NumGoroutine=%d",
 		runtime.Version(), runtime.NumCPU(), runtime.NumGoroutine())
+
+	// Detect and log CPU ISA extensions (AES-NI, SSE, AVX, BMI)
+	features := cpufeatures.Detect()
+	log.Infof("CPU ISA Extensions: %s", features.Summary())
+	log.Infof("Compression Tier: %s (recommended algorithm: %s)",
+		features.CompressionTier(), features.RecommendedCompression())
+	if features.CryptoAccelerated() {
+		log.Infof("Hardware Crypto: AES-NI available — HMAC/TLS operations hardware-accelerated")
+	} else {
+		log.Warnf("Hardware Crypto: AES-NI NOT detected — cryptographic operations use software fallback")
+	}
+	if features.ZstdOptimal() {
+		log.Infof("Compression Hint: BMI2+%s detected — zstd entropy coding (HUF/FSE) hardware-accelerated",
+			func() string {
+				if features.HasAVX2 {
+					return "AVX2"
+				}
+				return "SSE4.2"
+			}())
+	}
 }
 
 // initMetrics initializes Prometheus metrics

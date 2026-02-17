@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 
+	"git.uuxo.net/uuxo/hmac-file-server/internal/compression"
 	"git.uuxo.net/uuxo/hmac-file-server/internal/config"
 )
 
@@ -280,6 +281,11 @@ func main() {
 
 	setupLogging()
 	logSystemInfo()
+
+	// Log compression auto-selection based on CPU ISA extensions
+	compressionProfile := compression.AutoSelect()
+	log.Infof("Compression Auto-Selection: %s", compressionProfile)
+	log.Debugf("\n%s", compression.ISAImpactTable(compressionProfile.Features))
 
 	// Initialize metrics
 	initMetrics()
