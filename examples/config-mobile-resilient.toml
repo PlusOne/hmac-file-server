@@ -1,6 +1,6 @@
 # HMAC File Server - Mobile Network Resilience Configuration
 # Optimized for WiFi ↔ LTE switching and device standby scenarios
-# Version: 3.3.0 Enhanced for Mobile Devices
+# Version: 3.4.0 "Cascade" Enhanced for Mobile Devices
 
 [server]
 # Network binding - CRITICAL: Use 0.0.0.0 to bind to all interfaces

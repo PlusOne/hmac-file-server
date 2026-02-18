@@ -1,6 +1,6 @@
 #!/bin/bash
 # 🧪 COMPREHENSIVE INTEGRATION TEST SUITE
-# Tests the ejabberd module with HMAC File Server 3.3.0
+# Tests the ejabberd module with HMAC File Server 3.4.0
 # Author: HMAC File Server Team
 # Date: August 25, 2025
 
@@ -241,7 +241,7 @@ echo ""
 echo "📋 INSTALLATION REQUIREMENTS:"
 echo "   1. ejabberd server (version 20.01 or later)"
 echo "   2. Erlang/OTP (version 22 or later) ✅"
-echo "   3. HMAC File Server 3.3.0 with Bearer token support"
+echo "   3. HMAC File Server 3.4.0 with Bearer token support"
 echo "   4. Shared network access between ejabberd and HMAC server"
 echo ""
 

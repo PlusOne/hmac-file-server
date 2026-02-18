@@ -1,6 +1,6 @@
 # HMAC File Server - Network Switching Resilient Configuration
 # Optimized for 5G ↔ WiFi switching with session persistence
-# Version: 3.3.0 "Nexus Infinitum" - Network Switching Solution
+# Version: 3.4.0 "Cascade" - Network Switching Solution
 
 [server]
 # Network binding - CRITICAL: Use 0.0.0.0 to bind to all interfaces
@@ -33,7 +33,7 @@ standby_grace_period = "24h"               # 24 hours for standby recovery
 ultra_max_grace = "72h"                    # 72 hours ultra-maximum for critical scenarios
 
 [session_store]
-# Session persistence for network resilience - NEW in 3.3.0
+# Session persistence for network resilience - NEW in 3.4.0
 enabled = true                             # CRITICAL: Enable session store
 backend = "memory"                         # "memory" or "redis"
 max_sessions = 50000                       # Maximum concurrent sessions
@@ -140,4 +140,4 @@ adapt_to_client_network = true           # Adapt server behavior to client netwo
 session_migration_timeout = "10m"       # Migration timeout
 
 [build]
-version = "3.3.0"
+version = "3.4.0"

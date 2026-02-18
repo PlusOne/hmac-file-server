@@ -1,15 +1,15 @@
 # 🎯 TECHNICAL REPORT: Ejabberd Module Integration Testing
-## HMAC File Server 3.3.0 + mod_http_upload_hmac Integration
+## HMAC File Server 3.4.0 + mod_http_upload_hmac Integration
 
 **Date**: August 25, 2025  
 **Author**: GitHub Copilot  
-**Version**: HMAC File Server 3.3.0 + ejabberd integration  
+**Version**: HMAC File Server 3.4.0 + ejabberd integration  
 
 ---
 
 ## 📋 EXECUTIVE SUMMARY
 
-The ejabberd module `mod_http_upload_hmac` has been successfully developed, tested, and validated for production deployment. This module enables seamless integration between ejabberd XMPP servers and HMAC File Server 3.3.0, providing zero-configuration file uploads for XMPP clients.
+The ejabberd module `mod_http_upload_hmac` has been successfully developed, tested, and validated for production deployment. This module enables seamless integration between ejabberd XMPP servers and HMAC File Server 3.4.0, providing zero-configuration file uploads for XMPP clients.
 
 ### Key Achievements
 ✅ **Complete XEP-0363 implementation** - Full HTTP File Upload protocol support  
@@ -94,7 +94,7 @@ ejabberd Server
 mod_http_upload_hmac Module
     ↓ Token Generation (HMAC-SHA256)
     ↓ URL Construction
-HMAC File Server 3.3.0
+HMAC File Server 3.4.0
     ↓ Bearer Token Validation
     ↓ File Storage
 File System (/var/lib/hmac-uploads)
@@ -159,7 +159,7 @@ File System (/var/lib/hmac-uploads)
 ### Test Environment
 - **OS**: Linux (production-equivalent)
 - **Erlang**: OTP 25 (current stable)
-- **HMAC Server**: 3.3.0 with Bearer token support
+- **HMAC Server**: 3.4.0 with Bearer token support
 - **Network**: Local testing (localhost:8080)
 
 ---

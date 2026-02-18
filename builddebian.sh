@@ -32,7 +32,7 @@ PROJECT_DIR=$(pwd)
 BUILD_DIR=$PROJECT_DIR/build
 DEB_DIR=$PROJECT_DIR/debian
 PACKAGE_NAME="hmac-file-server"
-VERSION="3.3.0"
+VERSION="3.4.0"
 MAINTAINER="Alex Renz <renz@uuxo.net>"
 
 # Source package for compilation

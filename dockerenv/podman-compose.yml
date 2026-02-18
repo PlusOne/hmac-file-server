@@ -1,5 +1,5 @@
 # Podman Compose Configuration for HMAC File Server
-# Version: 3.2.1 - Podman optimized
+# Version: 3.4.0 "Cascade" - Podman optimized
 
 services:
   hmac-file-server:

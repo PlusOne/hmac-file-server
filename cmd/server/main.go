@@ -136,7 +136,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Println("hmac-file-server version 3.3.0")
+		fmt.Println("hmac-file-server version 3.4.0")
 		os.Exit(0)
 	}
 
@@ -493,7 +493,7 @@ func main() {
 		go monitorWorkerPerformance(ctx, &conf.Server, &conf.Workers, &conf.ClamAV)
 	}
 
-	versionString = "3.3.0"
+	versionString = "3.4.0"
 	if conf.Build.Version != "" {
 		versionString = conf.Build.Version
 	}

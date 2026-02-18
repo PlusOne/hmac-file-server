@@ -1,4 +1,4 @@
-# 🔐 Enhanced Security Configuration for HMAC File Server 3.3.0
+# 🔐 Enhanced Security Configuration for HMAC File Server 3.4.0
 # Advanced security features for network switching and standby recovery
 
 [server]
@@ -8,7 +8,7 @@ bind_ip = "0.0.0.0"
 storage_path = "./uploads"
 unix_socket = false
 
-# Network resilience features (3.3.0+)
+# Network resilience features (3.4.0+)
 network_events = true
 client_multi_interface = true
 
@@ -16,7 +16,7 @@ client_multi_interface = true
 # HMAC authentication secret (CHANGE THIS IN PRODUCTION!)
 secret = "your-very-secret-hmac-key-change-in-production"
 
-# Enhanced Security Features (NEW in 3.3.0)
+# Enhanced Security Features (NEW in 3.4.0)
 enhanced_security = true                    # Enable enhanced security evaluation
 challenge_on_network_change = true         # Require challenge-response on network change
 reauth_on_long_standby = true              # Require full re-auth after long standby
@@ -56,4 +56,4 @@ level = "info"
 file = "/var/log/hmac-file-server/enhanced-security.log"
 
 [build]
-version = "3.3.0"
+version = "3.4.0"

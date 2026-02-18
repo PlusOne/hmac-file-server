@@ -115,7 +115,7 @@ func DefaultConfig() *Config {
 		},
 		File: FileConfig{},
 		Build: BuildConfig{
-			Version: "3.3.0",
+			Version: "3.4.0",
 		},
 	}
 }
@@ -378,6 +378,6 @@ client_connection_detection = false        # Detect client network type
 adapt_to_client_network = false           # Optimize parameters based on client connection
 
 [build]
-version = "3.3.0"
+version = "3.4.0"
 `
 }

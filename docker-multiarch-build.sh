@@ -1,5 +1,5 @@
 #!/bin/bash
-# HMAC File Server 3.3.0 "Nexus Infinitum" - Docker Multi-Architecture Builder
+# HMAC File Server 3.4.0 "Cascade" - Docker Multi-Architecture Builder
 # Builds multi-arch Docker images using Docker Buildx
 
 set -euo pipefail
@@ -15,7 +15,7 @@ NC='\033[0m'
 
 # Configuration
 IMAGE_NAME="hmac-file-server"
-VERSION="3.3.0"
+VERSION="3.4.0"
 REGISTRY="localhost"  # Change to your registry
 PLATFORMS="linux/amd64,linux/arm64,linux/arm/v7"
 

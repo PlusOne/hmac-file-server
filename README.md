@@ -36,12 +36,12 @@ A high-performance, secure file server implementing XEP-0363 (HTTP File Upload) 
 
 ```bash
 # From Gitea (Primary)
-wget https://git.uuxo.net/UUXO/hmac-file-server/releases/download/v3.3.0/hmac-file-server-linux-amd64
+wget https://git.uuxo.net/UUXO/hmac-file-server/releases/download/v3.4.0/hmac-file-server-linux-amd64
 chmod +x hmac-file-server-linux-amd64
 sudo mv hmac-file-server-linux-amd64 /usr/local/bin/hmac-file-server
 
 # From GitHub (Mirror)
-wget https://github.com/PlusOne/hmac-file-server/releases/download/v3.3.0/hmac-file-server-linux-amd64
+wget https://github.com/PlusOne/hmac-file-server/releases/download/v3.4.0/hmac-file-server-linux-amd64
 chmod +x hmac-file-server-linux-amd64
 sudo mv hmac-file-server-linux-amd64 /usr/local/bin/hmac-file-server
 ```
@@ -57,9 +57,9 @@ go build -o hmac-file-server ./cmd/server/
 ### Docker
 
 ```bash
-docker pull ghcr.io/plusone/hmac-file-server:3.3.0
+docker pull ghcr.io/plusone/hmac-file-server:3.4.0
 docker run -v /path/to/config:/config -v /path/to/uploads:/uploads \
-  ghcr.io/plusone/hmac-file-server:3.3.0
+  ghcr.io/plusone/hmac-file-server:3.4.0
 ```
 
 ## Quick Start

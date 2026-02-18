@@ -251,7 +251,7 @@ journalctl -u hmac-file-server -f
 
 - **ejabberd** 20.01+ (tested with 23.x)
 - **Erlang/OTP** 23+ 
-- **HMAC File Server** 3.3.0+
+- **HMAC File Server** 3.4.0+
 - **XMPP Client** with XEP-0363 support
 
 ## 🔄 Updates
@@ -260,8 +260,8 @@ journalctl -u hmac-file-server -f
 
 | Module Version | ejabberd | HMAC Server | Features |
 |----------------|----------|-------------|----------|
-| 1.0.0 | 20.01+ | 3.3.0+ | Bearer tokens, basic auth |
-| 1.1.0 | 23.01+ | 3.3.0+ | User quotas, audit logging |
+| 1.0.0 | 20.01+ | 3.4.0+ | Bearer tokens, basic auth |
+| 1.1.0 | 23.01+ | 3.4.0+ | User quotas, audit logging |
 
 ### Upgrade Path
 ```bash

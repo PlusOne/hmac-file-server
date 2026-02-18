@@ -1,5 +1,5 @@
 #!/bin/bash
-# HMAC File Server 3.3.0 "Nexus Infinitum" - Multi-Architecture Builder
+# HMAC File Server 3.4.0 "Cascade" - Multi-Architecture Builder
 # Builds binaries for multiple architectures and platforms
 
 set -euo pipefail
@@ -14,7 +14,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Configuration
-VERSION="3.3.0"
+VERSION="3.4.0"
 PROJECT_NAME="hmac-file-server"
 BUILD_DIR="builds"
 SOURCE_FILES="./cmd/server/"
@@ -36,7 +36,7 @@ declare -A PLATFORMS=(
 # Functions
 print_header() {
     echo -e "${BLUE}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║${NC} ${CYAN}HMAC File Server 3.3.0 'Nexus Infinitum' Multi-Arch Builder${NC} ${BLUE}║${NC}"
+    echo -e "${BLUE}║${NC} ${CYAN}HMAC File Server 3.4.0 'Cascade' Multi-Arch Builder${NC} ${BLUE}║${NC}"
     echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }

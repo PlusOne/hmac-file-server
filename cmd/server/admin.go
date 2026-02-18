@@ -226,7 +226,7 @@ func handleAdminStats(w http.ResponseWriter, r *http.Request) {
 
 	stats.System = SystemStats{
 		Uptime:        time.Since(serverStartTime).Round(time.Second).String(),
-		Version:       "3.3.0",
+		Version:       "3.4.0",
 		GoVersion:     runtime.Version(),
 		NumGoroutines: runtime.NumGoroutine(),
 		MemoryUsageMB: int64(mem.Alloc / 1024 / 1024),

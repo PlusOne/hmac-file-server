@@ -290,7 +290,7 @@ uploadqueuesize = 50
 # Add file-specific configurations here
 
 [build]
-version = "3.3.0"
+version = "3.4.0"
 `)
 }
 

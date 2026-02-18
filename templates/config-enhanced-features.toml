@@ -1,4 +1,4 @@
-# HMAC File Server 3.3.0 "Nexus Infinitum" Configuration
+# HMAC File Server 3.4.0 "Cascade" Configuration
 # Enhanced Features Template: Audit Logging, Content Validation, Quotas, Admin API
 # Generated on: January 2025
 
@@ -57,7 +57,7 @@ address = "127.0.0.1:6379"
 db = 0
 
 # ============================================
-# NEW ENHANCED FEATURES (v3.3.0)
+# NEW ENHANCED FEATURES (v3.4.0)
 # ============================================
 
 # Security Audit Logging

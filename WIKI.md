@@ -5,7 +5,7 @@ This documentation provides detailed information on configuring, setting up, and
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [3.3.0 "Nexus Infinitum" Revolutionary Features](#330-nexus-infinitum-revolutionary-features)
+2. [3.3.0 "Nexus Infinitum" & 3.4.0 "Cascade" Features](#330-nexus-infinitum--340-cascade-features)
 3. [Configuration](#configuration)
     - [Server Configuration](#server-configuration)
     - [Deduplication Settings](#deduplication-settings)
@@ -658,7 +658,7 @@ rtt_critical_threshold = "1000ms"          # RTT threshold for critical
 packet_loss_warning_threshold = 2.0        # Packet loss % for warning
 packet_loss_critical_threshold = 10.0      # Packet loss % for critical
 
-# Multi-Interface Support (v3.3.0+)
+# Multi-Interface Support (v3.4.0+)
 multi_interface_enabled = false            # Enable multi-interface management
 interface_priority = ["eth0", "wlan0", "wwan0", "ppp0"]  # Interface priority order
 auto_switch_enabled = true                 # Enable automatic interface switching
@@ -1007,7 +1007,7 @@ Before starting the service, verify:
 
 ## Configuration Validation
 
-The HMAC File Server v3.3.0 includes a comprehensive configuration validation system with specialized command-line flags for different validation scenarios.
+The HMAC File Server v3.4.0 includes a comprehensive configuration validation system with specialized command-line flags for different validation scenarios.
 
 ### Available Validation Flags
 
@@ -1135,13 +1135,13 @@ livenessProbe:
   periodSeconds: 60
 ```
 
-The enhanced command-line validation system provides comprehensive coverage with 50+ validation checks across all configuration areas, making HMAC File Server v3.3.0 production-ready with enterprise-grade configuration management.
+The enhanced command-line validation system provides comprehensive coverage with 50+ validation checks across all configuration areas, making HMAC File Server v3.4.0 production-ready with enterprise-grade configuration management.
 
 ---
 
 ## Command-Line Tools & Utilities
 
-HMAC File Server 3.3.0 "Nexus Infinitum" includes a comprehensive suite of command-line tools and utilities for development, debugging, and maintenance.
+HMAC File Server 3.4.0 "Cascade" includes a comprehensive suite of command-line tools and utilities for development, debugging, and maintenance.
 
 ### Core Server Options
 
@@ -1161,13 +1161,13 @@ HMAC File Server 3.3.0 "Nexus Infinitum" includes a comprehensive suite of comma
 ### Diagnostic & Debugging Tools
 
 ```bash
-# XMPP Client Troubleshooting (NEW in 3.3.0)
+# XMPP Client Troubleshooting (NEW in 3.4.0)
 ./fix_xmpp_clients.sh                    # Fix desktop client upload issues
 ./fix_xmpp_clients.sh --clear-cache     # Clear XMPP client caches
 ./fix_xmpp_clients.sh --dino            # Fix Dino-specific issues
 ./fix_xmpp_clients.sh --gajim           # Fix Gajim-specific issues
 
-# Network Resilience Verification (NEW in 3.3.0)
+# Network Resilience Verification (NEW in 3.4.0)
 ./verify_network_resilience.sh          # Test network switching scenarios
 ./verify_network_resilience.sh --mobile # Test mobile network scenarios
 ./verify_network_resilience.sh --wifi   # Test WiFi scenarios
@@ -1176,11 +1176,11 @@ HMAC File Server 3.3.0 "Nexus Infinitum" includes a comprehensive suite of comma
 ### Build & Development Tools
 
 ```bash
-# Multi-Architecture Building (NEW in 3.3.0)
+# Multi-Architecture Building (NEW in 3.4.0)
 ./build-multi-arch.sh                   # Interactive multiarch builder
 ./build-multi-arch.sh --help           # Show build options
 
-# Docker Multi-Architecture (NEW in 3.3.0)  
+# Docker Multi-Architecture (NEW in 3.4.0)  
 ./docker-multiarch-build.sh --local    # Build for local testing
 ./docker-multiarch-build.sh --push     # Build and push to registry
 ./docker-multiarch-build.sh --help     # Show Docker build options
@@ -1200,7 +1200,7 @@ HMAC File Server 3.3.0 "Nexus Infinitum" includes a comprehensive suite of comma
 ./installer.sh                        # Interactive installer
 ./installer.sh --help                # Show installation options
 
-# Installation Manager (NEW in 3.3.0)
+# Installation Manager (NEW in 3.4.0)
 ./install-manager.sh                 # Advanced installation management
 ./install-manager.sh --upgrade       # Upgrade existing installation
 ./install-manager.sh --uninstall     # Clean uninstallation
@@ -1243,7 +1243,7 @@ export HMAC_TRACE="true"                       # Enable trace logging
 
 ### Multi-Architecture Build System
 
-HMAC File Server 3.3.0 features a comprehensive multi-architecture build system supporting 13+ platforms.
+HMAC File Server 3.4.0 features a comprehensive multi-architecture build system supporting 13+ platforms.
 
 #### Interactive Builder
 
@@ -1322,8 +1322,8 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o builds/hmac
 - **Configuration templates** - Production-ready configs included
 
 **Generated Packages:**
-- `hmac-file-server_3.3.0_amd64.deb` - AMD64 Debian package
-- `hmac-file-server_3.3.0_arm64.deb` - ARM64 Debian package
+- `hmac-file-server_3.4.0_amd64.deb` - AMD64 Debian package
+- `hmac-file-server_3.4.0_arm64.deb` - ARM64 Debian package
 
 ### Container Build Tools
 
@@ -1450,7 +1450,7 @@ redishealthcheckinterval = "120s"
 numworkers = 4
 uploadqueuesize = 50
 
-# Network Resilience (v3.3.0+)
+# Network Resilience (v3.4.0+)
 [network_resilience]
 enabled = true
 fast_detection = true
@@ -1476,7 +1476,7 @@ auto_switch_enabled = true
 switch_threshold_latency = "500ms"
 switch_threshold_packet_loss = 5.0
 
-# Client Network Support (v3.3.0+)
+# Client Network Support (v3.4.0+)
 [client_network_support]
 session_based_tracking = false             # Standard IP-based tracking for servers
 allow_ip_changes = true                    # Allow for client network changes
@@ -1489,7 +1489,7 @@ adapt_to_client_network = false
 # Add file-specific configurations here
 
 [build]
-version = "3.3.0"
+version = "3.4.0"
 ```
 
 ---
@@ -2046,7 +2046,7 @@ services:
 
 ## Running with Podman
 
-Podman is a daemonless container engine that's often preferred in enterprise environments for enhanced security and rootless capabilities. HMAC File Server 3.3.0 provides complete Podman support with optimized deployment scripts.
+Podman is a daemonless container engine that's often preferred in enterprise environments for enhanced security and rootless capabilities. HMAC File Server 3.4.0 provides complete Podman support with optimized deployment scripts.
 
 ### Why Choose Podman?
 
@@ -2467,7 +2467,7 @@ nc -zv localhost 8888
 
 ## Multi-Architecture Deployment
 
-HMAC File Server 3.3.0 "Nexus Infinitum" provides comprehensive multi-architecture support for modern deployment scenarios.
+HMAC File Server 3.4.0 "Cascade" provides comprehensive multi-architecture support for modern deployment scenarios.
 
 ### Supported Architectures
 
@@ -2492,7 +2492,7 @@ HMAC File Server 3.3.0 "Nexus Infinitum" provides comprehensive multi-architectu
 ### Build Commands
 
 ```bash
-# Interactive Multi-Architecture Builder (NEW in 3.3.0)
+# Interactive Multi-Architecture Builder (NEW in 3.4.0)
 ./build-multi-arch.sh
 
 # Quick options:
@@ -2511,15 +2511,15 @@ GOOS=linux GOARCH=arm GOARM=7 go build -o hmac-file-server-linux-arm ./cmd/serve
 ### Docker Multi-Architecture
 
 ```bash
-# Build multi-platform Docker images (NEW in 3.3.0)
+# Build multi-platform Docker images (NEW in 3.4.0)
 ./docker-multiarch-build.sh --local    # Local testing
 ./docker-multiarch-build.sh --push     # Push to registry
 
 # Manual Docker buildx (advanced)
-docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t hmac-file-server:3.3.0 .
+docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t hmac-file-server:3.4.0 .
 
 # Run platform-specific image
-docker run --platform linux/arm64 hmac-file-server:3.3.0
+docker run --platform linux/arm64 hmac-file-server:3.4.0
 ```
 
 ### Architecture-Specific Optimizations
@@ -2543,7 +2543,7 @@ docker run --platform linux/arm64 hmac-file-server:3.3.0
 
 ## Network Resilience & Queue Optimization
 
-HMAC File Server 3.3.0 introduces advanced network resilience and queue optimization systems designed for enterprise-grade reliability.
+HMAC File Server 3.4.0 introduces advanced network resilience and queue optimization systems designed for enterprise-grade reliability.
 
 ### Network Resilience Features
 
@@ -2716,7 +2716,7 @@ uploadqueuesize = 50
 # Add file-specific configurations here
 
 [build]
-version = "3.3.0"
+version = "3.4.0"
 ```
 
 ### Quickstart with Docker Compose
@@ -2734,7 +2734,7 @@ docker compose up -d
 
 ## Simplified Configuration Examples
 
-HMAC File Server 3.3.0 "Nexus Infinitum" achieves **93% configuration reduction** through intelligent defaults. Here are minimal configurations for common scenarios:
+HMAC File Server 3.4.0 "Cascade" achieves **93% configuration reduction** through intelligent defaults. Here are minimal configurations for common scenarios:
 
 ### Minimal Production Configuration (93% Simplified)
 

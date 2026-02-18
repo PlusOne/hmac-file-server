@@ -109,7 +109,7 @@ func applyDefaults(conf *Config) {
 	}
 
 	if conf.Build.Version == "" {
-		conf.Build.Version = "3.3.0"
+		conf.Build.Version = "3.4.0"
 	}
 
 	if conf.Security.JWTAlgorithm == "" {
@@ -207,7 +207,7 @@ numworkers = 4
 uploadqueuesize = 50
 
 [build]
-version = "3.3.0"
+version = "3.4.0"
 `
 }
 
@@ -362,6 +362,6 @@ path_prefix = "/admin"
 type = "bearer"
 
 [build]
-version = "3.3.0"
+version = "3.4.0"
 `
 }

@@ -1,6 +1,6 @@
 # HMAC File Server - Podman Configuration Examples
 
-This directory contains Podman-specific deployment files for HMAC File Server 3.3.0 "Nexus Infinitum".
+This directory contains Podman-specific deployment files for HMAC File Server 3.4.0 "Cascade".
 
 ## 🚀 Quick Start
 
